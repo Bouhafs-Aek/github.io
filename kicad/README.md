@@ -126,36 +126,71 @@ Pin 2 matters: this is an *inverted-F*, not a monopole. The footprint's second
 pad is the ground/short pin and it has to sit on the edge of the ground plane,
 which is what the board below does.
 
-## Retuning: the published antenna came out 15% high
+## Simulating this board: four settings that decide whether the answer means anything
 
-An RFsim run of this board put the resonance at **2.83 GHz**, not 2.45 — VSWR
-1.0 at 2.83, and off the top of the plot in the ISM band. The board therefore
-carries a **x1.155 scaled radiator** (`SWRA117D_2G4_Left_retuned`), with the
-footprint as published kept alongside it untouched.
+An RFsim run of this board reported resonance at 2.83 GHz, and the board
+carried a x1.155 scaled radiator for one commit because of it. **That number
+was not usable, and the scaling has been reverted.** The layout plot from the
+run shows why: the only copper on the board is the antenna, the feed line and
+the connector pads. The ground pours are absent, and the dialog was set to
+RFsim's FR-4 preset rather than this board's stackup. Two large errors pulling
+in opposite directions.
 
-Why scaling, and not lengthening the arm by hand: uniform in-plane scaling is
-the one retune that needs no model of what the meander is doing. Multiply
-every dimension *and every gap* by k and each current path and coupling
-distance scales with it, so the resonance moves as 1/k. k = 2.83/2.45 = 1.155.
-Lengthening one arm instead would also move the feed tap relative to the
-short, which is what sets the input impedance — so it would fix the frequency
-and break the 50 Ω.
+Before trusting any result from this board, check all four:
 
-It is first order only: the substrate thickness does not scale, so εr,eff
-shifts a little and the resonance moves slightly more than 1/k. **Expect to
-iterate**: simulate, take the new ratio, rescale.
+| setting | must be | why |
+|---|---|---|
+| **copper zones** | **filled** — press **B** in the PCB editor before exporting | An inverted-F radiates *against its ground plane*; the plane is half the antenna. With the pours unfilled there is no plane at all, only the connector's pads, and the 49 stitching vias connect to nothing. This is not a small error — it is a different antenna. |
+| **substrate** | **0.8 mm, εr 4.4** | The FR-4 preset is 1.6 mm / εr 4.5. On 1.6 mm our 1.5 mm line is **71 Ω**, not 50, and the antenna's resonance shifts with substrate thickness too. |
+| **domain margin** | **≥ 31 mm** (λ/4 at 2.45 GHz) | At the 4 mm default the absorbing boundary sits inside the antenna's near field — λ/31 away — so it truncates the fields that make the antenna an antenna. `sim/openems/swra117d_openems.py` uses 30 mm for the same reason. |
+| **port** | attached to the feed line, **Coplanar (CPW)** at the launch | The dialog showed *Port 1 [No Track]*, *Feed: No Line*, Lumped, width 3.114 mm. That width is the 50 Ω width for 1.6 mm / εr 4.5 — RFsim's own preset, confirming the stackup mismatch — and ours is 1.49 mm. A lumped port with no line is not connected to the 50 Ω feed. |
+
+The proof on the stackup is worth keeping: `tools/line_impedance.py` gives
+50 Ω at **3.11 mm** on 1.6 mm / εr 4.5 and at **1.49 mm** on 0.8 mm / εr 4.4.
+RFsim guessed 3.114 mm.
+
+### Retuning, once a valid run exists
+
+Uniform in-plane scaling is the retune whose physics needs no model of the
+meander: scale every dimension *and every gap* by k and each current path and
+coupling distance scales with it, so the resonance moves as 1/k. It also
+carries the feed tap and the short along with it, so the input impedance is
+preserved — lengthening one arm by hand would fix the frequency and break the
+50 Ω. It is first order only (the substrate thickness does not scale), so
+expect to iterate.
 
 ```sh
 python3 tools/scale_footprint.py \
     library/SWRA117D_RF.pretty/Texas_SWRA117D_2.4GHz_Left.kicad_mod \
     library/SWRA117D_RF.pretty/SWRA117D_2G4_Left_retuned.kicad_mod \
-    --scale 1.155 --name SWRA117D_2G4_Left_retuned
-python3 tools/gen_project.py        # ANT_SCALE / ANT_FOOTPRINT live here
+    --scale <f_measured / 2.45> --name SWRA117D_2G4_Left_retuned
+# then set ANT_SCALE and ANT_FOOTPRINT in tools/gen_project.py
+python3 tools/gen_project.py
 ```
 
-`ANT_ORIGIN` moved 0.5 mm down the board to keep the bigger antenna clear of
-the top edge, and the ground plane edge follows the footprint's keep-out box
-automatically, so a different scale factor needs no other edits.
+`SWRA117D_2G4_Left_retuned.kicad_mod` is still in the library at x1.155 as an
+example; the board is back on the published geometry. `ANT_ORIGIN` stays at
+66.5 mm — 0.9 mm of board beyond the antenna's keep-out box, which is routing
+margin, and the ground plane edge follows the footprint automatically either
+way.
+
+### Board edge, keep-out edge, and domain edge are three different things
+
+Easy to conflate, and the RFsim plot draws two of them:
+
+* **Board edge** (Edge.Cuts, solid line). The antenna's keep-out box sits
+  0.9 mm inside the top edge. Do **not** extend the board past the antenna to
+  "give it room": dielectric alongside and above the arm loads it, which pulls
+  the resonance *down* and adds loss. An inverted-F belongs at the edge of its
+  board. The only reason to keep any margin at all is mechanical — routing
+  tolerance — and 0.9 mm is enough.
+* **Keep-out edge** (the ground plane edge, Cmts.User line at y = 66.25). This
+  is the antenna's ground reference and it is not negotiable: no copper above
+  it on any layer. Extending the *plane* into the keep-out would short the
+  antenna's near field to ground and destroy it.
+* **Domain edge** (the dashed rectangle in RFsim's plot). This is the
+  simulation air box, nothing to do with the board. **This is the one to
+  extend** — from 4 mm to at least 31 mm, per the table above.
 
 ### What could not be established analytically
 
@@ -168,16 +203,7 @@ that to resonate at 2.45 GHz needs εr,eff = 0.87, and at 2.83 GHz εr,eff =
 over-predicts the electrical length by a wide margin, which is exactly what a
 meander does: adjacent segments carry opposing currents that partly cancel. So
 there is no shortcut, and the resonance of this geometry can only come from a
-field solver or a VNA. The scaling above sidesteps that: it needs the *ratio*
-of two frequencies, not a model of either.
-
-Also worth noting what the retune does *not* depend on: the substrate the
-application note assumed. A thinner board raises an IFA's resonance (less
-field in the dielectric, lower εr,eff), so 0.8 mm FR4 may well be part of why
-this came out high — but scaling to the measured ratio converges on whatever
-board is actually in front of us, whereas switching to 1.6 mm FR4 to match an
-assumed reference would also widen the 50 Ω line to ~2.9 mm and invalidate the
-one simulation result we have.
+correctly set up field solver or a VNA.
 
 ## The footprints
 
@@ -189,9 +215,9 @@ footprint, converted to the modern format by `tools/convert_legacy_footprint.py`
 polygon, the pads and the `Dwgs.User` keep-out box are carried over unchanged.
 `SWRA117D_2G4_Left_retuned.kicad_mod` is that footprint scaled x1.155 by
 `tools/scale_footprint.py` (copper 16.63 × 6.24 mm, strip 0.578 mm, feed pad
-0.578 mm, ground pin at 2.425 mm) — see [Retuning](#retuning-the-published-antenna-came-out-15-high).
-The board uses the scaled one; the original stays for reference and for
-re-scaling from.
+0.578 mm, ground pin at 2.425 mm). **The board uses the published one** — the
+scaled copy is an example of the retune path, kept for when a valid simulation
+says what k should be. See [Retuning](#retuning-once-a-valid-run-exists).
 
 The SMA footprint is a generic end launch: a 1.5 mm signal pad with a ground
 tab 0.8 mm either side on the top, and one solid ground pad under the whole
@@ -209,7 +235,7 @@ the stackup is in the board file, so the 3D viewer and any EM export see it.
 |------|-------|-----|
 | 50 Ω microstrip | **w = 1.5 mm** | Hammerstad gives 50.8 Ω for w/h = 1.875, εr,eff = 3.33 (≈ 50 Ω once 35 µm copper is included) |
 | feed length | 23.5 mm, board edge to feed pad | λg ≈ 67 mm at 2.45 GHz, so ≈ 126° of line |
-| ground plane | y ≥ 66.21 mm only | its edge is the antenna's ground reference, and `gen_project.py` reads it from the footprint's own keep-out box so a rescaled antenna moves it |
+| ground plane | y ≥ 66.25 mm only | its edge is the antenna's ground reference, and `gen_project.py` reads it from the footprint's own keep-out box so a rescaled antenna moves it |
 | antenna keep-out | rule area above that edge, F.Cu **and** B.Cu | no pour, no tracks, no vias under or beside the antenna |
 | top pour keep-away | 1.0 mm either side of the feed | keeps the line a microstrip instead of a narrow-gap coplanar waveguide |
 | stitching | 49 vias | 8 in the connector pads, an 11-via fence at 3 mm along the plane edge, and a 5 mm grid over the pour — see [Ground stitching](#ground-stitching-the-rule-and-what-it-is-for) |
@@ -379,10 +405,9 @@ is identical to the 32 mm version of this board.
 
 **The antenna model is design intent, not a prediction of the etched
 geometry.** It is a 2.454 GHz resonator — the antenna this board is meant to
-have. RFsim put the published footprint at 2.83 GHz on this stackup, which is
-why the radiator is now scaled. Use RFsim or openEMS to find where the copper
-actually resonates, and this deck to work out what to do about the impedance
-once you know.
+have. Use a correctly set up field solver to find where the copper actually
+resonates (see the four settings above), and this deck to work out what to do
+about the impedance once you know.
 
 ### 2. Full wave (openEMS)
 
@@ -402,12 +427,12 @@ python3 sim/openems/swra117d_openems.py --plot      # FDTD run + plots
 
 ```
 board          : 40.0 x 30.0 mm, 0.8 mm FR4 (er 4.4, tan d 0.02)
-ground plane   : y = 0 .. 23.79 mm (antenna region 23.79 .. 30.0 mm is clear)
+ground plane   : y = 0 .. 23.75 mm (antenna region 23.75 .. 30.0 mm is clear)
 feed line      : 2 segments, 23.5 mm total, port launches along y from (24.00, 0.00) mm, feed pad at (24.00, 23.50) mm
                  ( 24.00,  0.00) -> ( 24.00, 22.50)  w = 1.5 mm
                  ( 24.00, 22.50) -> ( 24.00, 23.50)  w = 0.5 mm
 top pour       : 2 boxes around 1 keep-away corridors
-antenna copper : 29 vertices, x 10.31..26.95 mm, y 23.21..29.45 mm
+antenna copper : 29 vertices, x 12.15..26.55 mm, y 23.25..28.65 mm
 ```
 
 A real run needs openEMS with its Python bindings
@@ -485,7 +510,9 @@ positions (rotations included) and verifies that
 * every board pad carries the net the schematic gives it,
 * every track ends on a pad, a via or another track,
 * copper of different nets keeps ≥ 0.15 mm apart,
-* nothing but the antenna lives above the ground plane edge,
+* nothing but the antenna lives above the ground plane edge — which the
+  checker reads from the board's own zones, never a hardcoded value, so it
+  follows the antenna when it moves or is rescaled,
 * every end of the feed line sits over the B.Cu ground pour, so the microstrip
   has a return path — and it says so when the zones are still unfilled,
 * the port pad sits inside the bottom-side ground pad, so an RF simulator
@@ -496,7 +523,7 @@ positions (rotations included) and verifies that
 ok   library: 6 symbols, 4 footprints parse cleanly
 ok   schematic: 4 embedded symbols all match library/SWRA117D_RF.kicad_sym (no lib_symbol_mismatch)
 ok   schematic: 7 pins placed, 5 wires, netlist matches the intended one
-ok   board: 6 pads, 2 tracks, 49 vias, clearances >= 0.15 mm, keep-out clean
+ok   board: 6 pads, 2 tracks, 49 vias, clearances >= 0.15 mm, keep-out above y = 66.25 clean
 ok   board: 28 antenna polygon vertices overlap the plane edge, all of them inside the antenna's own pads
 ok   board: all 4 feed line ends sit over the B.Cu ground pour (reference plane present)
 ok   board: 2 copper zones carry no fill yet - press B in the PCB editor before running DRC or an RF simulation, or tools that look for the reference layer will find it empty

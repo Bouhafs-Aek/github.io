@@ -48,13 +48,20 @@ BOARD_Y1 = BOARD_Y0 + BOARD_H            # counterpoise, so shrinking this to
 ANT_ORIGIN = (124.0, 66.5)  # antenna feed pad on the board
 FEED_X = ANT_ORIGIN[0]      # the feed runs straight down from it to the SMA
 
-# The antenna as published resonated at 2.83 GHz in RFsim on this 0.8 mm FR4
-# board, 15% high.  Uniform in-plane scaling is the retune whose physics needs
-# no model of the meander: scale every dimension and gap by k and the
-# resonance moves as 1/k.  ANT_FOOTPRINT is the scaled copy produced by
-# tools/scale_footprint.py; re-simulate, take the new ratio, rescale.
-ANT_SCALE = 1.155           # 2.83 / 2.45
-ANT_FOOTPRINT = "SWRA117D_2G4_Left_retuned"
+# Retune, when there is a trustworthy resonance to retune against.
+#
+# Uniform in-plane scaling is the retune whose physics needs no model of the
+# meander: scale every dimension and gap by k and the resonance moves as 1/k.
+# The board ran on a x1.155 scaled radiator for one commit, from an RFsim
+# result of 2.83 GHz - but that run had the copper zones unfilled (so the
+# antenna had no ground plane, and an inverted-F radiates against its plane)
+# and used RFsim's 1.6 mm FR-4 preset instead of this board's 0.8 mm stackup.
+# Two errors pulling opposite ways, so the number cannot be used.  Back to the
+# published geometry until a valid run says otherwise; see the README for the
+# four RFsim settings that make a run valid.  To apply a retune: generate the
+# scaled footprint with tools/scale_footprint.py, then set both lines below.
+ANT_SCALE = 1.0
+ANT_FOOTPRINT = "Texas_SWRA117D_2.4GHz_Left"
 W50 = 1.5                   # 50 ohm microstrip width for 0.8 mm FR4, er = 4.4
 W_NECK = 0.5                # neck into the 0.5 mm antenna feed pad
 POUR_GAP = 1.0              # top pour keep-away either side of the 50 ohm line
@@ -97,8 +104,8 @@ PARTS = [
          nets={"1": "ANT_FEED", "2": "GND"},
          ref_at=(132.08, 77.47), val_at=(132.08, 80.01),
          fp_ref_at=(-6.0, 1.6), in_bom=False,
-         desc=f"2.45 GHz printed inverted-F antenna (TI SWRA117D, left layout, "
-              f"geometry scaled x{ANT_SCALE:g})",
+         desc="2.45 GHz printed inverted-F antenna (TI SWRA117D, left layout)"
+              + (f", geometry scaled x{ANT_SCALE:g}" if ANT_SCALE != 1.0 else ""),
          extra_props=[
              ("Sim.Device", "SUBCKT"),
              ("Sim.Name", "ANT_SWRA117D_2G4"),

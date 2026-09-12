@@ -20,7 +20,6 @@ from sexpr import find, find_all, parse  # noqa: E402
 
 PRJ_DIR = pathlib.Path(__file__).resolve().parent.parent
 PROJECT = "swra117d_2g4_antenna"
-GND_EDGE_Y = 65.75
 MIN_CLEARANCE = 0.15
 EPS = 1e-6
 
@@ -34,6 +33,18 @@ def fail(msg: str) -> None:
 
 def q(pt):
     return (round(pt[0], 3), round(pt[1], 3))
+
+
+def plane_edge(pcb) -> float:
+    """Top edge of the ground plane, read from the board's own copper zones.
+
+    Never hardcode this: the antenna footprint's keep-out box sets it, so it
+    moves when the antenna is repositioned or rescaled, and a checker holding
+    a stale value reports the board as broken when it is the checker that is.
+    """
+    return min(float(xy[2])
+               for zone in find_all(pcb, "zone") if not find(zone, "keepout")
+               for xy in find(find(zone, "polygon"), "pts")[1:])
 
 
 class DSU:
@@ -183,6 +194,7 @@ class Pad:
 def check_board(expected_nets):
     pcb = parse((PRJ_DIR / f"{PROJECT}.kicad_pcb").read_text())
     nets = {int(n[1]): str(n[2]) for n in find_all(pcb, "net")}
+    gnd_edge_y = plane_edge(pcb)
     pads: list[Pad] = []
     poly_points = []
 
@@ -271,25 +283,25 @@ def check_board(expected_nets):
     # nothing but the antenna may live above the ground plane edge
     for a, b, _w, net, _layer in segments:
         for end in (a, b):
-            if end[1] < GND_EDGE_Y - EPS and net != "ANT_FEED":
+            if end[1] < gnd_edge_y - EPS and net != "ANT_FEED":
                 fail(f"board: {net} track reaches {q(end)}, inside the antenna keep-out")
     for pos, _size, _net in vias:
-        if pos[1] < GND_EDGE_Y - EPS:
+        if pos[1] < gnd_edge_y - EPS:
             fail(f"board: via {q(pos)} sits inside the antenna keep-out")
     for zone in find_all(pcb, "zone"):
         if find(zone, "keepout"):
             continue
         ys = [float(xy[2]) for xy in find(find(zone, "polygon"), "pts")[1:]]
-        if min(ys) < GND_EDGE_Y - EPS:
+        if min(ys) < gnd_edge_y - EPS:
             fail(f"board: copper zone {find(zone, 'name')[1]} crosses the keep-out edge")
 
-    intruding = [(ref, pt) for ref, pt in poly_points if pt[1] > GND_EDGE_Y + EPS]
+    intruding = [(ref, pt) for ref, pt in poly_points if pt[1] > gnd_edge_y + EPS]
     covered = [(ref, pt) for ref, pt in intruding
                if any(p.ref == ref and p.contains(pt) for p in pads)]
     if len(intruding) != len(covered):
         fail("board: antenna copper reaches into the ground plane outside its own pads")
     notes.append(f"board: {len(pads)} pads, {len(segments)} tracks, {len(vias)} vias, "
-                 f"clearances >= {MIN_CLEARANCE} mm, keep-out clean")
+                 f"clearances >= {MIN_CLEARANCE} mm, keep-out above y = {gnd_edge_y} clean")
     notes.append(f"board: {len(intruding)} antenna polygon vertices overlap the plane edge, "
                  "all of them inside the antenna's own pads")
 
