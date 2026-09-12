@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import pathlib
 import sys
 import uuid
@@ -342,6 +343,30 @@ def board_footprint(part) -> list:
     return out
 
 
+def stitch_grid(existing, launch_y, pitch=5.0, keepaway=2.0):
+    """A grid of ground vias over the top pour, avoiding everything that matters.
+
+    Skipped: the feed line's pour keep-away corridor, the connector's own
+    courtyard (already stitched), anything within *keepaway* of a via that is
+    already placed, and a margin from the board edges.
+    """
+    half = W50 / 2 + POUR_GAP
+    out = []
+    y = GND_EDGE_Y + 1.5 + pitch
+    while y <= BOARD_Y1 - 1.0:
+        x = BOARD_X0 + 1.5
+        while x <= BOARD_X1 - 1.5:
+            in_corridor = FEED_X - half - 0.5 <= x <= FEED_X + half + 0.5
+            at_connector = (abs(x - FEED_X) <= 5.3 and y >= launch_y - 2.8)
+            crowded = any(math.dist((x, y), pos) < keepaway
+                          for pos in existing + out)
+            if not (in_corridor or at_connector or crowded):
+                out.append((x, y))
+            x += pitch
+        y += pitch
+    return out
+
+
 def segment(a, b, width, net, layer="F.Cu"):
     return [Sym("segment"),
             [Sym("start"), num(a[0]), num(a[1])],
@@ -522,12 +547,23 @@ def build_board() -> list:
     for a, b, width, net in tracks:
         pcb.append(segment(a, b, width, net))
 
-    # ground stitching: the connector shell first, inside its own pads, so the
-    # coplanar ground at the launch is tied to the bottom plane right there
+    # Ground stitching, in three jobs.
+    #
+    # 1. The launch: 8 vias inside the connector's own pads, so the coplanar
+    #    ground at the port is tied to the bottom plane right where the
+    #    return current has to cross.
+    # 2. The plane edge: a fence at 3.0 mm = lambda/19 at 2.45 GHz in FR4,
+    #    which stops the plane pair radiating from its open edge.
+    # 3. The pour area: a 5.0 mm grid, so no patch of top pour is left big
+    #    enough to resonate.  A 22 mm island - which is what each side of
+    #    the feed corridor would otherwise be - is half-wave resonant at
+    #    3.25 GHz, inside the range this board gets simulated over.  At
+    #    5.0 mm the patches resonate above 14 GHz.
     stitch = [(FEED_X + dx, launch_y + dy)
               for dx in (-3.6, -2.3, 2.3, 3.6) for dy in (-0.8, 0.8)]
     stitch += [(x, GND_EDGE_Y + 1.0) for x in
                (103, 106, 109, 112, 115, 118, 121, 127.5, 130.5, 133.5, 136.5)]
+    stitch += stitch_grid(stitch, launch_y)
     for pos in stitch:
         pcb.append(via(pos))
 

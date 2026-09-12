@@ -212,7 +212,7 @@ the stackup is in the board file, so the 3D viewer and any EM export see it.
 | ground plane | y ≥ 66.21 mm only | its edge is the antenna's ground reference, and `gen_project.py` reads it from the footprint's own keep-out box so a rescaled antenna moves it |
 | antenna keep-out | rule area above that edge, F.Cu **and** B.Cu | no pour, no tracks, no vias under or beside the antenna |
 | top pour keep-away | 1.0 mm either side of the feed | keeps the line a microstrip instead of a narrow-gap coplanar waveguide |
-| stitching | 19 vias | 8 in the connector pads, tying the coplanar ground to the plane right at the launch, plus a row along the plane edge |
+| stitching | 49 vias | 8 in the connector pads, an 11-via fence at 3 mm along the plane edge, and a 5 mm grid over the pour — see [Ground stitching](#ground-stitching-the-rule-and-what-it-is-for) |
 
 The 1.5 mm line necks down to 0.5 mm over the last millimetre to meet the
 antenna's 0.5 mm feed pad — much shorter than λg/20, so not worth modelling as
@@ -268,6 +268,78 @@ If it needs help, a pi network goes in the feed line: `C` and `L` are already
 in the symbol library and `Chip_0402_1005Metric_RF` in the footprint library,
 and `sim/s11_antenna.cir` has the topology in a comment block so you can work
 out what the parts would buy before committing pads to a layout.
+
+### Ground stitching: the rule, and what it is for
+
+Stitching vias tie the top pour to the bottom plane. The pitch rule everyone
+quotes is **≤ λ/20 at the highest frequency of interest, measured in the
+dielectric** (λ = c / f√εr, so εr = 4.4 here, *not* the microstrip εr,eff):
+
+| f | λ in FR4 | λ/10 | λ/20 |
+|---|---|---|---|
+| 2.45 GHz | 58.3 mm | 5.8 mm | 2.9 mm |
+| 4.90 GHz (2nd harmonic) | 29.2 mm | 2.9 mm | 1.5 mm |
+| 7.35 GHz (3rd harmonic) | 19.4 mm | 1.9 mm | 1.0 mm |
+
+But the pitch is the *consequence*, not the rule. What actually matters is
+that no piece of pour is left electrically large, because a patch of copper
+d wide is half-wave resonant at c / 2d√εr — and a resonant patch is a cavity
+that stores energy, couples between traces and radiates from the board edge:
+
+| unstitched patch | resonates at |
+|---|---|
+| 22 mm | 3.25 GHz |
+| 12 mm | 5.96 GHz |
+| 8 mm | 8.9 GHz |
+| 5 mm | 14.3 GHz |
+
+Vias also have inductance, which is why one is rarely enough anywhere it
+matters. A 0.3 mm drill through 0.8 mm FR4 is about 0.54 nH — **8.3 Ω at
+2.45 GHz**. Two in parallel give 4.1 Ω, four give 2.1 Ω. So a shunt
+component's ground pad wants two or more vias, not one, or the component sees
+several ohms of inductance in series with it.
+
+This board stitches for three distinct reasons, which is the useful way to
+think about it:
+
+| where | why | pitch here |
+|---|---|---|
+| 8 vias inside the connector's own pads | the return current has to cross layers at the launch; this is the one place vias are not optional | — |
+| 11-via fence along the plane edge | stops the plane pair radiating from its open edge | 3.0 mm = λ/19 at 2.45 GHz |
+| 30-via grid over the pour | keeps every pour patch small | 5.0 mm, patches ≤ 8.4 mm → 8.5 GHz |
+
+That grid was added after measuring the gap: the feed corridor splits the top
+pour into two ~22 mm islands, each stitched only along its top edge, and a
+22 mm island is half-wave resonant at **3.25 GHz** — inside the range this
+board gets simulated over. With the grid the worst-case distance from any pour
+copper to a via is 4.22 mm, so the largest span is 8.4 mm and the first patch
+resonance moves to 8.5 GHz.
+
+**Where vias earn their place, in priority order:**
+
+1. **Beside every layer-changing signal via**, within 1–2 mm. The return
+   current must change layers too, and if there is no ground via nearby it
+   detours around the plane, which is both an inductance and a loop antenna.
+2. **At the connector / port launch**, as above.
+3. **Along the edges of a plane pair**, as a fence at λ/20.
+4. **Along both gaps of a coplanar waveguide.** GCPW *requires* this: without
+   it the coplanar ground floats between vias and supports its own modes. A
+   via fence beside an ordinary microstrip, by contrast, does close to nothing
+   — the return current is already in the plane directly under the trace.
+5. **Between RF blocks**, as a wall, where isolation is the goal.
+6. **Area fill**, to keep patches small — the lowest-value job, and the one
+   those tidy grids on educational boards usually are.
+
+So the rows of aligned vias you have seen are sometimes doing job 3 or 4,
+where they are essential, and sometimes decoration. The test is simple: ask
+what return current crosses layers there. If the answer is "none", the vias
+are cosmetic — on a 2-layer board with an intact pour they cost drill hits and
+nothing else, but they are not what makes a layout work.
+
+One exception worth knowing: do not stitch into an antenna keep-out. A via
+there is metal in the near field and will detune the antenna, which is why
+this board's fence stops at the plane edge and the keep-out rule area forbids
+vias above it.
 
 ### Antenna rules this board follows (keep them if you re-use it)
 
@@ -424,7 +496,7 @@ positions (rotations included) and verifies that
 ok   library: 6 symbols, 4 footprints parse cleanly
 ok   schematic: 4 embedded symbols all match library/SWRA117D_RF.kicad_sym (no lib_symbol_mismatch)
 ok   schematic: 7 pins placed, 5 wires, netlist matches the intended one
-ok   board: 6 pads, 2 tracks, 19 vias, clearances >= 0.15 mm, keep-out clean
+ok   board: 6 pads, 2 tracks, 49 vias, clearances >= 0.15 mm, keep-out clean
 ok   board: 28 antenna polygon vertices overlap the plane edge, all of them inside the antenna's own pads
 ok   board: all 4 feed line ends sit over the B.Cu ground pour (reference plane present)
 ok   board: 2 copper zones carry no fill yet - press B in the PCB editor before running DRC or an RF simulation, or tools that look for the reference layer will find it empty
