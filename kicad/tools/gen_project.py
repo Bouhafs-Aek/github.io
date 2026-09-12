@@ -46,36 +46,21 @@ GND_EDGE_Y = 65.75          # top edge of the ground plane = bottom of the anten
 FEED_Y = 75.0               # y of the 50 ohm feed line
 ANT_ORIGIN = (124.0, 66.0)  # antenna feed pad on the board
 W50 = 1.5                   # 50 ohm microstrip width for 0.8 mm FR4, er = 4.4
-W_NECK = 0.5                # neck into the 0402 lands and the antenna feed pad
+W_NECK = 0.5                # neck into the 0.5 mm antenna feed pad
 POUR_GAP = 1.0              # top pour keep-away either side of the 50 ohm line
 SUB_H, SUB_ER, SUB_TAND = 0.8, 4.4, 0.02
 
-NETS = {"": 0, "GND": 1, "RF_IN": 2, "ANT_FEED": 3}
+NETS = {"": 0, "GND": 1, "ANT_FEED": 2}
 
-TITLE = "2.45 GHz PCB antenna (TI SWRA117D) - RF test board"
+TITLE = "2.45 GHz PCB antenna (TI SWRA117D) - radiator on a 50 ohm SMA port"
 
 # reference, library id, value, footprint, schematic placement, board placement
 PARTS = [
     dict(ref="J1", lib=f"{LIB_NICK}:Conn_Coaxial_SMA", value="SMA edge launch",
          fp="SMA_EdgeMount_Generic", sch=(76.2, 88.9, 0), pcb=(100.0, FEED_Y, 0),
-         nets={"1": "RF_IN", "2": "GND"},
+         nets={"1": "ANT_FEED", "2": "GND"},
          ref_at=(76.2, 81.28), val_at=(76.2, 83.82),
          desc="Coaxial connector, 50 ohm test port"),
-    dict(ref="C1", lib=f"{LIB_NICK}:C", value="0.5pF", fp="Chip_0402_1005Metric_RF",
-         sch=(91.44, 96.52, 0), pcb=(113.5, FEED_Y + 0.51, 270), dnp=True,
-         nets={"1": "RF_IN", "2": "GND"},
-         ref_at=(93.98, 95.25), val_at=(93.98, 97.79),
-         desc="Shunt element of the pi matching network (source side)"),
-    dict(ref="L1", lib=f"{LIB_NICK}:L", value="0R", fp="Chip_0402_1005Metric_RF",
-         sch=(101.6, 88.9, 90), pcb=(118.0, FEED_Y, 0),
-         nets={"1": "RF_IN", "2": "ANT_FEED"},
-         ref_at=(101.6, 85.09), val_at=(101.6, 92.71),
-         desc="Series element of the pi matching network; 0 ohm jumper as built"),
-    dict(ref="C2", lib=f"{LIB_NICK}:C", value="0.5pF", fp="Chip_0402_1005Metric_RF",
-         sch=(111.76, 96.52, 0), pcb=(120.5, FEED_Y + 0.51, 270), dnp=True,
-         nets={"1": "ANT_FEED", "2": "GND"},
-         ref_at=(114.3, 95.25), val_at=(114.3, 97.79),
-         desc="Shunt element of the pi matching network (antenna side)"),
     dict(ref="AE1", lib=f"{LIB_NICK}:ANT_SWRA117D_2G4_Left",
          value="ANT_SWRA117D_2G4_Left", fp="Texas_SWRA117D_2.4GHz_Left",
          sch=(127.0, 81.28, 0), pcb=(ANT_ORIGIN[0], ANT_ORIGIN[1], 0),
@@ -92,45 +77,35 @@ PARTS = [
 ]
 
 WIRES = [
-    ((81.28, 88.9), (91.44, 88.9)),     # J1 -> C1 node
-    ((91.44, 88.9), (97.79, 88.9)),     # C1 node -> L1
-    ((105.41, 88.9), (111.76, 88.9)),   # L1 -> C2 node
-    ((111.76, 88.9), (127.0, 88.9)),    # C2 node -> antenna
-    ((127.0, 88.9), (127.0, 86.36)),    # up into AE1 pin 1
-    ((91.44, 88.9), (91.44, 92.71)),    # C1 stub
-    ((91.44, 100.33), (91.44, 102.87)),  # C1 -> GND
-    ((111.76, 88.9), (111.76, 92.71)),  # C2 stub
-    ((111.76, 100.33), (111.76, 102.87)),  # C2 -> GND
-    ((76.2, 93.98), (76.2, 96.52)),     # J1 shield -> GND
+    ((81.28, 88.9), (127.0, 88.9)),      # J1 signal -> antenna feed
+    ((127.0, 88.9), (127.0, 86.36)),     # up into AE1 pin 1
+    ((76.2, 93.98), (76.2, 96.52)),      # J1 shell -> GND
+    ((76.2, 96.52), (71.12, 96.52)),     # GND -> PWR_FLAG
     ((129.54, 86.36), (129.54, 96.52)),  # AE1 ground pin -> GND
-    ((91.44, 102.87), (86.36, 102.87)),  # GND -> PWR_FLAG
 ]
-JUNCTIONS = [(91.44, 88.9), (111.76, 88.9)]
-LABELS = [("RF_IN", (85.09, 88.9)), ("ANT_FEED", (120.65, 88.9))]
+JUNCTIONS = [(76.2, 96.52)]
+LABELS = [("ANT_FEED", (95.25, 88.9))]
 
 SCH_NOTE = (
-    "RF test board for the TI SWRA117D 2.45 GHz printed inverted-F antenna.\n"
+    "Radiator on a 50 ohm port: the TI SWRA117D 2.45 GHz printed inverted-F\n"
+    "antenna fed straight from J1, with no matching network in the path.\n"
     "\n"
-    "J1 feeds a 1.5 mm wide 50 ohm microstrip on 0.8 mm FR4 (er 4.4, tan d 0.02).\n"
-    "The antenna is a 50 ohm design, so the board ships unmatched: L1 is a 0 ohm\n"
-    "jumper and C1 / C2 are unpopulated. The pi network is there to retune the\n"
-    "antenna once it is measured in its real enclosure - fit parts only then.\n"
-    "AE1 pin 2 must sit on the ground plane edge - see the keep-out on the PCB.\n"
+    "J1 -> 1.5 mm wide 50 ohm microstrip on 0.8 mm FR4 (er 4.4, tan d 0.02)\n"
+    "-> AE1 pin 1.  AE1 pin 2 is the inverted-F ground pin and sits on the\n"
+    "edge of the ground plane; see the keep-out on the PCB.\n"
     "\n"
-    "Simulation: sim/s11_pi_match.cir (ngspice, lumped antenna model) and\n"
+    "Simulation: sim/s11_antenna.cir (ngspice, lumped antenna model) and\n"
     "sim/openems/swra117d_openems.py (full wave S11, impedance, far field)."
 )
 
-POWER = [  # ground symbols and the ERC power flag: reference, sheet position
+POWER = [  # ground symbols: reference, sheet position
     ("#PWR01", (76.2, 96.52)),
-    ("#PWR02", (91.44, 102.87)),
-    ("#PWR03", (111.76, 102.87)),
-    ("#PWR04", (129.54, 96.52)),
+    ("#PWR02", (129.54, 96.52)),
 ]
 # A passive RF board has no power source of its own, so ERC reports
 # "Input Power pin not driven by any Output Power pins" on the ground net.
 # One flag with a power-output pin on that net is the standard answer.
-PWR_FLAGS = [("#FLG01", (86.36, 102.87))]
+PWR_FLAGS = [("#FLG01", (71.12, 96.52))]
 
 
 def effects(size=1.27, hide=False, justify=None, thickness=None):
@@ -154,13 +129,27 @@ def prop(name, value, at, hide=False, justify=None):
 
 # ------------------------------------------------------------------ schematic
 def lib_symbols() -> list:
+    """Embed the symbols this sheet places, exactly as the library defines them.
+
+    KiCad compares every embedded copy against its library and reports
+    lib_symbol_mismatch on any difference, so each copy is taken verbatim and
+    only the name gains the library nickname.  Symbols the sheet does not
+    place are left out, which is what KiCad itself writes.
+    """
+    used = {part["lib"] for part in PARTS}
+    if POWER:
+        used.add(f"{LIB_NICK}:GND")
+    if PWR_FLAGS:
+        used.add(f"{LIB_NICK}:PWR_FLAG")
     out = [Sym("lib_symbols")]
-    ant = parse((LIB_DIR / f"{LIB_NICK}.kicad_sym").read_text())
-    for child in ant[1:]:
+    lib = parse((LIB_DIR / f"{LIB_NICK}.kicad_sym").read_text())
+    for child in lib[1:]:
         if isinstance(child, list) and child[0] == "symbol":
-            sym = copy.deepcopy(child)
-            sym[1] = f"{LIB_NICK}:{sym[1]}"
-            out.append(sym)
+            lib_id = f"{LIB_NICK}:{child[1]}"
+            if lib_id in used:
+                sym = copy.deepcopy(child)
+                sym[1] = lib_id
+                out.append(sym)
     return out
 
 
@@ -229,7 +218,7 @@ def build_schematic() -> list:
             [Sym("title"), TITLE],
             [Sym("date"), "2026-09-12"],
             [Sym("rev"), "A"],
-            [Sym("comment"), Sym("1"), "50 ohm microstrip feed + pi matching network"],
+            [Sym("comment"), Sym("1"), "Radiator fed straight from the SMA port, no matching network"],
             [Sym("comment"), Sym("2"), "Antenna keep-out: no copper on any layer"]],
            lib_symbols()]
 
@@ -464,7 +453,7 @@ def build_board() -> list:
             [Sym("date"), "2026-09-12"],
             [Sym("rev"), "A"],
             [Sym("comment"), Sym("1"), "2 layer, 0.8 mm FR4, 35 um Cu"],
-            [Sym("comment"), Sym("2"), "50 ohm microstrip w = 1.5 mm"]],
+            [Sym("comment"), Sym("2"), "50 ohm microstrip w = 1.5 mm, no matching network"]],
            layer_nodes,
            [Sym("setup"), stackup(),
             [Sym("pad_to_mask_clearance"), Sym("0")],
@@ -492,14 +481,10 @@ def build_board() -> list:
     pcb.append(gr_text("50R microstrip w=1.5mm / 0.8mm FR4 er=4.4",
                        (BOARD_X0 + 1.0, 89.0), "F.SilkS", size=0.9))
 
-    # 50 ohm feed: SMA -> pi network -> antenna feed pad
+    # 50 ohm feed: straight from the SMA signal pad to the antenna feed pad,
+    # 45 degree corner, necked down over the last mm to meet the 0.5 mm pad
     tracks = [
-        ((101.75, FEED_Y), (112.5, FEED_Y), W50, "RF_IN"),
-        ((112.5, FEED_Y), (113.5, FEED_Y), W_NECK, "RF_IN"),
-        ((113.5, FEED_Y), (117.52, FEED_Y), W_NECK, "RF_IN"),
-        ((118.48, FEED_Y), (120.5, FEED_Y), W_NECK, "ANT_FEED"),
-        ((120.5, FEED_Y), (121.5, FEED_Y), W_NECK, "ANT_FEED"),
-        ((121.5, FEED_Y), (122.5, FEED_Y), W50, "ANT_FEED"),
+        ((101.75, FEED_Y), (122.5, FEED_Y), W50, "ANT_FEED"),
         ((122.5, FEED_Y), (124.0, 73.5), W50, "ANT_FEED"),
         ((124.0, 73.5), (124.0, 67.0), W50, "ANT_FEED"),
         ((124.0, 67.0), (124.0, 66.0), W_NECK, "ANT_FEED"),
@@ -507,13 +492,8 @@ def build_board() -> list:
     for a, b, width, net in tracks:
         pcb.append(segment(a, b, width, net))
 
-    # shunt capacitor ground returns: pad -> via -> bottom plane
-    for x in (113.5, 120.5):
-        pcb.append(segment((x, FEED_Y + 0.99), (x, FEED_Y + 2.0), W_NECK, "GND"))
-
-    # ground stitching
-    stitch = [(101.0, 72.0), (103.0, 72.0), (101.0, 78.0), (103.0, 78.0),
-              (113.5, FEED_Y + 2.0), (120.5, FEED_Y + 2.0)]
+    # ground stitching: connector shell, then a row along the plane edge
+    stitch = [(101.0, 72.0), (103.0, 72.0), (101.0, 78.0), (103.0, 78.0)]
     stitch += [(x, GND_EDGE_Y + 1.0) for x in
                (103, 106, 109, 112, 115, 118, 121, 127.5, 130.5, 133.5, 136.5)]
     for pos in stitch:
@@ -600,8 +580,7 @@ def build_project() -> dict:
             "meta": {"version": 4},
             "net_colors": None,
             "netclass_assignments": None,
-            "netclass_patterns": [{"netclass": "RF_50R", "pattern": "RF_IN"},
-                                  {"netclass": "RF_50R", "pattern": "ANT_FEED"}],
+            "netclass_patterns": [{"netclass": "RF_50R", "pattern": "ANT_FEED"}],
         },
         "pcbnew": {"last_paths": {"gencad": "", "idf": "", "netlist": "",
                                   "plot": "", "pos_files": "", "specctra_dsn": "",

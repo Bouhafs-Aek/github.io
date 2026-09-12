@@ -337,10 +337,7 @@ def check_embedded_symbols():
 
 def main() -> int:
     expected = {
-        ("J1", "1"): "RF_IN", ("J1", "2"): "GND",
-        ("C1", "1"): "RF_IN", ("C1", "2"): "GND",
-        ("L1", "1"): "RF_IN", ("L1", "2"): "ANT_FEED",
-        ("C2", "1"): "ANT_FEED", ("C2", "2"): "GND",
+        ("J1", "1"): "ANT_FEED", ("J1", "2"): "GND",
         ("AE1", "1"): "ANT_FEED", ("AE1", "2"): "GND",
     }
     check_libraries()

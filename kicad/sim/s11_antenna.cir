@@ -1,0 +1,57 @@
+* SWRA117D 2.45 GHz radiator on a 50 ohm SMA port - return loss at the connector
+*
+* Mirrors the board exactly as built (swra117d_2g4_antenna.kicad_sch):
+*   J1 (50 ohm port) -- 32.1 mm of 50 ohm microstrip -- AE1
+* There is no matching network: the antenna is a 50 ohm design and nothing is
+* fitted between the connector and the radiator.
+*
+* T1 is the routed feed line, lossless: 1.5 mm wide microstrip on 0.8 mm FR4
+* gives eps_eff = 3.325, so 32.1 mm is TD = 195 ps (172 degrees at 2.45 GHz).
+* A matched line cannot change |S11|, only its phase - which is exactly why a
+* lumped antenna model is still the right tool for return loss at the SMA.
+* To see the antenna on its own, short T1 out: comment it and uncomment Rjmp.
+*
+* With a 1 V AC source behind 50 ohm, the reflection coefficient at the
+* connector is gamma = 2*v(in) - 1, because v(in) = Zin/(Zin+50).
+*
+* Run:  ngspice -b s11_antenna.cir        (writes s11_results.csv)
+
+.include antenna_swra117d.lib
+
+V1  src 0    dc 0 ac 1
+Rs  src in   50
+T1  in  0 ant 0 Z0=50 TD=195p
+*Rjmp in ant  1u
+XAE1 ant 0   ANT_SWRA117D_2G4
+
+* Optional: the pi network this board does NOT have, for working out what a
+* match would buy you before committing pads to a layout.  Insert between
+* "in" and the antenna, with T1 shorted out.
+*   C1 in  0   0.5p
+*   L1 in  ant 0.8n
+*   C2 ant 0   0.5p
+
+.control
+  ac lin 2001 2.0e9 3.0e9
+  let gamma = 2 * v(in) - 1
+  let s11   = db(gamma)
+  let rho   = mag(gamma)
+  let vswr  = (1 + rho) / (1 - rho)
+  let zin   = 50 * v(in) / (1 - v(in))
+  let rin   = real(zin)
+  let xin   = imag(zin)
+
+  meas ac s11min  MIN s11 from=2.0e9 to=3.0e9
+  meas ac s11_2g4 FIND s11 AT=2.442e9
+  meas ac vswr2g4 FIND vswr AT=2.442e9
+
+  echo "--- return loss at the SMA connector ---"
+  print s11min s11_2g4 vswr2g4
+
+  wrdata s11_results.csv s11 vswr rin xin
+  if $?batchmode = 0
+    plot s11 xlabel "frequency [Hz]" ylabel "S11 [dB]"
+    plot rin xin xlabel "frequency [Hz]" ylabel "Zin at the connector [ohm]"
+  end
+.endc
+.end

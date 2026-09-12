@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""Full-wave (FDTD) model of the SWRA117D 2.45 GHz antenna board for openEMS.
+"""Full-wave (FDTD) model of the SWRA117D 2.45 GHz radiator for openEMS.
 
 The geometry is read out of ``swra117d_2g4_antenna.kicad_pcb`` - board
-outline, stackup, ground plane edge, antenna copper and feed point - so the
-simulation always matches the board that gets fabricated.  Two deliberate
-simplifications keep the model small and the result meaningful:
+outline, stackup, ground plane edge, antenna copper, the routed 50 ohm feed
+and the pour keep-away corridors - so the simulation always matches the board
+that gets fabricated.  The board carries no matching network: the port looks
+straight into the feed line and the radiator, which is what a VNA at the SMA
+connector would see.
 
-  * the feed is a straight 50 ohm microstrip from the board edge to the
-    antenna feed pad (the routed board takes a detour through the matching
-    network; a bent line changes nothing about the antenna itself),
-  * the matching network is not modelled.  Simulate the bare antenna, then
-    match the resulting impedance - with sim/s11_pi_match.cir or on a Smith
-    chart - which is how a matching network is designed in the first place.
+Simplifications: copper is modelled as a zero thickness sheet, the connector
+itself is not in the model (the port launches at the board edge in its place),
+and the SMA ground pads are left to the surrounding pour.
 
 Usage:
     python3 swra117d_openems.py --dry-run        # geometry summary, no solver
@@ -40,6 +39,7 @@ PCB = pathlib.Path(__file__).resolve().parents[2] / "swra117d_2g4_antenna.kicad_
 F0 = 2.45e9      # band centre
 FC = 1.0e9       # gaussian excitation half width -> 1.45 .. 3.45 GHz
 C0 = 299792458.0
+EPS0 = 8.8541878128e-12
 
 
 # --------------------------------------------------------------- board input
@@ -71,8 +71,30 @@ def drop_keyholes(points):
     return pts
 
 
+def order_path(segments, start):
+    """Chain feed line segments into a path that starts at *start*."""
+    remaining = list(segments)
+    path, point = [], start
+    while remaining:
+        for i, (a, b, width) in enumerate(remaining):
+            if math.dist(a, point) < 1e-6:
+                path.append((a, b, width))
+                point = b
+            elif math.dist(b, point) < 1e-6:
+                path.append((b, a, width))
+                point = a
+            else:
+                continue
+            remaining.pop(i)
+            break
+        else:
+            raise SystemExit("the feed line on the board is not one contiguous path")
+    return path
+
+
 def load_board(path: pathlib.Path) -> dict:
     pcb = parse(path.read_text())
+    nets = {int(n[1]): str(n[2]) for n in find_all(pcb, "net")}
 
     edges = [((float(find(g, "start")[1]), float(find(g, "start")[2])),
               (float(find(g, "end")[1]), float(find(g, "end")[2])))
@@ -87,16 +109,26 @@ def load_board(path: pathlib.Path) -> dict:
     substrate = dict(h=float(find(core, "thickness")[1]),
                      er=float(find(core, "epsilon_r")[1]),
                      tand=float(find(core, "loss_tangent")[1]))
-    copper_t = float(find(next(l for l in find_all(stack, "layer") if l[1] == "F.Cu"),
-                          "thickness")[1])
 
     gnd_top = min(float(xy[2])
                   for zone in find_all(pcb, "zone") if not find(zone, "keepout")
                   for xy in find(find(zone, "polygon"), "pts")[1:])
 
+    # rule areas that keep the top pour off the feed line
+    corridors = []
+    for zone in find_all(pcb, "zone"):
+        keepout = find(zone, "keepout")
+        if keepout is None or str(find(keepout, "copperpour")[1]) != "not_allowed":
+            continue
+        pts = [(float(xy[1]), float(xy[2])) for xy in find(find(zone, "polygon"), "pts")[1:]]
+        cx = [p[0] for p in pts]
+        cy = [p[1] for p in pts]
+        if min(cy) < gnd_top:       # the antenna keep-out, already handled
+            continue
+        corridors.append((min(cx), min(cy), max(cx), max(cy)))
+
     antenna = None
     for fp in find_all(pcb, "footprint"):
-        ref = next(p[2] for p in find_all(fp, "property") if p[1] == "Reference")
         poly = find(fp, "fp_poly")
         if poly is None:
             continue
@@ -110,14 +142,22 @@ def load_board(path: pathlib.Path) -> dict:
         feed_pad = next(p for p in find_all(fp, "pad") if str(p[1]) == "1")
         pad_at = find(feed_pad, "at")
         frx, fry = rotate((float(pad_at[1]), float(pad_at[2])), -rot)
-        antenna = dict(ref=ref, points=drop_keyholes(pts),
-                       feed=(origin[0] + frx, origin[1] + fry))
+        antenna = dict(points=drop_keyholes(pts),
+                       feed=(origin[0] + frx, origin[1] + fry),
+                       net=nets[int(find(feed_pad, "net")[1])])
     if antenna is None:
         raise SystemExit("no antenna footprint (one with an fp_poly) found on the board")
 
-    widths = sorted({float(find(s, "width")[1]) for s in find_all(pcb, "segment")})
-    return dict(outline=outline, substrate=substrate, copper_t=copper_t,
-                gnd_top=gnd_top, antenna=antenna, line_w=widths[-1])
+    feed = [((float(find(s, "start")[1]), float(find(s, "start")[2])),
+             (float(find(s, "end")[1]), float(find(s, "end")[2])),
+             float(find(s, "width")[1]))
+            for s in find_all(pcb, "segment")
+            if nets[int(find(s, "net")[1])] == antenna["net"]
+            and str(find(s, "layer")[1]) == "F.Cu"]
+    launch = min((p for seg in feed for p in seg[:2]), key=lambda p: p[0])
+    return dict(outline=outline, substrate=substrate, gnd_top=gnd_top,
+                corridors=corridors, antenna=antenna,
+                feed=order_path(feed, launch), launch=launch)
 
 
 def to_sim(board: dict) -> dict:
@@ -127,25 +167,55 @@ def to_sim(board: dict) -> dict:
     def conv(pt):
         return (pt[0] - x0, y1 - pt[1])
 
+    def conv_rect(rect):
+        ax, ay = conv((rect[0], rect[1]))
+        bx, by = conv((rect[2], rect[3]))
+        return (min(ax, bx), min(ay, by), max(ax, bx), max(ay, by))
+
+    feed = [(conv(a), conv(b), w) for a, b, w in board["feed"]]
+    # the port replaces the connector, so start the line at the board edge
+    (ax, ay), (bx, by), w = feed[0]
+    if abs(ay - by) < 1e-6 and ax < bx:
+        feed[0] = ((0.0, ay), (bx, by), w)
     return dict(width=x1 - x0, height=y1 - y0,
-                substrate=board["substrate"], copper_t=board["copper_t"],
+                substrate=board["substrate"],
                 gnd_height=y1 - board["gnd_top"],
+                corridors=[conv_rect(r) for r in board["corridors"]],
                 antenna=[conv(p) for p in board["antenna"]["points"]],
-                feed=conv(board["antenna"]["feed"]),
-                line_w=board["line_w"])
+                feed_point=conv(board["antenna"]["feed"]), feed=feed)
+
+
+def pour_boxes(rect, corridors):
+    """The pour rectangle cut into boxes that avoid the keep-away corridors."""
+    x0, y0, x1, y1 = rect
+    xs = sorted({x0, x1} | {v for c in corridors for v in (c[0], c[2]) if x0 < v < x1})
+    ys = sorted({y0, y1} | {v for c in corridors for v in (c[1], c[3]) if y0 < v < y1})
+    out = []
+    for i in range(len(xs) - 1):
+        for j in range(len(ys) - 1):
+            cx, cy = (xs[i] + xs[i + 1]) / 2, (ys[j] + ys[j + 1]) / 2
+            if not any(c[0] <= cx <= c[2] and c[1] <= cy <= c[3] for c in corridors):
+                out.append((xs[i], ys[j], xs[i + 1], ys[j + 1]))
+    return out
+
+
+def track_polygon(a, b, width):
+    """A track as a rectangle; the mesher staircases the 45 degree corner."""
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    length = math.hypot(dx, dy)
+    nx, ny = -dy / length * width / 2, dx / length * width / 2
+    return [(a[0] + nx, a[1] + ny), (b[0] + nx, b[1] + ny),
+            (b[0] - nx, b[1] - ny), (a[0] - nx, a[1] - ny)]
 
 
 # ----------------------------------------------------------------- the model
-def build(geo: dict, pour_gap: float, resolution: float, air: float):
+def build(geo: dict, resolution: float, air: float):
     from CSXCAD import ContinuousStructure
     from openEMS import openEMS
 
     h = geo["substrate"]["h"]
     er, tand = geo["substrate"]["er"], geo["substrate"]["tand"]
     w, d = geo["width"], geo["height"]
-    xf, yf = geo["feed"]
-    line_w = geo["line_w"]
-    port_len = max(4.0, 5 * h)
 
     fdtd = openEMS(NrTS=120000, EndCriteria=1e-4)
     fdtd.SetGaussExcite(F0, FC)
@@ -157,35 +227,44 @@ def build(geo: dict, pour_gap: float, resolution: float, air: float):
     mesh.SetDeltaUnit(1e-3)
 
     metal = csx.AddMetal("copper")
-    kappa = 2 * math.pi * F0 * 8.8541878128e-12 * er * tand
-    sub = csx.AddMaterial("FR4", epsilon=er, kappa=kappa)
+    sub = csx.AddMaterial("FR4", epsilon=er,
+                          kappa=2 * math.pi * F0 * EPS0 * er * tand)
     sub.AddBox([0, 0, 0], [w, d, h], priority=0)
 
-    # ground plane, bottom side: full reference plane up to the antenna edge
+    # bottom side: the reference plane, stopping at the antenna keep-out
     metal.AddBox([0, 0, 0], [w, geo["gnd_height"], 0], priority=10)
 
-    # ground pour, top side: kept clear of the feed line
-    keep = line_w / 2 + pour_gap
-    metal.AddBox([0, 0, h], [xf - keep, geo["gnd_height"], h], priority=10)
-    metal.AddBox([xf + keep, 0, h], [w, geo["gnd_height"], h], priority=10)
+    # top side: the same pour, minus the keep-away corridors round the feed
+    for x0, y0, x1, y1 in pour_boxes((0, 0, w, geo["gnd_height"]), geo["corridors"]):
+        metal.AddBox([x0, y0, h], [x1, y1, h], priority=10)
 
-    # 50 ohm feed line: port at the board edge, then a straight run to the pad
+    # the routed 50 ohm feed; the first millimetres are the port
+    (ax, ay), (bx, by), line_w = geo["feed"][0]
+    port_len = max(4.0, 5 * h)
     port = fdtd.AddMSLPort(1, metal,
-                           [xf - line_w / 2, 0, h],
-                           [xf + line_w / 2, port_len, 0],
-                           "y", "z", excite=-1,
+                           [ax, ay - line_w / 2, h],
+                           [ax + port_len, ay + line_w / 2, 0],
+                           "x", "z", excite=-1,
                            FeedShift=10 * resolution,
                            MeasPlaneShift=port_len / 2,
                            priority=15)
-    metal.AddBox([xf - line_w / 2, port_len, h], [xf + line_w / 2, yf, h], priority=15)
+    rest = [((ax + port_len, ay), (bx, by), line_w)] + geo["feed"][1:]
+    for a, b, width in rest:
+        poly = [c for pt in track_polygon(a, b, width) for c in pt]
+        metal.AddPolygon(poly, "z", h, priority=15)
 
     # antenna copper
-    poly = [c for pt in geo["antenna"] for c in pt]
-    metal.AddPolygon(poly, "z", h, priority=15)
+    metal.AddPolygon([c for pt in geo["antenna"] for c in pt], "z", h, priority=15)
 
-    # mesh: thirds rule around every copper edge, coarse in the air box
-    xs = {0.0, w, xf - line_w / 2, xf + line_w / 2, xf - keep, xf + keep}
-    ys = {0.0, d, geo["gnd_height"], yf, port_len}
+    # mesh: thirds rule at every copper edge, coarse out in the air box
+    xs, ys = {0.0, w}, {0.0, d, geo["gnd_height"]}
+    for a, b, width in geo["feed"]:
+        for pt, other in ((a, b), (b, a)):
+            xs |= {pt[0], pt[0] - width / 2, pt[0] + width / 2}
+            ys |= {pt[1], pt[1] - width / 2, pt[1] + width / 2}
+    for x0, y0, x1, y1 in geo["corridors"]:
+        xs |= {x0, x1}
+        ys |= {y0, y1}
     for px, py in geo["antenna"]:
         xs.add(px)
         ys.add(py)
@@ -223,7 +302,7 @@ def report(port, nf2ff, sim_path, freq, plot=False):
         print(f"-10 dB band    : {band.min() / 1e9:.3f} - {band.max() / 1e9:.3f} GHz "
               f"({(band.max() - band.min()) / 1e6:.0f} MHz)")
     else:
-        print("-10 dB band    : none - the antenna needs the matching network")
+        print("-10 dB band    : none - check the plane edge and the keep-out")
 
     theta = np.arange(-180, 180.1, 2.0)
     ff = nf2ff.CalcNF2FF(sim_path, freq[best], theta, [0, 90], center=[0, 0, 0])
@@ -258,8 +337,6 @@ def main() -> None:
     ap.add_argument("--dry-run", action="store_true",
                     help="print the geometry taken from the board and stop")
     ap.add_argument("--plot", action="store_true", help="show S11 and impedance plots")
-    ap.add_argument("--pour-gap", type=float, default=1.0,
-                    help="top pour keep-away either side of the feed line [mm]")
     ap.add_argument("--resolution", type=float, default=0.25,
                     help="mesh resolution on the copper [mm]")
     ap.add_argument("--air", type=float, default=30.0,
@@ -273,8 +350,16 @@ def main() -> None:
           f"{sub['h']} mm FR4 (er {sub['er']}, tan d {sub['tand']})")
     print(f"ground plane   : y = 0 .. {geo['gnd_height']:.2f} mm "
           f"(antenna region {geo['gnd_height']:.2f} .. {geo['height']:.1f} mm is clear)")
-    print(f"feed           : x = {geo['feed'][0]:.2f} mm, y = {geo['feed'][1]:.2f} mm, "
-          f"line width {geo['line_w']} mm")
+    length = sum(math.dist(a, b) for a, b, _w in geo["feed"])
+    print(f"feed line      : {len(geo['feed'])} segments, {length:.1f} mm total, "
+          f"port at x = 0, feed pad at ({geo['feed_point'][0]:.2f}, "
+          f"{geo['feed_point'][1]:.2f}) mm")
+    for a, b, width in geo["feed"]:
+        print(f"                 ({a[0]:6.2f},{a[1]:6.2f}) -> "
+              f"({b[0]:6.2f},{b[1]:6.2f})  w = {width} mm")
+    boxes = pour_boxes((0, 0, geo["width"], geo["gnd_height"]), geo["corridors"])
+    print(f"top pour       : {len(boxes)} boxes around "
+          f"{len(geo['corridors'])} keep-away corridors")
     ax = [p[0] for p in geo["antenna"]]
     ay = [p[1] for p in geo["antenna"]]
     print(f"antenna copper : {len(geo['antenna'])} vertices, "
@@ -283,7 +368,7 @@ def main() -> None:
         return
 
     import numpy as np
-    fdtd, port, nf2ff = build(geo, args.pour_gap, args.resolution, args.air)
+    fdtd, port, nf2ff = build(geo, args.resolution, args.air)
     os.makedirs(args.sim_path, exist_ok=True)
     fdtd.Run(args.sim_path, verbose=3, cleanup=True)
     report(port, nf2ff, args.sim_path, np.linspace(F0 - FC, F0 + FC, 401), args.plot)

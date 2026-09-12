@@ -106,10 +106,6 @@
     "netclass_patterns": [
       {
         "netclass": "RF_50R",
-        "pattern": "RF_IN"
-      },
-      {
-        "netclass": "RF_50R",
         "pattern": "ANT_FEED"
       }
     ]

@@ -5,10 +5,10 @@
 	(uuid "0c52b35a-5623-5f55-988d-762afc65fb88")
 	(paper "A4")
 	(title_block
-		(title "2.45 GHz PCB antenna (TI SWRA117D) - RF test board")
+		(title "2.45 GHz PCB antenna (TI SWRA117D) - radiator on a 50 ohm SMA port")
 		(date "2026-09-12")
 		(rev "A")
-		(comment 1 "50 ohm microstrip feed + pi matching network")
+		(comment 1 "Radiator fed straight from the SMA port, no matching network")
 		(comment 2 "Antenna keep-out: no copper on any layer")
 	)
 	(lib_symbols
@@ -73,122 +73,6 @@
 					(at 2.54 -5.08 90)
 					(length 2.54)
 					(name "GND" (effects (font (size 1.27 1.27))))
-					(number "2" (effects (font (size 1.27 1.27))))
-				)
-			)
-			(embedded_fonts no)
-		)
-		(symbol "SWRA117D_RF:C"
-			(pin_numbers (hide yes))
-			(pin_names (offset 0.254))
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "C" (at 0.635 2.54 0) (effects (font (size 1.27 1.27)) (justify left)))
-			(property "Value" "C" (at 0.635 -2.54 0) (effects (font (size 1.27 1.27)) (justify left)))
-			(property "Footprint" "SWRA117D_RF:Chip_0402_1005Metric_RF"
-				(at 0.9652 -3.81 0)
-				(effects (font (size 1.27 1.27)) (hide yes))
-			)
-			(property "Datasheet" "~" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
-			(property "Description" "Unpolarized capacitor, 0402 RF matching part"
-				(at 0 0 0)
-				(effects (font (size 1.27 1.27)) (hide yes))
-			)
-			(property "ki_keywords" "cap capacitor RF matching"
-				(at 0 0 0)
-				(effects (font (size 1.27 1.27)) (hide yes))
-			)
-			(symbol "C_0_1"
-				(polyline
-					(pts (xy -2.032 -0.762) (xy 2.032 -0.762))
-					(stroke (width 0.508) (type default))
-					(fill (type none))
-				)
-				(polyline
-					(pts (xy -2.032 0.762) (xy 2.032 0.762))
-					(stroke (width 0.508) (type default))
-					(fill (type none))
-				)
-			)
-			(symbol "C_1_1"
-				(pin passive line
-					(at 0 3.81 270)
-					(length 2.794)
-					(name "~" (effects (font (size 1.27 1.27))))
-					(number "1" (effects (font (size 1.27 1.27))))
-				)
-				(pin passive line
-					(at 0 -3.81 90)
-					(length 2.794)
-					(name "~" (effects (font (size 1.27 1.27))))
-					(number "2" (effects (font (size 1.27 1.27))))
-				)
-			)
-			(embedded_fonts no)
-		)
-		(symbol "SWRA117D_RF:L"
-			(pin_numbers (hide yes))
-			(pin_names (offset 1.016) (hide yes))
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "L" (at -1.27 2.54 90) (effects (font (size 1.27 1.27))))
-			(property "Value" "L" (at 1.905 2.54 90) (effects (font (size 1.27 1.27))))
-			(property "Footprint" "SWRA117D_RF:Chip_0402_1005Metric_RF"
-				(at 0 0 0)
-				(effects (font (size 1.27 1.27)) (hide yes))
-			)
-			(property "Datasheet" "~" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
-			(property "Description" "Inductor, 0402 RF matching part"
-				(at 0 0 0)
-				(effects (font (size 1.27 1.27)) (hide yes))
-			)
-			(property "ki_keywords" "inductor choke coil RF matching"
-				(at 0 0 0)
-				(effects (font (size 1.27 1.27)) (hide yes))
-			)
-			(symbol "L_0_1"
-				(arc
-					(start 0 -2.54)
-					(mid 0.6323 -1.905)
-					(end 0 -1.27)
-					(stroke (width 0) (type default))
-					(fill (type none))
-				)
-				(arc
-					(start 0 -1.27)
-					(mid 0.6323 -0.635)
-					(end 0 0)
-					(stroke (width 0) (type default))
-					(fill (type none))
-				)
-				(arc
-					(start 0 0)
-					(mid 0.6323 0.635)
-					(end 0 1.27)
-					(stroke (width 0) (type default))
-					(fill (type none))
-				)
-				(arc
-					(start 0 1.27)
-					(mid 0.6323 1.905)
-					(end 0 2.54)
-					(stroke (width 0) (type default))
-					(fill (type none))
-				)
-			)
-			(symbol "L_1_1"
-				(pin passive line
-					(at 0 3.81 270)
-					(length 1.27)
-					(name "1" (effects (font (size 1.27 1.27))))
-					(number "1" (effects (font (size 1.27 1.27))))
-				)
-				(pin passive line
-					(at 0 -3.81 90)
-					(length 1.27)
-					(name "2" (effects (font (size 1.27 1.27))))
 					(number "2" (effects (font (size 1.27 1.27))))
 				)
 			)
@@ -321,24 +205,9 @@
 		)
 	)
 	(wire
-		(pts (xy 81.28 88.9) (xy 91.44 88.9))
+		(pts (xy 81.28 88.9) (xy 127 88.9))
 		(stroke (width 0) (type default))
-		(uuid "8b143d78-4d17-52bd-ba6c-badc25a0e9d0")
-	)
-	(wire
-		(pts (xy 91.44 88.9) (xy 97.79 88.9))
-		(stroke (width 0) (type default))
-		(uuid "ba740e01-efb7-5153-a3e9-84b7df11ec00")
-	)
-	(wire
-		(pts (xy 105.41 88.9) (xy 111.76 88.9))
-		(stroke (width 0) (type default))
-		(uuid "16ed5bf8-f69c-5eea-834a-44eee9df27a2")
-	)
-	(wire
-		(pts (xy 111.76 88.9) (xy 127 88.9))
-		(stroke (width 0) (type default))
-		(uuid "9ebd5a8e-9cc3-528f-9a25-a2c5160da536")
+		(uuid "89d32f58-3325-5df0-b042-6c95303ae502")
 	)
 	(wire
 		(pts (xy 127 88.9) (xy 127 86.36))
@@ -346,63 +215,32 @@
 		(uuid "f58cd496-04f3-5738-8baf-600fe08c25cc")
 	)
 	(wire
-		(pts (xy 91.44 88.9) (xy 91.44 92.71))
-		(stroke (width 0) (type default))
-		(uuid "8d7562c6-bab9-57ce-add9-44b5cb002e3b")
-	)
-	(wire
-		(pts (xy 91.44 100.33) (xy 91.44 102.87))
-		(stroke (width 0) (type default))
-		(uuid "3bffb5f8-d0df-55c8-aebb-ba895bfb8b7c")
-	)
-	(wire
-		(pts (xy 111.76 88.9) (xy 111.76 92.71))
-		(stroke (width 0) (type default))
-		(uuid "8d3c9b49-65c7-59d8-a7b8-419b83f64e7d")
-	)
-	(wire
-		(pts (xy 111.76 100.33) (xy 111.76 102.87))
-		(stroke (width 0) (type default))
-		(uuid "19bbd072-0ba1-50c5-a9cd-b1108b5b6361")
-	)
-	(wire
 		(pts (xy 76.2 93.98) (xy 76.2 96.52))
 		(stroke (width 0) (type default))
 		(uuid "bfb9d0b0-24e9-5649-8d8a-72ede6f0ce87")
+	)
+	(wire
+		(pts (xy 76.2 96.52) (xy 71.12 96.52))
+		(stroke (width 0) (type default))
+		(uuid "2c8aee4f-ff6b-5133-b020-acfbe5561a95")
 	)
 	(wire
 		(pts (xy 129.54 86.36) (xy 129.54 96.52))
 		(stroke (width 0) (type default))
 		(uuid "4afe2606-26ca-5799-ad36-ba5946ca33d6")
 	)
-	(wire
-		(pts (xy 91.44 102.87) (xy 86.36 102.87))
-		(stroke (width 0) (type default))
-		(uuid "d69bbf4d-6df2-5f8b-b67a-de3ee2968082")
-	)
 	(junction
-		(at 91.44 88.9)
+		(at 76.2 96.52)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "c9e0342b-f9e6-5eec-b5df-78d6e4e25f8f")
-	)
-	(junction
-		(at 111.76 88.9)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "936598f3-6d0e-5c2f-9d34-ccda9a3f6e52")
-	)
-	(label "RF_IN"
-		(at 85.09 88.9 0)
-		(effects (font (size 1.27 1.27)) (justify left bottom))
-		(uuid "54b51706-78ba-5141-93aa-6a5b7f82b906")
+		(uuid "8b803aed-5f68-56a5-a251-7a66e6eef7a7")
 	)
 	(label "ANT_FEED"
-		(at 120.65 88.9 0)
+		(at 95.25 88.9 0)
 		(effects (font (size 1.27 1.27)) (justify left bottom))
 		(uuid "629d9a6f-80c8-58ba-975b-a2ae9d678d9d")
 	)
-	(text "RF test board for the TI SWRA117D 2.45 GHz printed inverted-F antenna.\n\nJ1 feeds a 1.5 mm wide 50 ohm microstrip on 0.8 mm FR4 (er 4.4, tan d 0.02).\nThe antenna is a 50 ohm design, so the board ships unmatched: L1 is a 0 ohm\njumper and C1 / C2 are unpopulated. The pi network is there to retune the\nantenna once it is measured in its real enclosure - fit parts only then.\nAE1 pin 2 must sit on the ground plane edge - see the keep-out on the PCB.\n\nSimulation: sim/s11_pi_match.cir (ngspice, lumped antenna model) and\nsim/openems/swra117d_openems.py (full wave S11, impedance, far field)."
+	(text "Radiator on a 50 ohm port: the TI SWRA117D 2.45 GHz printed inverted-F\nantenna fed straight from J1, with no matching network in the path.\n\nJ1 -> 1.5 mm wide 50 ohm microstrip on 0.8 mm FR4 (er 4.4, tan d 0.02)\n-> AE1 pin 1.  AE1 pin 2 is the inverted-F ground pin and sits on the\nedge of the ground plane; see the keep-out on the PCB.\n\nSimulation: sim/s11_antenna.cir (ngspice, lumped antenna model) and\nsim/openems/swra117d_openems.py (full wave S11, impedance, far field)."
 		(exclude_from_sim no)
 		(at 76.2 112 0)
 		(effects (font (size 1.27 1.27)) (justify left top))
@@ -436,99 +274,6 @@
 		(instances
 			(project "swra117d_2g4_antenna"
 				(path "/0c52b35a-5623-5f55-988d-762afc65fb88" (reference "J1") (unit 1))
-			)
-		)
-	)
-	(symbol
-		(lib_id "SWRA117D_RF:C")
-		(at 91.44 96.52 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp yes)
-		(uuid "fa52dc35-7486-57a7-8d8a-7b62a978346c")
-		(property "Reference" "C1"
-			(at 93.98 95.25 0)
-			(effects (font (size 1.27 1.27)) (justify left))
-		)
-		(property "Value" "0.5pF" (at 93.98 97.79 0) (effects (font (size 1.27 1.27)) (justify left)))
-		(property "Footprint" "SWRA117D_RF:Chip_0402_1005Metric_RF"
-			(at 91.44 96.52 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "Datasheet" "~" (at 91.44 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Description" "Shunt element of the pi matching network (source side)"
-			(at 91.44 96.52 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(pin "1" (uuid "a18a3a1c-c1df-5535-beee-62fd576210b7"))
-		(pin "2" (uuid "d4bf961f-b7af-5b3d-9d56-aa20a895a51a"))
-		(instances
-			(project "swra117d_2g4_antenna"
-				(path "/0c52b35a-5623-5f55-988d-762afc65fb88" (reference "C1") (unit 1))
-			)
-		)
-	)
-	(symbol
-		(lib_id "SWRA117D_RF:L")
-		(at 101.6 88.9 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "156ba1e4-34f9-59d6-a300-d4ed2da972e3")
-		(property "Reference" "L1"
-			(at 101.6 85.09 0)
-			(effects (font (size 1.27 1.27)) (justify left))
-		)
-		(property "Value" "0R" (at 101.6 92.71 0) (effects (font (size 1.27 1.27)) (justify left)))
-		(property "Footprint" "SWRA117D_RF:Chip_0402_1005Metric_RF"
-			(at 101.6 88.9 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "Datasheet" "~" (at 101.6 88.9 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Description" "Series element of the pi matching network; 0 ohm jumper as built"
-			(at 101.6 88.9 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(pin "1" (uuid "c824862f-ba03-5e0a-bec0-6def3b853071"))
-		(pin "2" (uuid "1e770ec6-56ef-5237-9705-e59ee00ba579"))
-		(instances
-			(project "swra117d_2g4_antenna"
-				(path "/0c52b35a-5623-5f55-988d-762afc65fb88" (reference "L1") (unit 1))
-			)
-		)
-	)
-	(symbol
-		(lib_id "SWRA117D_RF:C")
-		(at 111.76 96.52 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp yes)
-		(uuid "7482bd6c-80de-57b2-8d0b-191468c2540f")
-		(property "Reference" "C2"
-			(at 114.3 95.25 0)
-			(effects (font (size 1.27 1.27)) (justify left))
-		)
-		(property "Value" "0.5pF" (at 114.3 97.79 0) (effects (font (size 1.27 1.27)) (justify left)))
-		(property "Footprint" "SWRA117D_RF:Chip_0402_1005Metric_RF"
-			(at 111.76 96.52 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "Datasheet" "~" (at 111.76 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Description" "Shunt element of the pi matching network (antenna side)"
-			(at 111.76 96.52 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(pin "1" (uuid "0aa95cbb-dff0-59d4-822e-b0eb5f3b6fda"))
-		(pin "2" (uuid "2d5ea10f-7fd3-55b0-a454-daeb3bf58071"))
-		(instances
-			(project "swra117d_2g4_antenna"
-				(path "/0c52b35a-5623-5f55-988d-762afc65fb88" (reference "C2") (unit 1))
 			)
 		)
 	)
@@ -605,7 +350,7 @@
 	)
 	(symbol
 		(lib_id "SWRA117D_RF:GND")
-		(at 91.44 102.87 0)
+		(at 129.54 96.52 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -613,60 +358,6 @@
 		(dnp no)
 		(uuid "47a5d709-1ffc-5bfe-b7d1-211e5c258454")
 		(property "Reference" "#PWR02"
-			(at 91.44 109.22 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "Value" "GND" (at 91.44 106.68 0) (effects (font (size 1.27 1.27))))
-		(property "Footprint" "" (at 91.44 102.87 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Datasheet" "" (at 91.44 102.87 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Description" "Ground reference"
-			(at 91.44 102.87 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(pin "1" (uuid "1afbb479-a873-5a0b-81bb-a18272f8bdc7"))
-		(instances
-			(project "swra117d_2g4_antenna"
-				(path "/0c52b35a-5623-5f55-988d-762afc65fb88" (reference "#PWR02") (unit 1))
-			)
-		)
-	)
-	(symbol
-		(lib_id "SWRA117D_RF:GND")
-		(at 111.76 102.87 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "8bbba219-b67a-5b77-b0d9-4deac591f5c0")
-		(property "Reference" "#PWR03"
-			(at 111.76 109.22 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "Value" "GND" (at 111.76 106.68 0) (effects (font (size 1.27 1.27))))
-		(property "Footprint" "" (at 111.76 102.87 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Datasheet" "" (at 111.76 102.87 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Description" "Ground reference"
-			(at 111.76 102.87 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(pin "1" (uuid "fb8d65b2-f39c-55b4-b93c-21a3396a1977"))
-		(instances
-			(project "swra117d_2g4_antenna"
-				(path "/0c52b35a-5623-5f55-988d-762afc65fb88" (reference "#PWR03") (unit 1))
-			)
-		)
-	)
-	(symbol
-		(lib_id "SWRA117D_RF:GND")
-		(at 129.54 96.52 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "51ed4db7-4eb6-5d7b-921c-7849aae8d41b")
-		(property "Reference" "#PWR04"
 			(at 129.54 102.87 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -677,16 +368,16 @@
 			(at 129.54 96.52 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(pin "1" (uuid "a2149932-365d-589c-895a-f98d58c4d962"))
+		(pin "1" (uuid "1afbb479-a873-5a0b-81bb-a18272f8bdc7"))
 		(instances
 			(project "swra117d_2g4_antenna"
-				(path "/0c52b35a-5623-5f55-988d-762afc65fb88" (reference "#PWR04") (unit 1))
+				(path "/0c52b35a-5623-5f55-988d-762afc65fb88" (reference "#PWR02") (unit 1))
 			)
 		)
 	)
 	(symbol
 		(lib_id "SWRA117D_RF:PWR_FLAG")
-		(at 86.36 102.87 0)
+		(at 71.12 96.52 0)
 		(unit 1)
 		(exclude_from_sim yes)
 		(in_bom no)
@@ -694,14 +385,14 @@
 		(dnp no)
 		(uuid "ea271ccd-ea38-5446-95c2-075fef8edaca")
 		(property "Reference" "#FLG01"
-			(at 86.36 109.22 0)
+			(at 71.12 102.87 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(property "Value" "PWR_FLAG" (at 86.36 99.06 0) (effects (font (size 1.27 1.27))))
-		(property "Footprint" "" (at 86.36 102.87 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Datasheet" "" (at 86.36 102.87 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "PWR_FLAG" (at 71.12 92.71 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 71.12 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 71.12 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
 		(property "Description" "ERC power source flag"
-			(at 86.36 102.87 0)
+			(at 71.12 96.52 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(pin "1" (uuid "3979d1f6-1af2-521a-89ec-19d30edd06a6"))
