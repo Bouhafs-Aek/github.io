@@ -23,6 +23,38 @@ with `tools/line_impedance.py`.
 - [ ] **Nothing metal nearby**: battery, display, camera, screws, shield cans,
       hand or wrist position on a wearable.
 
+### What TI actually specifies (DN023 / SWRA228C, quoted)
+
+Sourced rules beat remembered ones. From the 868/915/955 MHz IFA design note,
+which states its implementation explicitly — the same antenna family and the
+same topology as a 2.4 GHz IFA:
+
+- **"The antenna was implemented on a 0.8 mm thick FR-4 substrate."**
+- **"Since there is no ground plane beneath the antenna the PCB thickness is
+  not critical, but if a different thickness is being used it might be
+  necessary to tune the length of the antenna."** Worth internalising: for
+  this topology the substrate is a second-order effect, because the radiator
+  has air on one side and no ground under it. Do not reach for substrate
+  thickness to explain a large frequency error.
+- **"To obtain optimum performance it is important to make an exact copy of
+  the antenna dimensions."** Implement the published geometry. Tune by the
+  element the note nominates, not by redrawing the antenna.
+- **Tuning is one segment, not a global scale.** DN023 tunes the open stub:
+  with its 31 × 45 mm ground plane, that leg is ~9 mm at 868 MHz and ~1 mm at
+  915 MHz. Uniform scaling preserves the feed-tap ratio and so the impedance,
+  but it is a departure from the published copy — prefer the nominated trim
+  where the note gives one.
+- **"Avoid placing components or having a ground plane close (minimum 5 mm) to
+  each side of the antenna."** A hard number for the side clearance.
+- **"The size of the ground plane affects the impedance of the antenna"**, and
+  the radiation pattern with it. The plane is a design input, not a leftover.
+- **"Since the impedance of this antenna is approximately matched to 50 ohm,
+  no external matching components are needed."** And in the same paragraph:
+  the reference design **still includes pads for one series and two shunt
+  components** at the feed, "to compensate for detuning caused by plastic
+  encapsulation and other objects in the vicinity". Both halves are the
+  guidance: fit nothing by default, but leave the sites.
+
 ## 2. Feed
 
 - [ ] **Line impedance computed for the real stackup**, not assumed
