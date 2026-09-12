@@ -215,6 +215,35 @@ example; the board is back on the published geometry. `ANT_ORIGIN` stays at
 margin, and the ground plane edge follows the footprint automatically either
 way.
 
+### The stackup is the open question
+
+The antenna geometry on this board is the published one. **The 0.8 mm FR4
+stackup is not** — it was picked at the start of this project for a convenient
+50 Ω line width, before anyone checked what substrate the application note
+specifies, and a printed antenna's resonance depends on the substrate it was
+designed for. That is the one remaining deviation from a standard
+implementation, and it cannot be settled by simulating harder.
+
+It needs two numbers out of the note: **dielectric thickness and εr** (plus the
+reference ground plane size, if it gives one). With those, the board follows
+automatically — the feed width is synthesised from the stackup rather than
+typed in:
+
+| stackup | 50 Ω line | pour keep-away |
+|---|---|---|
+| 0.8 mm FR4, εr 4.4 | 1.50 mm | 1.00 mm |
+| 1.0 mm FR4, εr 4.4 | 1.85 mm | 1.25 mm |
+| 1.6 mm FR4, εr 4.4 | 3.00 mm | 2.00 mm |
+
+One thing does not follow automatically, and `check_project.py` now says so
+rather than letting it slide: the SMA footprint's signal pad is a fixed
+1.5 mm, so moving to a thicker board fails the build with
+
+```
+FAIL board: the feed line is 3.0 mm wide but the port pad is 1.5 mm -
+     the stackup changed and the connector footprint did not follow
+```
+
 ### Board edge, keep-out edge, and domain edge are three different things
 
 Easy to conflate, and the RFsim plot draws two of them:
@@ -274,7 +303,7 @@ the stackup is in the board file, so the 3D viewer and any EM export see it.
 
 | item | value | why |
 |------|-------|-----|
-| 50 Ω microstrip | **w = 1.5 mm** | Hammerstad gives 50.8 Ω for w/h = 1.875, εr,eff = 3.33 (≈ 50 Ω once 35 µm copper is included) |
+| 50 Ω microstrip | **w = 1.5 mm** | not a chosen number: `gen_project.py` synthesises it from `SUB_H`/`SUB_ER`, so changing the stackup changes the line (1.6 mm FR4 would give 3.00 mm) |
 | feed length | 23.5 mm, board edge to feed pad | λg ≈ 67 mm at 2.45 GHz, so ≈ 126° of line |
 | ground plane | y ≥ 66.25 mm only | its edge is the antenna's ground reference, and `gen_project.py` reads it from the footprint's own keep-out box so a rescaled antenna moves it |
 | antenna keep-out | rule area above that edge, F.Cu **and** B.Cu | no pour, no tracks, no vias under or beside the antenna |

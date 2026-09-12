@@ -23,6 +23,7 @@ import sys
 import uuid
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from line_impedance import synthesise_microstrip  # noqa: E402
 from sexpr import Sym, dumps, find, num, parse  # noqa: E402
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -62,10 +63,14 @@ FEED_X = ANT_ORIGIN[0]      # the feed runs straight down from it to the SMA
 # scaled footprint with tools/scale_footprint.py, then set both lines below.
 ANT_SCALE = 1.0
 ANT_FOOTPRINT = "Texas_SWRA117D_2.4GHz_Left"
-W50 = 1.5                   # 50 ohm microstrip width for 0.8 mm FR4, er = 4.4
 W_NECK = 0.5                # neck into the 0.5 mm antenna feed pad
-POUR_GAP = 1.0              # top pour keep-away either side of the 50 ohm line
 SUB_H, SUB_ER, SUB_TAND = 0.8, 4.4, 0.02
+
+# The feed width is not a chosen number: it is whatever gives 50 ohm on the
+# stackup above, so changing the stackup changes it.  Rounded to 0.05 mm
+# because no fab holds better than that on an outer layer.
+W50 = round(synthesise_microstrip(50.0, SUB_H, SUB_ER, 0.035) / 0.05) * 0.05
+POUR_GAP = round(1.25 * SUB_H, 2)   # top pour keep-away either side of the line
 
 NETS = {"": 0, "GND": 1, "ANT_FEED": 2}
 

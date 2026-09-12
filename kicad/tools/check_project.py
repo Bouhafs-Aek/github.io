@@ -359,6 +359,41 @@ def check_reference_plane():
                      "the PCB editor before running DRC or an RF simulation, or "
                      "tools that look for the reference layer will find it empty")
 
+def check_feed_width():
+    """The port pad and the feed line must be the same width.
+
+    The feed width is derived from the stackup, so changing the stackup moves
+    it - and the connector footprint does not follow automatically.  This is
+    the guard that says so instead of letting a 50 ohm line run into a pad
+    built for a different board.
+    """
+    pcb = parse((PRJ_DIR / f"{PROJECT}.kicad_pcb").read_text())
+    nets = {int(n[1]): str(n[2]) for n in find_all(pcb, "net")}
+    widths = {float(find(s, "width")[1]) for s in find_all(pcb, "segment")
+              if nets[int(find(s, "net")[1])] != "GND"}
+    if not widths:
+        return
+    line = max(widths)
+    port = None
+    for fp in find_all(pcb, "footprint"):
+        if find(fp, "fp_poly") is not None:
+            continue                      # the antenna: its feed pad is the neck, not the port
+        for pad in find_all(fp, "pad"):
+            net = find(pad, "net")
+            layers = [str(x) for x in find(pad, "layers")[1:]]
+            if net and nets[int(net[1])] not in ("", "GND") and "F.Cu" in layers:
+                size = find(pad, "size")
+                port = min(float(size[1]), float(size[2]))
+    if port is None:
+        return
+    if abs(port - line) > 0.2:
+        fail(f"board: the feed line is {line} mm wide but the port pad is {port} mm - "
+             "the stackup changed and the connector footprint did not follow")
+    else:
+        notes.append(f"board: feed line {line} mm matches the {port} mm port pad, "
+                     "and the width is derived from the stackup")
+
+
 def check_pour_islands():
     """Every island of copper pour must contain a stitching via.
 
@@ -547,6 +582,7 @@ def main() -> int:
     check_reference_plane()
     check_launch_and_radiator()
     check_pour_islands()
+    check_feed_width()
     for note in notes:
         print(f"ok   {note}")
     for err in errors:
