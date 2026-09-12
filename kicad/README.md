@@ -1,0 +1,210 @@
+# 2.45 GHz PCB antenna (TI SWRA117D) — KiCad symbol, schematic, board and RF simulation
+
+A complete, self-contained KiCad project built around the TI SWRA117D
+**2.4 GHz printed inverted-F antenna** (left-hand layout), plus two simulation
+flows for the RF side: a lumped **ngspice** match/return-loss testbench and a
+full-wave **openEMS** model that reads its geometry straight out of the board
+file.
+
+```
+kicad/
+├── swra117d_2g4_antenna.kicad_pro   project (net classes, design rules)
+├── swra117d_2g4_antenna.kicad_sch   schematic: SMA → pi match → antenna
+├── swra117d_2g4_antenna.kicad_pcb   2 layer, 40 × 30 mm, 0.8 mm FR4
+├── sym-lib-table / fp-lib-table     point KiCad at the project libraries
+├── library/
+│   ├── SWRA117D_RF.kicad_sym        ← the antenna symbol
+│   └── SWRA117D_RF.pretty/
+│       ├── Texas_SWRA117D_2.4GHz_Left.kicad_mod   antenna (converted)
+│       ├── SMA_EdgeMount_Generic.kicad_mod        50 Ω test port
+│       └── Chip_0402_1005Metric_RF.kicad_mod      matching network land
+├── sim/
+│   ├── antenna_swra117d.lib         lumped antenna model (ngspice subckt)
+│   ├── s11_pi_match.cir             S11 / VSWR / Zin testbench
+│   └── openems/swra117d_openems.py  full-wave S11, impedance, directivity
+└── tools/                           the generators and the static checker
+```
+
+Open `swra117d_2g4_antenna.kicad_pro` in KiCad, then press **B** in the PCB
+editor to fill the ground zones (they are stored unfilled).
+
+## KiCad version
+
+Every file is written in the KiCad 9.x s-expression format
+(`kicad_sym` 20241209, `kicad_sch` 20250114, `kicad_pcb` 20241229). KiCad 10
+reads those directly and rewrites them in its own format the first time you
+save — that is the normal upgrade path and nothing is lost. If you need the
+files to *stay* in KiCad 10's format, open and save once, then commit.
+
+## The antenna symbol
+
+`library/SWRA117D_RF.kicad_sym` holds one symbol,
+`ANT_SWRA117D_2G4_Left`:
+
+| pin | name | type | goes to |
+|-----|------|------|---------|
+| 1 | FEED | passive | 50 Ω feed line |
+| 2 | GND  | passive | ground plane edge, right at the feed |
+
+It is drawn as a dipole-style antenna over a ground bar, carries the TI
+application-note URL as its datasheet, is pre-linked to the antenna footprint
+and filters the footprint chooser to `Texas_SWRA117D*`. It also carries the
+`Sim.*` fields that point KiCad's built-in ngspice at
+`sim/antenna_swra117d.lib`, so the symbol can be simulated in place.
+
+Pin 2 matters: this is an *inverted-F*, not a monopole. The footprint's second
+pad is the ground/short pin and it has to sit on the edge of the ground plane,
+which is what the board below does.
+
+## The footprints
+
+`Texas_SWRA117D_2.4GHz_Left.kicad_mod` is the supplied legacy (KiCad 4/5)
+footprint converted to the modern format by `tools/convert_legacy_footprint.py`
+— `module` → `footprint`, `fp_text reference/value` → `property`, bare `width`
+→ `stroke`, `attr virtual` → `exclude_from_pos_files exclude_from_bom`, the v5
+`connect` pad → `smd`, and a UUID on every item. The 53-vertex antenna
+polygon, the pads and the `Dwgs.User` keep-out box are carried over unchanged.
+
+The SMA and 0402 footprints are generic parts written for this board, not
+copies of the stock KiCad library; check them against your own connector and
+assembly rules before ordering.
+
+## The board
+
+2 layers, 40 × 30 mm, **0.8 mm FR4** (εr 4.4, tan δ 0.02), 35 µm copper —
+the stackup is in the board file, so the 3D viewer and any EM export see it.
+
+| item | value | why |
+|------|-------|-----|
+| 50 Ω microstrip | **w = 1.5 mm** | Hammerstad gives 50.8 Ω for w/h = 1.875, εr,eff = 3.33 (≈ 50 Ω once 35 µm copper is included) |
+| guided wavelength | λg ≈ 67 mm at 2.45 GHz | keeps the whole feed well under λg/4 |
+| ground plane | y ≥ 65.75 mm only | its edge is the antenna's ground reference |
+| antenna keep-out | rule area above that edge, F.Cu **and** B.Cu | no pour, no tracks, no vias under or beside the antenna |
+| top pour keep-away | 1.0 mm either side of the feed | keeps the line a microstrip instead of a narrow-gap coplanar waveguide |
+| matching network | C1 / L1 / C2, 0402 | C1 and C2 are DNP, L1 = 0.8 nH fitted |
+| stitching | 17 vias | connector ground, both shunt caps, and a row along the plane edge |
+
+Signal path: `J1 → C1 shunt → L1 series → C2 shunt → AE1`, nets `RF_IN` and
+`ANT_FEED` on the `RF_50R` net class (1.5 mm, 0.3 mm clearance).
+
+The antenna polygon overlaps the plane edge by 0.25 mm at 28 of its vertices —
+that is the part of both legs that lands on the pads, so the pads' own
+clearance covers it. Nothing else crosses the line.
+
+### Antenna rules this board follows (keep them if you re-use it)
+
+* No copper of any kind — pour, track, via, component — above the plane edge.
+* The antenna sits on the board edge; keep it there, and keep 10 mm or more of
+  clear space in front of it in the enclosure.
+* The ground pin (pad 2) touches the plane; the feed pin does not.
+* Keep batteries, metal shields and displays away from the keep-out region.
+* Tune the match against the *assembled, enclosed* product — plastic, battery
+  and hand loading all pull the resonance down.
+
+## RF simulation
+
+### 1. Lumped match / return loss (ngspice)
+
+`sim/antenna_swra117d.lib` is a behavioural model of the antenna: a series
+R-L-C (50 Ω, 26 nH, 0.1618 pF → 2.454 GHz, Q ≈ 8) with 0.35 pF of feed
+capacitance. `sim/s11_pi_match.cir` puts the pi network in front of it and
+computes Γ = 2·v(in) − 1 directly from a 1 V source behind 50 Ω.
+
+```sh
+cd kicad/sim && ngspice -b s11_pi_match.cir       # writes s11_results.csv
+```
+
+With the default values (C1, C2 unpopulated, L1 = 0.8 nH):
+
+| | |
+|---|---|
+| best match | −31 dB at 2.461 GHz |
+| 2.400 GHz | Zin 39.4 − 13.8j Ω, S11 −14.4 dB, VSWR 1.47 |
+| 2.442 GHz | Zin 44.6 − 3.9j Ω, S11 −23.0 dB, VSWR 1.15 |
+| 2.4835 GHz | Zin 51.4 + 7.7j Ω, S11 −22.2 dB, VSWR 1.17 |
+| −10 dB band | 2.358 – 2.568 GHz (210 MHz) |
+
+Change the match by editing the `.param` line (a DNP part is modelled as
+1 fF). **The antenna model is a plausible fit, not a field solution** — it
+reproduces the shape of an IFA response on a board this size, but the real
+resonance depends on your stackup, enclosure and ground plane. Refit it to
+openEMS or VNA data before trusting it to better than a few dB.
+
+The same model is reachable from the schematic: AE1 carries `Sim.Device`,
+`Sim.Name`, `Sim.Library` and `Sim.Pins`, so KiCad's built-in simulator can
+use it once you add a source to the sheet.
+
+### 2. Full wave (openEMS)
+
+`sim/openems/swra117d_openems.py` builds the FDTD model from the board file —
+outline, stackup, ground plane edge, the antenna polygon and the feed point
+all come out of `swra117d_2g4_antenna.kicad_pcb`, so the model cannot drift
+away from the layout. The KiCad keyhole slits (the clearance ring around the
+ground pin) are collapsed, since they are far below the mesh size.
+
+```sh
+python3 sim/openems/swra117d_openems.py --dry-run   # geometry only, no solver
+python3 sim/openems/swra117d_openems.py --plot      # FDTD run + plots
+```
+
+`--dry-run` needs nothing but Python and reports what it read:
+
+```
+board          : 40.0 x 30.0 mm, 0.8 mm FR4 (er 4.4, tan d 0.02)
+ground plane   : y = 0 .. 24.25 mm (antenna region 24.25 .. 30.0 mm is clear)
+feed           : x = 24.00 mm, y = 24.00 mm, line width 1.5 mm
+antenna copper : 29 vertices, x 12.15..26.55 mm, y 23.75..29.15 mm
+```
+
+A real run needs openEMS with its Python bindings
+(<https://docs.openems.de/python/install.html>) and prints S11, the −10 dB
+band, the input impedance at the band edges and the peak directivity, and
+writes `s11_openems.csv`.
+
+Two deliberate simplifications: the feed is a straight 50 Ω line from the
+board edge to the feed pad (the routed board detours through the matching
+network, which does not change the antenna), and the matching network is not
+in the model. Simulate the bare antenna, then design the match from the
+impedance you get — `s11_pi_match.cir` is where that match gets checked.
+
+For other solvers, export from KiCad as usual: Gerbers or DXF for 2.5D tools
+(Sonnet, ADS Momentum), STEP for 3D (HFSS, CST).
+
+## Regenerating and checking the files
+
+```sh
+python3 tools/gen_project.py      # rebuild .kicad_sch / .kicad_pcb / .kicad_pro
+python3 tools/check_project.py    # static netlist + clearance + keep-out checks
+```
+
+`gen_project.py` embeds the symbol and the footprints into the schematic and
+the board, so all three files agree on pins, pads and nets by construction.
+It is a one-shot generator: **once you edit anything in KiCad, KiCad owns the
+files** — re-running it would overwrite your work.
+
+`check_project.py` is the safety net used while writing these files. It
+extracts the schematic netlist from the wire geometry, rebuilds the board pad
+positions (rotations included) and verifies that
+
+* every symbol pin lands on a wire and every net matches the intended one,
+* every board pad carries the net the schematic gives it,
+* every track ends on a pad, a via or another track,
+* copper of different nets keeps ≥ 0.15 mm apart,
+* nothing but the antenna lives above the ground plane edge.
+
+```
+ok   library: 1 symbol, 3 footprints parse cleanly
+ok   schematic: 14 pins placed, 11 wires, netlist matches the intended one
+ok   board: 13 pads, 11 tracks, 17 vias, clearances >= 0.15 mm, keep-out clean
+ok   board: 28 antenna polygon vertices overlap the plane edge, all of them inside the antenna's own pads
+0 problem(s)
+```
+
+That is a structural check, not a substitute for KiCad: **run ERC and DRC, and
+fill the zones, after opening the project.** These files were generated and
+verified with the scripts above, not by a KiCad installation.
+
+## Reference
+
+TI application note SWRA117D, *2.4 GHz Inverted F Antenna*:
+<https://www.ti.com/lit/an/swra117d/swra117d.pdf>

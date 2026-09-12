@@ -1,0 +1,24 @@
+* ---------------------------------------------------------------------------
+* Lumped equivalent circuit of the TI SWRA117D 2.45 GHz printed inverted-F
+* antenna (left-hand layout), as fitted on 0.8 mm FR4 with the ground plane
+* edge at the antenna feed line.
+*
+*   node 1 = feed (pad 1)      node 2 = ground (pad 2 / ground plane)
+*
+*   Cfeed : feed/ground-plane capacitance of the short arm
+*   Rrad  : radiation + loss resistance at resonance
+*   Lant  : equivalent series inductance of the radiating arm
+*   Cant  : equivalent series capacitance of the radiating arm
+*
+* Lant/Cant set the series resonance to 2.454 GHz with a loaded Q of about 8
+* (-10 dB bandwidth ~ 300 MHz), which is representative for this antenna on a
+* board of this size.  It is a behavioural fit, NOT a field solution: replace
+* the values with a fit to your own openEMS/VNA data before trusting a match
+* to better than a few dB.  See ../README.md.
+* ---------------------------------------------------------------------------
+.subckt ANT_SWRA117D_2G4 1 2
+Cfeed 1  2  0.35p
+Rrad  1  n1 50
+Lant  n1 n2 26n
+Cant  n2 2  0.1618p
+.ends ANT_SWRA117D_2G4

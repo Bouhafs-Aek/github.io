@@ -1,0 +1,9 @@
+# simulation output
+sim/s11_results.csv
+sim/openems/s11_openems.csv
+sim/openems/*.vtr
+sim/openems/*.h5
+# KiCad session / backup files
+*.kicad_prl
+*-backups/
+fp-info-cache

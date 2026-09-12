@@ -1,0 +1,4 @@
+(fp_lib_table
+	(version 7)
+	(lib (name "SWRA117D_RF")(type "KiCad")(uri "${KIPRJMOD}/library/SWRA117D_RF.pretty")(options "")(descr "Antenna, edge launch SMA and 0402 RF footprints for this project"))
+)
