@@ -72,6 +72,29 @@ Every one of these has produced a confidently wrong answer in practice.
       shorted to ground by design. A circuit-level extractor sees only that
       short and reports VSWR → ∞.
 
+## 4b. Read the solver's settings back out of its own output
+
+Dialog boxes lie by omission — a preset you forgot to change looks identical
+to one you set deliberately. Every solver hands you the settings back in its
+results if you know where to look, and checking takes seconds:
+
+- [ ] **Field-plot caption.** A cut described as the *substrate mid-plane* at
+      z = 0.80 mm is the mid-plane of a **1.6 mm** board; a 0.8 mm board would
+      say 0.40 mm. Halve the number and compare it to your stackup.
+- [ ] **Field-plot extent.** The coloured region ends at the domain boundary.
+      Measure it against the board outline on the axes: if the field stops a
+      few mm past the copper, the margin is a few mm, whatever you meant to
+      set. Bright field sitting *on* that boundary means the absorber is
+      inside the near field and the result is not trustworthy.
+- [ ] **Port width the tool proposes.** A solver that offers a 50 Ω width is
+      telling you which stackup it believes. Compare with your own
+      calculation — 3.11 mm means 1.6 mm FR4, 1.49 mm means 0.8 mm.
+- [ ] **Layer list / copper shown in the geometry preview.** If the pours are
+      missing from the picture, they are missing from the model.
+- [ ] **Sanity of the result itself.** εr,eff below 1, a quarter-wave arm that
+      beats the speed of light, or VSWR → ∞ across an entire sweep are setup
+      faults, not antenna behaviour.
+
 ## 5. Tuning and validation
 
 - [ ] **Tune on the assembled, enclosed product**, not the bare board.
