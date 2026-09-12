@@ -44,15 +44,41 @@ ROOT_UUID = U("sheet", "root")
 BOARD_X0, BOARD_Y0, BOARD_X1 = 100.0, 60.0, 140.0
 BOARD_H = 30.0              # board height; the ground plane is the antenna's
 BOARD_Y1 = BOARD_Y0 + BOARD_H            # counterpoise, so shrinking this to
-GND_EDGE_Y = 65.75          # shorten the feed costs antenna performance
-ANT_ORIGIN = (124.0, 66.0)  # antenna feed pad on the board
+ANT_ORIGIN = (124.0, 66.5)  # antenna feed pad on the board
 FEED_X = ANT_ORIGIN[0]      # the feed runs straight down from it to the SMA
+
+# The antenna as published resonated at 2.83 GHz in RFsim on this 0.8 mm FR4
+# board, 15% high.  Uniform in-plane scaling is the retune whose physics needs
+# no model of the meander: scale every dimension and gap by k and the
+# resonance moves as 1/k.  ANT_FOOTPRINT is the scaled copy produced by
+# tools/scale_footprint.py; re-simulate, take the new ratio, rescale.
+ANT_SCALE = 1.155           # 2.83 / 2.45
+ANT_FOOTPRINT = "SWRA117D_2G4_Left_retuned"
 W50 = 1.5                   # 50 ohm microstrip width for 0.8 mm FR4, er = 4.4
 W_NECK = 0.5                # neck into the 0.5 mm antenna feed pad
 POUR_GAP = 1.0              # top pour keep-away either side of the 50 ohm line
 SUB_H, SUB_ER, SUB_TAND = 0.8, 4.4, 0.02
 
 NETS = {"": 0, "GND": 1, "ANT_FEED": 2}
+
+
+def plane_edge() -> float:
+    """Top edge of the ground plane, taken from the antenna's keep-out box.
+
+    The footprint draws its required clear area on Dwgs.User; the bottom of
+    that box is where the ground plane may start.  Reading it here means a
+    rescaled antenna moves the plane edge with it instead of silently
+    overlapping copper the antenna needs kept clear.
+    """
+    fp = parse((FP_DIR / f"{ANT_FOOTPRINT}.kicad_mod").read_text())
+    ys = [float(node[i][2])
+          for node in fp if isinstance(node, list) and node[0] == "fp_line"
+          and str(find(node, "layer")[1]) == "Dwgs.User"
+          for i in (1, 2)]
+    return ANT_ORIGIN[1] + max(ys)
+
+
+GND_EDGE_Y = plane_edge()
 
 TITLE = "2.45 GHz PCB antenna (TI SWRA117D) - radiator on a 50 ohm SMA port"
 
@@ -65,12 +91,13 @@ PARTS = [
          ref_at=(76.2, 81.28), val_at=(76.2, 83.82),
          desc="Coaxial connector, 50 ohm test port"),
     dict(ref="AE1", lib=f"{LIB_NICK}:ANT_SWRA117D_2G4_Left",
-         value="ANT_SWRA117D_2G4_Left", fp="Texas_SWRA117D_2.4GHz_Left",
-         sch=(127.0, 81.28, 0), pcb=(ANT_ORIGIN[0], ANT_ORIGIN[1], 0),
+         value="ANT_SWRA117D_2G4_Left", fp=ANT_FOOTPRINT,
+         sch=(127.0, 81.28, 0), pcb=ANT_ORIGIN + (0,),
          nets={"1": "ANT_FEED", "2": "GND"},
          ref_at=(132.08, 77.47), val_at=(132.08, 80.01),
          fp_ref_at=(-6.0, 1.6), in_bom=False,
-         desc="2.45 GHz printed inverted-F antenna (TI SWRA117D, left layout)",
+         desc=f"2.45 GHz printed inverted-F antenna (TI SWRA117D, left layout, "
+              f"geometry scaled x{ANT_SCALE:g})",
          extra_props=[
              ("Sim.Device", "SUBCKT"),
              ("Sim.Name", "ANT_SWRA117D_2G4"),

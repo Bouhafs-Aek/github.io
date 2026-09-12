@@ -1,12 +1,12 @@
 * SWRA117D 2.45 GHz radiator on a 50 ohm SMA port - return loss at the connector
 *
 * Mirrors the board exactly as built (swra117d_2g4_antenna.kicad_sch):
-*   J1 (50 ohm port) -- 24.0 mm of 50 ohm microstrip -- AE1
+*   J1 (50 ohm port) -- 23.5 mm of 50 ohm microstrip -- AE1
 * There is no matching network: the antenna is a 50 ohm design and nothing is
 * fitted between the connector and the radiator.
 *
 * T1 is the routed feed line, lossless: 1.5 mm wide microstrip on 0.8 mm FR4
-* gives eps_eff = 3.325, so 24.0 mm is TD = 146 ps (129 degrees at 2.45 GHz).
+* gives eps_eff = 3.325, so 23.5 mm is TD = 143 ps (126 degrees at 2.45 GHz).
 * A matched line cannot change |S11|, only its phase - which is exactly why a
 * lumped antenna model is still the right tool for return loss at the SMA.
 * To see the antenna on its own, short T1 out: comment it and uncomment Rjmp.
@@ -16,11 +16,18 @@
 *
 * Run:  ngspice -b s11_antenna.cir        (writes s11_results.csv)
 
+* NOTE: antenna_swra117d.lib is the antenna this board is meant to have - a
+* 2.454 GHz resonator.  It is design intent, not a prediction of the etched
+* geometry: RFsim put the published footprint at 2.83 GHz on this stackup,
+* which is why the board now carries a x1.155 scaled radiator.  Use RFsim or
+* openEMS to find where the copper actually resonates, and this deck to work
+* out what to do about the impedance once you know.
+
 .include antenna_swra117d.lib
 
 V1  src 0    dc 0 ac 1
 Rs  src in   50
-T1  in  0 ant 0 Z0=50 TD=146p
+T1  in  0 ant 0 Z0=50 TD=143p
 *Rjmp in ant  1u
 XAE1 ant 0   ANT_SWRA117D_2G4
 

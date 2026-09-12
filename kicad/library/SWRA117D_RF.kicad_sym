@@ -23,7 +23,7 @@
 				(justify left bottom)
 			)
 		)
-		(property "Footprint" "SWRA117D_RF:Texas_SWRA117D_2.4GHz_Left"
+		(property "Footprint" "SWRA117D_RF:SWRA117D_2G4_Left_retuned"
 			(at 0 -7.62 0)
 			(effects
 				(font (size 1.27 1.27))
@@ -51,7 +51,7 @@
 				(hide yes)
 			)
 		)
-		(property "ki_fp_filters" "Texas_SWRA117D*"
+		(property "ki_fp_filters" "*SWRA117D*"
 			(at 0 0 0)
 			(effects
 				(font (size 1.27 1.27))
