@@ -22,7 +22,7 @@ kicad/
 │   ├── antenna_swra117d.lib         lumped antenna model (ngspice subckt)
 │   ├── s11_antenna.cir              S11 / VSWR / Zin at the connector
 │   └── openems/swra117d_openems.py  full-wave S11, impedance, directivity
-└── tools/                           the generators and the static checker
+└── tools/                           generators, static checker, line calculator
 ```
 
 Open `swra117d_2g4_antenna.kicad_pro` in KiCad, then press **B** in the PCB
@@ -224,6 +224,38 @@ writes `s11_openems.csv`. Copper is a zero-thickness sheet, the connector body
 is not modelled (the port launches at the board edge in its place), and the
 SMA ground pads are left to the surrounding pour.
 
+### 3. In-KiCad RFsim plugin — port setup
+
+RFsim reads the board directly, so two things need saying before it will model
+the launch correctly.
+
+**Fill the zones first.** The copper pours are stored unfilled (KiCad computes
+fills on **B**), so a fresh checkout has no B.Cu copper anywhere and RFsim
+reports *"no copper on reference layer B.Cu"* for Port 1. That is the missing
+fill, not a missing plane: the B.Cu ground pour outline covers the whole feed
+line, which `tools/check_project.py` verifies.
+
+**Set Port 1 to "Coplanar (CPW)".** RFsim also reports coplanar copper 0.8 mm
+from the feed line, and it is right — that is the end-launch footprint doing
+its job. `SMA_EdgeMount_Generic` puts a 1.5 mm signal pad between two ground
+pads 0.8 mm either side, with the plane underneath: a grounded coplanar
+waveguide, not a microstrip. A Lumped or Microstrip port looks for its return
+directly beneath the signal only, so it mis-models the launch.
+
+The two geometries are deliberately the same impedance, which
+`tools/line_impedance.py` computes from the stackup in the board file:
+
+| | | |
+|---|---|---|
+| feed line, microstrip, 1.5 mm | **49.7 Ω** | εr,eff 3.33, λg 67.0 mm |
+| SMA launch, CPWG, 1.5 mm / 0.8 mm gap | **48.8 Ω** | εr,eff 3.19, λg 68.5 mm |
+| 50 Ω microstrip width for this stackup | 1.49 mm | Hammerstad + Wheeler thickness |
+
+So the launch is not a discontinuity — the CPW section is only as long as the
+connector pads (3.5 mm), and the coplanar ground stops there: the pour is held
+1.0 mm off the line by the `RF_POUR_KEEPAWAY_*` rule areas, so everything past
+the connector is a true microstrip over the bottom plane.
+
 For other solvers, export from KiCad as usual: Gerbers or DXF for 2.5D tools
 (Sonnet, ADS Momentum), STEP for 3D (HFSS, CST).
 
@@ -232,6 +264,7 @@ For other solvers, export from KiCad as usual: Gerbers or DXF for 2.5D tools
 ```sh
 python3 tools/gen_project.py      # rebuild .kicad_sch / .kicad_pcb / .kicad_pro
 python3 tools/check_project.py    # static netlist + clearance + keep-out checks
+python3 tools/line_impedance.py   # microstrip and CPWG impedance for the stackup
 ```
 
 `gen_project.py` embeds the symbol and the footprints into the schematic and
@@ -249,7 +282,9 @@ positions (rotations included) and verifies that
 * every board pad carries the net the schematic gives it,
 * every track ends on a pad, a via or another track,
 * copper of different nets keeps ≥ 0.15 mm apart,
-* nothing but the antenna lives above the ground plane edge.
+* nothing but the antenna lives above the ground plane edge,
+* every end of the feed line sits over the B.Cu ground pour, so the microstrip
+  has a return path — and it says so when the zones are still unfilled.
 
 ```
 ok   library: 6 symbols, 3 footprints parse cleanly
@@ -257,6 +292,8 @@ ok   schematic: 4 embedded symbols all match library/SWRA117D_RF.kicad_sym (no l
 ok   schematic: 7 pins placed, 5 wires, netlist matches the intended one
 ok   board: 7 pads, 4 tracks, 15 vias, clearances >= 0.15 mm, keep-out clean
 ok   board: 28 antenna polygon vertices overlap the plane edge, all of them inside the antenna's own pads
+ok   board: all 8 feed line ends sit over the B.Cu ground pour (reference plane present)
+ok   board: 2 copper zones carry no fill yet - press B in the PCB editor before running DRC or an RF simulation, or tools that look for the reference layer will find it empty
 0 problem(s)
 ```
 

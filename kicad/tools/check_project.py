@@ -294,6 +294,59 @@ def check_board(expected_nets):
                  "all of them inside the antenna's own pads")
 
 
+def point_in_polygon(pt, polygon) -> bool:
+    x, y = pt
+    inside = False
+    for i in range(len(polygon)):
+        (x0, y0), (x1, y1) = polygon[i - 1], polygon[i]
+        if (y0 > y) != (y1 > y) and x < x0 + (y - y0) / (y1 - y0) * (x1 - x0):
+            inside = not inside
+    return inside
+
+
+def check_reference_plane():
+    """A microstrip needs its plane: every bit of the feed line, and the port
+    pad the RF simulator launches from, must sit over a ground pour on the
+    opposite layer.  The pour is stored unfilled - KiCad fills it on B - so
+    this checks the zone outline, which is what the design actually promises."""
+    pcb = parse((PRJ_DIR / f"{PROJECT}.kicad_pcb").read_text())
+    nets = {int(n[1]): str(n[2]) for n in find_all(pcb, "net")}
+    planes, unfilled = [], 0
+    for zone in find_all(pcb, "zone"):
+        if find(zone, "keepout"):
+            continue
+        layers = find(zone, "layer") or find(zone, "layers")
+        names = [str(x) for x in layers[1:]]
+        polygon = [(float(xy[1]), float(xy[2]))
+                   for xy in find(find(zone, "polygon"), "pts")[1:]]
+        if not find(zone, "filled_polygon"):
+            unfilled += 1
+        if nets[int(find(zone, "net")[1])] == "GND":
+            planes.append((names, polygon))
+
+    feed_points = []
+    for seg in find_all(pcb, "segment"):
+        if str(find(seg, "layer")[1]) != "F.Cu":
+            continue
+        net = nets[int(find(seg, "net")[1])]
+        if net == "GND":
+            continue
+        for end in ("start", "end"):
+            node = find(seg, end)
+            feed_points.append((net, (float(node[1]), float(node[2]))))
+    for net, pt in feed_points:
+        over_plane = any("B.Cu" in names and point_in_polygon(pt, polygon)
+                         for names, polygon in planes)
+        if not over_plane:
+            fail(f"board: the {net} line reaches {q(pt)}, which has no B.Cu ground "
+                 "pour over it - a microstrip there has no return path")
+    notes.append(f"board: all {len(feed_points)} feed line ends sit over the B.Cu "
+                 "ground pour (reference plane present)")
+    if unfilled:
+        notes.append(f"board: {unfilled} copper zones carry no fill yet - press B in "
+                     "the PCB editor before running DRC or an RF simulation, or "
+                     "tools that look for the reference layer will find it empty")
+
 def library_symbols():
     lib = parse((PRJ_DIR / "library" / "SWRA117D_RF.kicad_sym").read_text())
     return {str(s[1]): s for s in find_all(lib, "symbol")}
@@ -344,6 +397,7 @@ def main() -> int:
     check_embedded_symbols()
     check_schematic(expected)
     check_board(expected)
+    check_reference_plane()
     for note in notes:
         print(f"ok   {note}")
     for err in errors:
