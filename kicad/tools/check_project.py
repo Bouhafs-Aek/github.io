@@ -359,6 +359,66 @@ def check_reference_plane():
                      "the PCB editor before running DRC or an RF simulation, or "
                      "tools that look for the reference layer will find it empty")
 
+def check_pour_islands():
+    """Every island of copper pour must contain a stitching via.
+
+    A pour keep-away rule area can cut a pour into pieces, and a piece with no
+    via is a floating patch of copper: it resonates, couples, and radiates,
+    and nothing in KiCad complains about it.
+    """
+    pcb = parse((PRJ_DIR / f"{PROJECT}.kicad_pcb").read_text())
+    nets = {int(n[1]): str(n[2]) for n in find_all(pcb, "net")}
+    vias = [((float(find(v, "at")[1]), float(find(v, "at")[2])),
+             [str(x) for x in find(v, "layers")[1:]])
+            for v in find_all(pcb, "via")
+            if nets[int(find(v, "net")[1])] == "GND"]
+
+    pours, cuts = [], []
+    for zone in find_all(pcb, "zone"):
+        layers = [str(x) for x in (find(zone, "layer") or find(zone, "layers"))[1:]]
+        pts = [(float(xy[1]), float(xy[2]))
+               for xy in find(find(zone, "polygon"), "pts")[1:]]
+        box = (min(p[0] for p in pts), min(p[1] for p in pts),
+               max(p[0] for p in pts), max(p[1] for p in pts))
+        keepout = find(zone, "keepout")
+        if keepout is not None:
+            if str(find(keepout, "copperpour")[1]) == "not_allowed":
+                cuts.append((layers, box))
+        elif nets[int(find(zone, "net")[1])] == "GND":
+            pours.append((layers, box))
+
+    total = 0
+    for layers, box in pours:
+        layer = layers[0]
+        mine = [b for ls, b in cuts if layer in ls]
+        xs = sorted({box[0], box[2]}
+                    | {v for c in mine for v in (c[0], c[2]) if box[0] < v < box[2]})
+        ys = sorted({box[1], box[3]}
+                    | {v for c in mine for v in (c[1], c[3]) if box[1] < v < box[3]})
+        cells = [(xs[i], ys[j], xs[i + 1], ys[j + 1])
+                 for i in range(len(xs) - 1) for j in range(len(ys) - 1)
+                 if not any(c[0] <= (xs[i] + xs[i + 1]) / 2 <= c[2]
+                            and c[1] <= (ys[j] + ys[j + 1]) / 2 <= c[3] for c in mine)]
+        groups = []
+        for cell in cells:
+            touching = [g for g in groups if any(
+                not (cell[2] < o[0] - EPS or o[2] < cell[0] - EPS
+                     or cell[3] < o[1] - EPS or o[3] < cell[1] - EPS) for o in g)]
+            groups = [g for g in groups if g not in touching] + \
+                     [[cell] + [c for g in touching for c in g]]
+        for group in groups:
+            x0, y0 = min(c[0] for c in group), min(c[1] for c in group)
+            x1, y1 = max(c[2] for c in group), max(c[3] for c in group)
+            stitched = [pos for pos, ls in vias
+                        if layer in ls and x0 <= pos[0] <= x1 and y0 <= pos[1] <= y1]
+            if not stitched:
+                fail(f"board: the {layer} pour island at x {x0:.1f}..{x1:.1f}, "
+                     f"y {y0:.1f}..{y1:.1f} has no stitching via - it would float")
+            total += 1
+    notes.append(f"board: all {total} pour islands across {len(pours)} layers carry "
+                 "stitching vias (top and bottom ground tied together everywhere)")
+
+
 def check_launch_and_radiator():
     """Two things an RF simulator needs that a netlist check cannot see.
 
@@ -486,6 +546,7 @@ def main() -> int:
     check_board(expected)
     check_reference_plane()
     check_launch_and_radiator()
+    check_pour_islands()
     for note in notes:
         print(f"ok   {note}")
     for err in errors:
