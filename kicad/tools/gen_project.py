@@ -41,10 +41,12 @@ def U(*parts: str) -> str:
 ROOT_UUID = U("sheet", "root")
 
 # ---------------------------------------------------------------- board data
-BOARD_X0, BOARD_Y0, BOARD_X1, BOARD_Y1 = 100.0, 60.0, 140.0, 90.0
-GND_EDGE_Y = 65.75          # top edge of the ground plane = bottom of the antenna
-FEED_Y = 75.0               # y of the 50 ohm feed line
+BOARD_X0, BOARD_Y0, BOARD_X1 = 100.0, 60.0, 140.0
+BOARD_H = 30.0              # board height; the ground plane is the antenna's
+BOARD_Y1 = BOARD_Y0 + BOARD_H            # counterpoise, so shrinking this to
+GND_EDGE_Y = 65.75          # shorten the feed costs antenna performance
 ANT_ORIGIN = (124.0, 66.0)  # antenna feed pad on the board
+FEED_X = ANT_ORIGIN[0]      # the feed runs straight down from it to the SMA
 W50 = 1.5                   # 50 ohm microstrip width for 0.8 mm FR4, er = 4.4
 W_NECK = 0.5                # neck into the 0.5 mm antenna feed pad
 POUR_GAP = 1.0              # top pour keep-away either side of the 50 ohm line
@@ -57,7 +59,8 @@ TITLE = "2.45 GHz PCB antenna (TI SWRA117D) - radiator on a 50 ohm SMA port"
 # reference, library id, value, footprint, schematic placement, board placement
 PARTS = [
     dict(ref="J1", lib=f"{LIB_NICK}:Conn_Coaxial_SMA", value="SMA edge launch",
-         fp="SMA_EdgeMount_Generic", sch=(76.2, 88.9, 0), pcb=(100.0, FEED_Y, 0),
+         fp="SMA_EdgeMount_Generic", sch=(76.2, 88.9, 0),
+         pcb=(FEED_X, BOARD_Y1, 90),
          nets={"1": "ANT_FEED", "2": "GND"},
          ref_at=(76.2, 81.28), val_at=(76.2, 83.82),
          desc="Coaxial connector, 50 ohm test port"),
@@ -477,23 +480,25 @@ def build_board() -> list:
                        (BOARD_X0 + 0.8, GND_EDGE_Y - 0.8), "Cmts.User", size=0.9))
     pcb.append(gr_text("ANTENNA KEEP-OUT", (BOARD_X0 + 0.8, 63.2), "F.SilkS", size=1.0))
     pcb.append(gr_text("SWRA117D 2.45 GHz IFA - RF test board",
-                       (BOARD_X0 + 1.0, 87.5), "F.SilkS", size=1.2))
+                       (BOARD_X0 + 1.0, BOARD_Y1 - 7.0), "F.SilkS", size=1.2))
     pcb.append(gr_text("50R microstrip w=1.5mm / 0.8mm FR4 er=4.4",
-                       (BOARD_X0 + 1.0, 89.0), "F.SilkS", size=0.9))
+                       (BOARD_X0 + 1.0, BOARD_Y1 - 5.6), "F.SilkS", size=0.9))
 
-    # 50 ohm feed: straight from the SMA signal pad to the antenna feed pad,
-    # 45 degree corner, necked down over the last mm to meet the 0.5 mm pad
+    # 50 ohm feed: the SMA sits on the bottom edge directly below the antenna
+    # feed pad and faces it, so the line is one straight run with no corner.
+    # The last millimetre necks down to meet the 0.5 mm feed pad.
+    launch_y = BOARD_Y1 - 1.75          # SMA signal pad centre
     tracks = [
-        ((101.75, FEED_Y), (122.5, FEED_Y), W50, "ANT_FEED"),
-        ((122.5, FEED_Y), (124.0, 73.5), W50, "ANT_FEED"),
-        ((124.0, 73.5), (124.0, 67.0), W50, "ANT_FEED"),
-        ((124.0, 67.0), (124.0, 66.0), W_NECK, "ANT_FEED"),
+        ((FEED_X, launch_y), (FEED_X, ANT_ORIGIN[1] + 1.0), W50, "ANT_FEED"),
+        ((FEED_X, ANT_ORIGIN[1] + 1.0), (FEED_X, ANT_ORIGIN[1]), W_NECK, "ANT_FEED"),
     ]
     for a, b, width, net in tracks:
         pcb.append(segment(a, b, width, net))
 
-    # ground stitching: connector shell, then a row along the plane edge
-    stitch = [(101.0, 72.0), (103.0, 72.0), (101.0, 78.0), (103.0, 78.0)]
+    # ground stitching: the connector shell first, inside its own pads, so the
+    # coplanar ground at the launch is tied to the bottom plane right there
+    stitch = [(FEED_X + dx, launch_y + dy)
+              for dx in (-3.6, -2.3, 2.3, 3.6) for dy in (-0.8, 0.8)]
     stitch += [(x, GND_EDGE_Y + 1.0) for x in
                (103, 106, 109, 112, 115, 118, 121, 127.5, 130.5, 133.5, 136.5)]
     for pos in stitch:
@@ -510,13 +515,9 @@ def build_board() -> list:
     # microstrip referenced to the bottom plane instead of turning into a
     # narrow-gap coplanar waveguide.  Tracks, vias and pads stay legal.
     half = W50 / 2 + POUR_GAP
-    pcb.append(keepout_zone("RF_POUR_KEEPAWAY_H",
-                            [(BOARD_X0 - 0.5, FEED_Y - half), (125.75, FEED_Y - half),
-                             (125.75, FEED_Y + half), (BOARD_X0 - 0.5, FEED_Y + half)],
-                            layers=("F.Cu",), tracks="allowed", vias="allowed"))
-    pcb.append(keepout_zone("RF_POUR_KEEPAWAY_V",
-                            [(122.25, GND_EDGE_Y), (125.75, GND_EDGE_Y),
-                             (125.75, FEED_Y + half), (122.25, FEED_Y + half)],
+    pcb.append(keepout_zone("RF_POUR_KEEPAWAY",
+                            [(FEED_X - half, GND_EDGE_Y), (FEED_X + half, GND_EDGE_Y),
+                             (FEED_X + half, BOARD_Y1 + 0.5), (FEED_X - half, BOARD_Y1 + 0.5)],
                             layers=("F.Cu",), tracks="allowed", vias="allowed"))
     pcb.append([Sym("embedded_fonts"), Sym("no")])
     return pcb

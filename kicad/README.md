@@ -38,9 +38,15 @@ save — that is the normal upgrade path and nothing is lost.
 ## The signal path
 
 ```
-J1  SMA edge launch  ──  1.5 mm wide 50 Ω microstrip, 32.1 mm  ──  AE1 pin 1 (FEED)
-    shell ── GND                                                  AE1 pin 2 (GND) ── GND
+J1  SMA edge launch  ──  1.5 mm wide 50 Ω microstrip, 24.0 mm  ──  AE1 pin 1 (FEED)
+    shell ── GND         one straight run, no corner              AE1 pin 2 (GND) ── GND
 ```
+
+The connector sits on the bottom edge directly below the antenna's feed pad
+and faces it, so the feed is a single vertical run. That is as short as an
+edge-launch connector can be here: the antenna owns the top edge, its ground
+pin blocks any approach from the right, and the SMA needs 9.1 mm of board edge
+with all of it on the ground plane — which only the bottom edge offers.
 
 One net, `ANT_FEED`, on the `RF_50R` net class (1.5 mm, 0.3 mm clearance).
 Nothing sits between the connector and the radiator: the SWRA117D antenna is a
@@ -143,16 +149,33 @@ the stackup is in the board file, so the 3D viewer and any EM export see it.
 | item | value | why |
 |------|-------|-----|
 | 50 Ω microstrip | **w = 1.5 mm** | Hammerstad gives 50.8 Ω for w/h = 1.875, εr,eff = 3.33 (≈ 50 Ω once 35 µm copper is included) |
-| feed length | 32.1 mm, board edge to feed pad | λg ≈ 67 mm at 2.45 GHz, so this is ≈ 172° of line |
+| feed length | 24.0 mm, board edge to feed pad | λg ≈ 67 mm at 2.45 GHz, so ≈ 129° of line |
 | ground plane | y ≥ 65.75 mm only | its edge is the antenna's ground reference |
 | antenna keep-out | rule area above that edge, F.Cu **and** B.Cu | no pour, no tracks, no vias under or beside the antenna |
 | top pour keep-away | 1.0 mm either side of the feed | keeps the line a microstrip instead of a narrow-gap coplanar waveguide |
-| stitching | 15 vias | connector shell, and a row along the plane edge |
+| stitching | 19 vias | 8 in the connector pads, tying the coplanar ground to the plane right at the launch, plus a row along the plane edge |
 
 The 1.5 mm line necks down to 0.5 mm over the last millimetre to meet the
-antenna's 0.5 mm feed pad, and turns the one corner at 45°. Both are much
-shorter than λg/20, so neither is worth modelling as a discontinuity — but
-they are in the openEMS geometry anyway, because it reads the real tracks.
+antenna's 0.5 mm feed pad — much shorter than λg/20, so not worth modelling as
+a discontinuity, though it is in the openEMS geometry anyway because that
+reads the real tracks. `BOARD_H` in `tools/gen_project.py` sets the board
+height: 26 mm gives an 18.3 mm feed, 22 mm gives 14.3 mm. Both shorten the
+feed by shrinking the ground plane, which is the antenna's counterpoise — so
+that trade buys tidiness at the cost of antenna performance, not the other way
+round.
+
+### A shorter feed does not move the resonance
+
+Worth being explicit, because it is the one thing a short feed cannot do. For
+a lossless line matched to the port, |Γ| at the connector equals |Γ| at the
+antenna: a length of 50 Ω line rotates the Smith chart trace but cannot change
+its radius. So the VSWR-versus-frequency curve — and the frequency where it
+dips — is the antenna's, whatever the feed length.
+
+What the shorter feed does buy: 129° of rotation instead of 172°, so the Smith
+trace winds round less and the impedance is easier to read; slightly less FR4
+loss; and no corner to argue about. If a simulation puts the dip at the wrong
+frequency, the feed line is not the thing to change.
 
 The antenna polygon overlaps the plane edge by 0.25 mm at 28 of its vertices —
 that is the part of both legs that lands on the pads, so the pads' own
@@ -203,7 +226,7 @@ out what the parts would buy before committing pads to a layout.
 `sim/antenna_swra117d.lib` is a behavioural model of the antenna: a series
 R-L-C (50 Ω, 26 nH, 0.1618 pF → 2.454 GHz, Q ≈ 8) with 0.35 pF of feed
 capacitance. `sim/s11_antenna.cir` puts the routed feed line in front of it as
-a lossless 50 Ω `T` element (32.1 mm, TD = 195 ps) and computes
+a lossless 50 Ω `T` element (24.0 mm, TD = 146 ps) and computes
 Γ = 2·v(in) − 1 from a 1 V source behind 50 Ω.
 
 ```sh
@@ -212,15 +235,16 @@ cd kicad/sim && ngspice -b s11_antenna.cir       # writes s11_results.csv
 
 | | Z at the antenna | Z at the SMA | S11 | VSWR |
 |---|---|---|---|---|
-| 2.400 GHz | 39.5 − 25.8j Ω | 49.5 − 31.2j Ω | −10.5 dB | 1.85 |
-| 2.442 GHz | 44.9 − 15.6j Ω | 49.4 − 17.2j Ω | −15.4 dB | 1.41 |
-| 2.4835 GHz | 51.4 − 4.7j Ω | 52.3 − 4.3j Ω | −26.4 dB | 1.10 |
+| 2.400 GHz | 39.5 − 25.8j Ω | 90.4 + 12.0j Ω | −10.5 dB | 1.85 |
+| 2.442 GHz | 44.9 − 15.6j Ω | 70.5 + 1.9j Ω | −15.4 dB | 1.41 |
+| 2.4835 GHz | 51.4 − 4.7j Ω | 54.3 + 2.5j Ω | −26.4 dB | 1.10 |
 
 Best match −28.8 dB at 2.493 GHz; below −10 dB from 2.394 to 2.595 GHz, so
 the antenna covers 2.400–2.4835 GHz unaided. The two impedance columns show
-what the line does: 172° of matched line rotates Zin right round the Smith
+what the line does: 129° of matched line rotates Zin round the Smith
 chart but cannot change |S11| — which is exactly why a lumped antenna model is
-still the right tool for return loss at the connector.
+still the right tool for return loss at the connector, and why the S11 column
+is identical to the 32 mm version of this board.
 
 **The antenna model is a plausible fit, not a field solution.** It reproduces
 the shape of an IFA response on a board this size; the real resonance depends
@@ -246,12 +270,10 @@ python3 sim/openems/swra117d_openems.py --plot      # FDTD run + plots
 ```
 board          : 40.0 x 30.0 mm, 0.8 mm FR4 (er 4.4, tan d 0.02)
 ground plane   : y = 0 .. 24.25 mm (antenna region 24.25 .. 30.0 mm is clear)
-feed line      : 4 segments, 32.1 mm total, port at x = 0, feed pad at (24.00, 24.00) mm
-                 (  0.00, 15.00) -> ( 22.50, 15.00)  w = 1.5 mm
-                 ( 22.50, 15.00) -> ( 24.00, 16.50)  w = 1.5 mm
-                 ( 24.00, 16.50) -> ( 24.00, 23.00)  w = 1.5 mm
+feed line      : 2 segments, 24.0 mm total, port launches along y from (24.00, 0.00) mm, feed pad at (24.00, 24.00) mm
+                 ( 24.00,  0.00) -> ( 24.00, 23.00)  w = 1.5 mm
                  ( 24.00, 23.00) -> ( 24.00, 24.00)  w = 0.5 mm
-top pour       : 6 boxes around 2 keep-away corridors
+top pour       : 2 boxes around 1 keep-away corridors
 antenna copper : 29 vertices, x 12.15..26.55 mm, y 23.75..29.15 mm
 ```
 
@@ -293,6 +315,7 @@ The line impedances are deliberately all within a couple of ohms of 50, which
 |---|---|---|
 | feed line, microstrip, 1.5 mm | **49.7 Ω** | εr,eff 3.33, λg 67.0 mm |
 | feed line with the pour at its 1.0 mm keep-away, CPWG | **49.8 Ω** | εr,eff 3.24 |
+| launch, after 8 ground vias in the connector pads | — | coplanar ground tied to the plane at the port |
 | SMA launch, CPWG, 0.8 mm gap | **48.8 Ω** | εr,eff 3.19 |
 | 50 Ω microstrip width for this stackup | 1.49 mm | Hammerstad + Wheeler |
 
@@ -339,9 +362,9 @@ positions (rotations included) and verifies that
 ok   library: 6 symbols, 3 footprints parse cleanly
 ok   schematic: 4 embedded symbols all match library/SWRA117D_RF.kicad_sym (no lib_symbol_mismatch)
 ok   schematic: 7 pins placed, 5 wires, netlist matches the intended one
-ok   board: 6 pads, 4 tracks, 15 vias, clearances >= 0.15 mm, keep-out clean
+ok   board: 6 pads, 2 tracks, 19 vias, clearances >= 0.15 mm, keep-out clean
 ok   board: 28 antenna polygon vertices overlap the plane edge, all of them inside the antenna's own pads
-ok   board: all 8 feed line ends sit over the B.Cu ground pour (reference plane present)
+ok   board: all 4 feed line ends sit over the B.Cu ground pour (reference plane present)
 ok   board: 2 copper zones carry no fill yet - press B in the PCB editor before running DRC or an RF simulation, or tools that look for the reference layer will find it empty
 ok   board: port pad 3.5 x 1.5 mm sits inside a 3.5 x 9.1 mm B.Cu ground pad, so the launch is referenced without a zone fill
 ok   board: the radiator is one piece of copper touching both antenna pads (inverted-F short: the port is a DC short to GND)

@@ -173,10 +173,14 @@ def to_sim(board: dict) -> dict:
         return (min(ax, bx), min(ay, by), max(ax, bx), max(ay, by))
 
     feed = [(conv(a), conv(b), w) for a, b, w in board["feed"]]
-    # the port replaces the connector, so start the line at the board edge
+    # the port replaces the connector, so start the line at the board edge it
+    # launches from, whichever edge and direction that is
     (ax, ay), (bx, by), w = feed[0]
-    if abs(ay - by) < 1e-6 and ax < bx:
-        feed[0] = ((0.0, ay), (bx, by), w)
+    span_x, span_y = x1 - x0, y1 - y0
+    if abs(ay - by) < 1e-6:                                  # launches along x
+        feed[0] = ((0.0 if ax < span_x / 2 else span_x, ay), (bx, by), w)
+    elif abs(ax - bx) < 1e-6:                                # launches along y
+        feed[0] = ((ax, 0.0 if ay < span_y / 2 else span_y), (bx, by), w)
     return dict(width=x1 - x0, height=y1 - y0,
                 substrate=board["substrate"],
                 gnd_height=y1 - board["gnd_top"],
@@ -241,14 +245,21 @@ def build(geo: dict, resolution: float, air: float):
     # the routed 50 ohm feed; the first millimetres are the port
     (ax, ay), (bx, by), line_w = geo["feed"][0]
     port_len = max(4.0, 5 * h)
-    port = fdtd.AddMSLPort(1, metal,
-                           [ax, ay - line_w / 2, h],
-                           [ax + port_len, ay + line_w / 2, 0],
-                           "x", "z", excite=-1,
+    if abs(ay - by) < 1e-6:                                  # launches along x
+        step = port_len if bx > ax else -port_len
+        start = [ax, ay - line_w / 2, h]
+        stop = [ax + step, ay + line_w / 2, 0]
+        axis, hand_off = "x", (ax + step, ay)
+    else:                                                    # launches along y
+        step = port_len if by > ay else -port_len
+        start = [ax - line_w / 2, ay, h]
+        stop = [ax + line_w / 2, ay + step, 0]
+        axis, hand_off = "y", (ax, ay + step)
+    port = fdtd.AddMSLPort(1, metal, start, stop, axis, "z", excite=-1,
                            FeedShift=10 * resolution,
                            MeasPlaneShift=port_len / 2,
                            priority=15)
-    rest = [((ax + port_len, ay), (bx, by), line_w)] + geo["feed"][1:]
+    rest = [(hand_off, (bx, by), line_w)] + geo["feed"][1:]
     for a, b, width in rest:
         poly = [c for pt in track_polygon(a, b, width) for c in pt]
         metal.AddPolygon(poly, "z", h, priority=15)
@@ -351,9 +362,11 @@ def main() -> None:
     print(f"ground plane   : y = 0 .. {geo['gnd_height']:.2f} mm "
           f"(antenna region {geo['gnd_height']:.2f} .. {geo['height']:.1f} mm is clear)")
     length = sum(math.dist(a, b) for a, b, _w in geo["feed"])
+    (ax, ay), (bx, by), _w = geo["feed"][0]
+    axis = "x" if abs(ay - by) < 1e-6 else "y"
     print(f"feed line      : {len(geo['feed'])} segments, {length:.1f} mm total, "
-          f"port at x = 0, feed pad at ({geo['feed_point'][0]:.2f}, "
-          f"{geo['feed_point'][1]:.2f}) mm")
+          f"port launches along {axis} from ({ax:.2f}, {ay:.2f}) mm, "
+          f"feed pad at ({geo['feed_point'][0]:.2f}, {geo['feed_point'][1]:.2f}) mm")
     for a, b, width in geo["feed"]:
         print(f"                 ({a[0]:6.2f},{a[1]:6.2f}) -> "
               f"({b[0]:6.2f},{b[1]:6.2f})  w = {width} mm")
