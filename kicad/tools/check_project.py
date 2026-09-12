@@ -122,14 +122,14 @@ def check_schematic(expected_nets):
         for a, b in touching:
             dsu.union(q(a), f"pin:{ref}.{number}")
 
-    # power symbols are global: tie every GND pin together
+    # power symbols are global: tie every GND pin, and the ERC flag, together
     for ref, number, _pos, lib_id in placed:
-        if lib_id == "power:GND":
+        if lib_id.endswith(":GND") or lib_id.endswith(":PWR_FLAG"):
             dsu.union(f"pin:{ref}.{number}", "label:GND")
 
     got = {}
     for ref, number, _pos, lib_id in placed:
-        if lib_id == "power:GND":
+        if lib_id.endswith(":GND") or lib_id.endswith(":PWR_FLAG"):
             continue
         root = dsu.find(f"pin:{ref}.{number}")
         name = next((str(k)[6:] for k in dsu.parent
@@ -294,18 +294,45 @@ def check_board(expected_nets):
                  "all of them inside the antenna's own pads")
 
 
-def check_libraries():
+def library_symbols():
     lib = parse((PRJ_DIR / "library" / "SWRA117D_RF.kicad_sym").read_text())
-    symbols = [str(s[1]) for s in find_all(lib, "symbol")]
+    return {str(s[1]): s for s in find_all(lib, "symbol")}
+
+
+def check_libraries():
+    symbols = library_symbols()
     if "ANT_SWRA117D_2G4_Left" not in symbols:
         fail("library: the antenna symbol is missing")
-    for fp in sorted((PRJ_DIR / "library" / "SWRA117D_RF.pretty").glob("*.kicad_mod")):
-        node = parse(fp.read_text())
-        if node[0] != "footprint":
+    footprints = sorted((PRJ_DIR / "library" / "SWRA117D_RF.pretty").glob("*.kicad_mod"))
+    for fp in footprints:
+        if parse(fp.read_text())[0] != "footprint":
             fail(f"library: {fp.name} is not in the modern footprint format")
-    notes.append(f"library: 1 symbol, "
-                 f"{len(list((PRJ_DIR / 'library' / 'SWRA117D_RF.pretty').glob('*.kicad_mod')))} "
-                 "footprints parse cleanly")
+    notes.append(f"library: {len(symbols)} symbols, {len(footprints)} footprints "
+                 "parse cleanly")
+
+
+def check_embedded_symbols():
+    """KiCad reports lib_symbol_mismatch when a schematic's embedded copy of a
+    symbol differs from the library it came from, so every embedded symbol has
+    to resolve to this project's library and be identical to it."""
+    sch = parse((PRJ_DIR / f"{PROJECT}.kicad_sch").read_text())
+    lib = library_symbols()
+    embedded = find_all(find(sch, "lib_symbols"), "symbol")
+    for sym in embedded:
+        lib_id = str(sym[1])
+        nickname, _, name = lib_id.partition(":")
+        if nickname != "SWRA117D_RF":
+            fail(f"schematic: {lib_id} comes from an external library, so KiCad "
+                 "will compare it against whatever version is installed")
+            continue
+        if name not in lib:
+            fail(f"schematic: {lib_id} is not in library/SWRA117D_RF.kicad_sym")
+            continue
+        expected = [lib[name][0], lib_id] + lib[name][2:]
+        if sym != expected:
+            fail(f"schematic: embedded copy of {lib_id} differs from the library")
+    notes.append(f"schematic: {len(embedded)} embedded symbols all match "
+                 "library/SWRA117D_RF.kicad_sym (no lib_symbol_mismatch)")
 
 
 def main() -> int:
@@ -317,6 +344,7 @@ def main() -> int:
         ("AE1", "1"): "ANT_FEED", ("AE1", "2"): "GND",
     }
     check_libraries()
+    check_embedded_symbols()
     check_schematic(expected)
     check_board(expected)
     for note in notes:

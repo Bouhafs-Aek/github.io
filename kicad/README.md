@@ -13,7 +13,7 @@ kicad/
 ├── swra117d_2g4_antenna.kicad_pcb   2 layer, 40 × 30 mm, 0.8 mm FR4
 ├── sym-lib-table / fp-lib-table     point KiCad at the project libraries
 ├── library/
-│   ├── SWRA117D_RF.kicad_sym        ← the antenna symbol
+│   ├── SWRA117D_RF.kicad_sym        ← the antenna symbol (+ C, L, SMA, GND, PWR_FLAG)
 │   └── SWRA117D_RF.pretty/
 │       ├── Texas_SWRA117D_2.4GHz_Left.kicad_mod   antenna (converted)
 │       ├── SMA_EdgeMount_Generic.kicad_mod        50 Ω test port
@@ -36,17 +36,29 @@ reads those directly and rewrites them in its own format the first time you
 save — that is the normal upgrade path and nothing is lost. If you need the
 files to *stay* in KiCad 10's format, open and save once, then commit.
 
-## The antenna symbol
+## The symbols
 
-`library/SWRA117D_RF.kicad_sym` holds one symbol,
-`ANT_SWRA117D_2G4_Left`:
+`library/SWRA117D_RF.kicad_sym` is the project's only symbol library, and it
+holds everything the schematic uses: the antenna, plus `C`, `L`,
+`Conn_Coaxial_SMA`, `GND` and `PWR_FLAG`. Those five are stand-ins for stock
+KiCad symbols, kept in-project on purpose — a schematic embeds a copy of every
+symbol it places, and KiCad raises `lib_symbol_mismatch` whenever that copy
+differs from the library it names, which it will for any stock symbol whose
+definition moves between library releases. Resolving them here makes the
+project self-contained and ERC-clean on any install. If you would rather use
+the stock symbols, swap the `lib_id`s and run *Tools → Update Symbols from
+Library* — but check `Conn_Coaxial_SMA` after doing it, because stock
+`Connector:Conn_Coaxial` puts pin 1 on the other side and the wire will need
+redrawing.
+
+The antenna symbol itself is `ANT_SWRA117D_2G4_Left`:
 
 | pin | name | type | goes to |
 |-----|------|------|---------|
 | 1 | FEED | passive | 50 Ω feed line |
 | 2 | GND  | passive | ground plane edge, right at the feed |
 
-It is drawn as a dipole-style antenna over a ground bar, carries the TI
+The antenna is drawn over a ground bar, carries the TI
 application-note URL as its datasheet, is pre-linked to the antenna footprint
 and filters the footprint chooser to `Texas_SWRA117D*`. It also carries the
 `Sim.*` fields that point KiCad's built-in ngspice at
@@ -186,6 +198,8 @@ files** — re-running it would overwrite your work.
 extracts the schematic netlist from the wire geometry, rebuilds the board pad
 positions (rotations included) and verifies that
 
+* every embedded symbol resolves to this project's library and is identical to
+  it, so KiCad has nothing to report as `lib_symbol_mismatch`,
 * every symbol pin lands on a wire and every net matches the intended one,
 * every board pad carries the net the schematic gives it,
 * every track ends on a pad, a via or another track,
@@ -193,16 +207,31 @@ positions (rotations included) and verifies that
 * nothing but the antenna lives above the ground plane edge.
 
 ```
-ok   library: 1 symbol, 3 footprints parse cleanly
-ok   schematic: 14 pins placed, 11 wires, netlist matches the intended one
+ok   library: 6 symbols, 3 footprints parse cleanly
+ok   schematic: 6 embedded symbols all match library/SWRA117D_RF.kicad_sym (no lib_symbol_mismatch)
+ok   schematic: 15 pins placed, 12 wires, netlist matches the intended one
 ok   board: 13 pads, 11 tracks, 17 vias, clearances >= 0.15 mm, keep-out clean
 ok   board: 28 antenna polygon vertices overlap the plane edge, all of them inside the antenna's own pads
 0 problem(s)
 ```
 
-That is a structural check, not a substitute for KiCad: **run ERC and DRC, and
-fill the zones, after opening the project.** These files were generated and
-verified with the scripts above, not by a KiCad installation.
+That is a structural check, not a substitute for KiCad, so **run ERC and DRC,
+and fill the zones, after opening the project.**
+
+### ERC history
+
+The first version of this project was written without a KiCad installation to
+test against. A KiCad 9 ERC run on it reported 1 error and 8 warnings, all of
+them from the schematic's symbol sources rather than its wiring:
+
+| report | cause | fix |
+|--------|-------|-----|
+| `power_pin_not_driven` on `#PWR01` | passive board, no power output anywhere | `#FLG01` `PWR_FLAG` added on the ground net |
+| `lib_symbol_mismatch` × 8 (`C`, `L`, `Conn_Coaxial`, `GND`) | embedded stand-ins for stock symbols did not match the installed libraries | those symbols moved into `library/SWRA117D_RF.kicad_sym`, which the schematic embeds from, and `check_project.py` now enforces it |
+
+Nothing in that report touched connectivity: no unconnected pins, no
+conflicting drivers, no net collisions — the netlist was as designed. DRC on
+the board has not been run yet.
 
 ## Reference
 

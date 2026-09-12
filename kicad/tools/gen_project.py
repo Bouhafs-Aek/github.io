@@ -56,22 +56,22 @@ TITLE = "2.45 GHz PCB antenna (TI SWRA117D) - RF test board"
 
 # reference, library id, value, footprint, schematic placement, board placement
 PARTS = [
-    dict(ref="J1", lib="Connector:Conn_Coaxial", value="SMA edge launch",
+    dict(ref="J1", lib=f"{LIB_NICK}:Conn_Coaxial_SMA", value="SMA edge launch",
          fp="SMA_EdgeMount_Generic", sch=(76.2, 88.9, 0), pcb=(100.0, FEED_Y, 0),
          nets={"1": "RF_IN", "2": "GND"},
          ref_at=(76.2, 81.28), val_at=(76.2, 83.82),
          desc="Coaxial connector, 50 ohm test port"),
-    dict(ref="C1", lib="Device:C", value="0.5pF", fp="Chip_0402_1005Metric_RF",
+    dict(ref="C1", lib=f"{LIB_NICK}:C", value="0.5pF", fp="Chip_0402_1005Metric_RF",
          sch=(91.44, 96.52, 0), pcb=(113.5, FEED_Y + 0.51, 270), dnp=True,
          nets={"1": "RF_IN", "2": "GND"},
          ref_at=(93.98, 95.25), val_at=(93.98, 97.79),
          desc="Shunt element of the pi matching network (source side)"),
-    dict(ref="L1", lib="Device:L", value="0.8nH", fp="Chip_0402_1005Metric_RF",
+    dict(ref="L1", lib=f"{LIB_NICK}:L", value="0.8nH", fp="Chip_0402_1005Metric_RF",
          sch=(101.6, 88.9, 90), pcb=(118.0, FEED_Y, 0),
          nets={"1": "RF_IN", "2": "ANT_FEED"},
          ref_at=(101.6, 85.09), val_at=(101.6, 92.71),
          desc="Series element of the pi matching network"),
-    dict(ref="C2", lib="Device:C", value="0.5pF", fp="Chip_0402_1005Metric_RF",
+    dict(ref="C2", lib=f"{LIB_NICK}:C", value="0.5pF", fp="Chip_0402_1005Metric_RF",
          sch=(111.76, 96.52, 0), pcb=(120.5, FEED_Y + 0.51, 270), dnp=True,
          nets={"1": "ANT_FEED", "2": "GND"},
          ref_at=(114.3, 95.25), val_at=(114.3, 97.79),
@@ -91,13 +91,6 @@ PARTS = [
          ]),
 ]
 
-POWER = [  # ground symbols: reference, sheet position
-    ("#PWR01", (76.2, 96.52)),
-    ("#PWR02", (91.44, 102.87)),
-    ("#PWR03", (111.76, 102.87)),
-    ("#PWR04", (129.54, 96.52)),
-]
-
 WIRES = [
     ((81.28, 88.9), (91.44, 88.9)),     # J1 -> C1 node
     ((91.44, 88.9), (97.79, 88.9)),     # C1 node -> L1
@@ -110,6 +103,7 @@ WIRES = [
     ((111.76, 100.33), (111.76, 102.87)),  # C2 -> GND
     ((76.2, 93.98), (76.2, 96.52)),     # J1 shield -> GND
     ((129.54, 86.36), (129.54, 96.52)),  # AE1 ground pin -> GND
+    ((91.44, 102.87), (86.36, 102.87)),  # GND -> PWR_FLAG
 ]
 JUNCTIONS = [(91.44, 88.9), (111.76, 88.9)]
 LABELS = [("RF_IN", (85.09, 88.9)), ("ANT_FEED", (120.65, 88.9))]
@@ -125,132 +119,16 @@ SCH_NOTE = (
     "sim/openems/swra117d_openems.py (full wave S11, impedance, far field)."
 )
 
-# ------------------------------------------------------ generic lib symbols
-# Minimal stand-ins for the stock KiCad symbols, embedded in the schematic so
-# it opens with or without the standard libraries installed.
-GENERIC_SYMBOLS = {
-    "Device:C": """
-    (symbol "Device:C"
-      (pin_numbers (hide yes))
-      (pin_names (offset 0.254))
-      (exclude_from_sim no) (in_bom yes) (on_board yes)
-      (property "Reference" "C" (at 0.635 2.54 0)
-        (effects (font (size 1.27 1.27)) (justify left)))
-      (property "Value" "C" (at 0.635 -2.54 0)
-        (effects (font (size 1.27 1.27)) (justify left)))
-      (property "Footprint" "" (at 0.9652 -3.81 0)
-        (effects (font (size 1.27 1.27)) (hide yes)))
-      (property "Datasheet" "~" (at 0 0 0)
-        (effects (font (size 1.27 1.27)) (hide yes)))
-      (property "Description" "Unpolarized capacitor" (at 0 0 0)
-        (effects (font (size 1.27 1.27)) (hide yes)))
-      (symbol "C_0_1"
-        (polyline (pts (xy -2.032 -0.762) (xy 2.032 -0.762))
-          (stroke (width 0.508) (type default)) (fill (type none)))
-        (polyline (pts (xy -2.032 0.762) (xy 2.032 0.762))
-          (stroke (width 0.508) (type default)) (fill (type none))))
-      (symbol "C_1_1"
-        (pin passive line (at 0 3.81 270) (length 2.794)
-          (name "~" (effects (font (size 1.27 1.27))))
-          (number "1" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 0 -3.81 90) (length 2.794)
-          (name "~" (effects (font (size 1.27 1.27))))
-          (number "2" (effects (font (size 1.27 1.27))))))
-      (embedded_fonts no))
-    """,
-    "Device:L": """
-    (symbol "Device:L"
-      (pin_numbers (hide yes))
-      (pin_names (offset 1.016) (hide yes))
-      (exclude_from_sim no) (in_bom yes) (on_board yes)
-      (property "Reference" "L" (at -1.27 2.54 90)
-        (effects (font (size 1.27 1.27))))
-      (property "Value" "L" (at 1.905 2.54 90)
-        (effects (font (size 1.27 1.27))))
-      (property "Footprint" "" (at 0 0 0)
-        (effects (font (size 1.27 1.27)) (hide yes)))
-      (property "Datasheet" "~" (at 0 0 0)
-        (effects (font (size 1.27 1.27)) (hide yes)))
-      (property "Description" "Inductor" (at 0 0 0)
-        (effects (font (size 1.27 1.27)) (hide yes)))
-      (symbol "L_0_1"
-        (arc (start 0 -2.54) (mid 0.6323 -1.905) (end 0 -1.27)
-          (stroke (width 0) (type default)) (fill (type none)))
-        (arc (start 0 -1.27) (mid 0.6323 -0.635) (end 0 0)
-          (stroke (width 0) (type default)) (fill (type none)))
-        (arc (start 0 0) (mid 0.6323 0.635) (end 0 1.27)
-          (stroke (width 0) (type default)) (fill (type none)))
-        (arc (start 0 1.27) (mid 0.6323 1.905) (end 0 2.54)
-          (stroke (width 0) (type default)) (fill (type none))))
-      (symbol "L_1_1"
-        (pin passive line (at 0 3.81 270) (length 1.27)
-          (name "1" (effects (font (size 1.27 1.27))))
-          (number "1" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 0 -3.81 90) (length 1.27)
-          (name "2" (effects (font (size 1.27 1.27))))
-          (number "2" (effects (font (size 1.27 1.27))))))
-      (embedded_fonts no))
-    """,
-    "Connector:Conn_Coaxial": """
-    (symbol "Connector:Conn_Coaxial"
-      (pin_numbers (hide yes))
-      (pin_names (offset 0.762) (hide yes))
-      (exclude_from_sim no) (in_bom yes) (on_board yes)
-      (property "Reference" "J" (at 0 3.81 0)
-        (effects (font (size 1.27 1.27))))
-      (property "Value" "Conn_Coaxial" (at 3.81 -3.81 0)
-        (effects (font (size 1.27 1.27))))
-      (property "Footprint" "" (at 0 0 0)
-        (effects (font (size 1.27 1.27)) (hide yes)))
-      (property "Datasheet" "~" (at 0 0 0)
-        (effects (font (size 1.27 1.27)) (hide yes)))
-      (property "Description" "Coaxial connector, 50 ohm" (at 0 0 0)
-        (effects (font (size 1.27 1.27)) (hide yes)))
-      (symbol "Conn_Coaxial_0_1"
-        (circle (center 0 0) (radius 2.54)
-          (stroke (width 0.254) (type default)) (fill (type none)))
-        (circle (center 0 0) (radius 0.508)
-          (stroke (width 0) (type default)) (fill (type outline)))
-        (polyline (pts (xy 0.508 0) (xy 2.54 0))
-          (stroke (width 0.254) (type default)) (fill (type none)))
-        (polyline (pts (xy 0 -2.54) (xy 0 -1.27))
-          (stroke (width 0.254) (type default)) (fill (type none))))
-      (symbol "Conn_Coaxial_1_1"
-        (pin passive line (at 5.08 0 180) (length 2.54)
-          (name "In" (effects (font (size 1.27 1.27))))
-          (number "1" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 0 -5.08 90) (length 2.54)
-          (name "Ext" (effects (font (size 1.27 1.27))))
-          (number "2" (effects (font (size 1.27 1.27))))))
-      (embedded_fonts no))
-    """,
-    "power:GND": """
-    (symbol "power:GND"
-      (power)
-      (pin_numbers (hide yes))
-      (pin_names (offset 0) (hide yes))
-      (exclude_from_sim no) (in_bom yes) (on_board yes)
-      (property "Reference" "#PWR" (at 0 -6.35 0)
-        (effects (font (size 1.27 1.27)) (hide yes)))
-      (property "Value" "GND" (at 0 -3.81 0)
-        (effects (font (size 1.27 1.27))))
-      (property "Footprint" "" (at 0 0 0)
-        (effects (font (size 1.27 1.27)) (hide yes)))
-      (property "Datasheet" "" (at 0 0 0)
-        (effects (font (size 1.27 1.27)) (hide yes)))
-      (property "Description" "Power symbol creates a global label with name GND" (at 0 0 0)
-        (effects (font (size 1.27 1.27)) (hide yes)))
-      (symbol "GND_0_1"
-        (polyline
-          (pts (xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54) (xy -1.27 -1.27) (xy 0 -1.27))
-          (stroke (width 0) (type default)) (fill (type none))))
-      (symbol "GND_1_1"
-        (pin power_in line (at 0 0 90) (length 0) (hide yes)
-          (name "GND" (effects (font (size 1.27 1.27))))
-          (number "1" (effects (font (size 1.27 1.27))))))
-      (embedded_fonts no))
-    """,
-}
+POWER = [  # ground symbols and the ERC power flag: reference, sheet position
+    ("#PWR01", (76.2, 96.52)),
+    ("#PWR02", (91.44, 102.87)),
+    ("#PWR03", (111.76, 102.87)),
+    ("#PWR04", (129.54, 96.52)),
+]
+# A passive RF board has no power source of its own, so ERC reports
+# "Input Power pin not driven by any Output Power pins" on the ground net.
+# One flag with a power-output pin on that net is the standard answer.
+PWR_FLAGS = [("#FLG01", (86.36, 102.87))]
 
 
 def effects(size=1.27, hide=False, justify=None, thickness=None):
@@ -281,8 +159,6 @@ def lib_symbols() -> list:
             sym = copy.deepcopy(child)
             sym[1] = f"{LIB_NICK}:{sym[1]}"
             out.append(sym)
-    for text in GENERIC_SYMBOLS.values():
-        out.append(parse(text))
     return out
 
 
@@ -314,22 +190,25 @@ def sch_symbol(part) -> list:
     return node
 
 
-def sch_power(ref, pos) -> list:
+def sch_power(ref, pos, name="GND", below=True, in_bom=True) -> list:
+    """Ground symbol or ERC power flag - both are 'power' symbols with one pin."""
     x, y = pos
+    label_y = y + 3.81 if below else y - 3.81
     return [Sym("symbol"),
-            [Sym("lib_id"), "power:GND"],
+            [Sym("lib_id"), f"{LIB_NICK}:{name}"],
             [Sym("at"), num(x), num(y), Sym("0")],
             [Sym("unit"), Sym("1")],
-            [Sym("exclude_from_sim"), Sym("no")],
-            [Sym("in_bom"), Sym("yes")],
-            [Sym("on_board"), Sym("yes")],
+            [Sym("exclude_from_sim"), Sym("no" if in_bom else "yes")],
+            [Sym("in_bom"), Sym("yes" if in_bom else "no")],
+            [Sym("on_board"), Sym("yes" if in_bom else "no")],
             [Sym("dnp"), Sym("no")],
             [Sym("uuid"), U("sym", ref)],
             prop("Reference", ref, (x, y + 6.35, 0), hide=True),
-            prop("Value", "GND", (x, y + 3.81, 0)),
+            prop("Value", name, (x, label_y, 0)),
             prop("Footprint", "", (x, y, 0), hide=True),
             prop("Datasheet", "", (x, y, 0), hide=True),
-            prop("Description", "Ground reference", (x, y, 0), hide=True),
+            prop("Description", "Ground reference" if name == "GND"
+                 else "ERC power source flag", (x, y, 0), hide=True),
             [Sym("pin"), "1", [Sym("uuid"), U("pin", ref, "1")]],
             [Sym("instances"),
              [Sym("project"), PROJECT,
@@ -379,6 +258,8 @@ def build_schematic() -> list:
         sch.append(sch_symbol(part))
     for ref, pos in POWER:
         sch.append(sch_power(ref, pos))
+    for ref, pos in PWR_FLAGS:
+        sch.append(sch_power(ref, pos, name="PWR_FLAG", below=False, in_bom=False))
 
     sch.append([Sym("sheet_instances"), [Sym("path"), "/", [Sym("page"), "1"]]])
     sch.append([Sym("embedded_fonts"), Sym("no")])
