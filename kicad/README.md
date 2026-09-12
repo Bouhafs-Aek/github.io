@@ -215,19 +215,67 @@ example; the board is back on the published geometry. `ANT_ORIGIN` stays at
 margin, and the ground plane edge follows the footprint automatically either
 way.
 
-### The stackup is the open question
+### Verified against the application note
 
-The antenna geometry on this board is the published one. **The 0.8 mm FR4
-stackup is not** — it was picked at the start of this project for a convenient
-50 Ω line width, before anyone checked what substrate the application note
-specifies, and a printed antenna's resonance depends on the substrate it was
-designed for. That is the one remaining deviation from a standard
-implementation, and it cannot be settled by simulating harder.
+SWRA117D (AN043) states the antenna as a dimension table, and states why it
+matters: *"Small changes of the antenna dimensions may have large impact on
+the performance. Therefore it is strongly recommended to make an exact copy of
+the reference design to achieve optimum performance."*
 
-It needs two numbers out of the note: **dielectric thickness and εr** (plus the
-reference ground plane size, if it gives one). With those, the board follows
-automatically — the feed width is synthesised from the stackup rather than
-typed in:
+`tools/verify_against_swra117d.py` measures the footprint's geometry out of
+the polygon and compares it with Table 1. **All 14 dimensions match within
+11 µm** — L1–L6, W1, W2 and D1–D6, including both repeats of the meander:
+
+```
+L1  3.94   3.940   open-end leg, under the top strip
+L2  2.70   2.700   meander top strips (second instance 2.700)
+L3  5.00   5.000   first top strip, ground leg to first finger
+L4  2.64   2.640   meander finger depth
+L5  2.00   2.000   meander bottom links (second instance 2.000)
+L6  4.90   4.900   feed and ground legs
+W1  0.90   0.900   ground (shorting) leg width
+W2  0.50   0.500   trace width everywhere else
+D1  0.50   0.500   clearance beyond the ground leg
+D2  0.30   0.300   clearance above the top strip
+D3  0.30   0.300   clearance beyond the open end
+D4  0.50   0.500   feed/ground pad height at the plane edge
+D5  1.40   1.400   gap, feed leg to ground leg
+D6  1.70   1.700   gap, feed leg to first meander finger
+```
+
+`check_project.py` runs this on whichever antenna footprint the board
+actually carries, so a scaled or redrawn radiator fails the build rather than
+passing quietly. Putting the ×1.155 variant back reports:
+
+```
+FAIL board: SWRA117D_2G4_Left_retuned is not an exact copy of SWRA117D
+     Table 1 - 14 dimension(s) differ, worst L3 by +775 um
+```
+
+Two things fall out of the table that the drawing alone does not tell you.
+The keep-out box is not arbitrary: D1, D2 and D3 are the note's own
+clearances, and D4 is the pad height at the plane edge — which is why the
+ground plane edge is read from that box rather than typed in. And the note's
+"15.2 × 5.7 mm" envelope is the copper (14.4 × 5.4 mm) plus exactly those
+clearances.
+
+### What the note does not say: the stackup
+
+SWRA117D does not give the stackup. It says: *"It is also recommended to use
+the same thickness and type of PCB material as used in the reference design.
+Information about the PCB can be found in a separate readme file included in
+the reference design"* — a readme we do not have. What it does give is the
+remedy: *"To compensate for a thicker/thinner PCB the antenna could be made
+slightly shorter/longer."*
+
+The 0.8 mm FR4 on this board is therefore not verified against SWRA117D, but
+it is not arbitrary either: TI's sibling note for the same antenna family
+(DN023 / SWRA228C, 868/915/955 MHz) states *"The antenna was implemented on a
+0.8 mm thick FR-4 substrate"*. Treat it as the best available default and a
+known open item, not as a specification.
+
+If a different thickness is used, the feed follows automatically — the width
+is synthesised from the stackup rather than typed in:
 
 | stackup | 50 Ω line | pour keep-away |
 |---|---|---|

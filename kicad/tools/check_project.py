@@ -359,6 +359,41 @@ def check_reference_plane():
                      "the PCB editor before running DRC or an RF simulation, or "
                      "tools that look for the reference layer will find it empty")
 
+def check_exact_copy():
+    """The antenna on the board must be an exact copy of SWRA117D Table 1.
+
+    The note is explicit that this is not a nicety: "Small changes of the
+    antenna dimensions may have large impact on the performance. Therefore it
+    is strongly recommended to make an exact copy of the reference design."
+    So a scaled or redrawn radiator has to fail here rather than pass quietly.
+    """
+    from verify_against_swra117d import TABLE_1, TOL, measure
+
+    pcb = parse((PRJ_DIR / f"{PROJECT}.kicad_pcb").read_text())
+    name = None
+    for fp in find_all(pcb, "footprint"):
+        if find(fp, "fp_poly") is not None:
+            name = str(fp[1]).split(":", 1)[-1]
+    if name is None:
+        fail("board: no antenna footprint on the board")
+        return
+    path = PRJ_DIR / "library" / "SWRA117D_RF.pretty" / f"{name}.kicad_mod"
+    try:
+        got, _info = measure(path)
+    except SystemExit as exc:
+        fail(f"board: {name} does not have the reference geometry ({exc})")
+        return
+    off = {k: got[k] - v for k, v in TABLE_1.items() if abs(got[k] - v) > TOL}
+    if off:
+        worst = max(off.items(), key=lambda kv: abs(kv[1]))
+        fail(f"board: {name} is not an exact copy of SWRA117D Table 1 - "
+             f"{len(off)} dimension(s) differ, worst {worst[0]} by "
+             f"{worst[1] * 1000:+.0f} um")
+    else:
+        notes.append(f"board: {name} matches all {len(TABLE_1)} dimensions of "
+                     f"SWRA117D Table 1 within {TOL * 1000:.0f} um (exact copy)")
+
+
 def check_feed_width():
     """The port pad and the feed line must be the same width.
 
@@ -583,6 +618,7 @@ def main() -> int:
     check_launch_and_radiator()
     check_pour_islands()
     check_feed_width()
+    check_exact_copy()
     for note in notes:
         print(f"ok   {note}")
     for err in errors:
