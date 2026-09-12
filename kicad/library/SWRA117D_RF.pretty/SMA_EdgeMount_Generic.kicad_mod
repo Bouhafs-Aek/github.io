@@ -3,7 +3,7 @@
 	(generator "hand")
 	(generator_version "9.0")
 	(layer "F.Cu")
-	(descr "Generic end-launch (edge-mount) SMA jack for a 0.8 mm two layer board. Origin sits on the board edge: the signal pad starts at x = 0 and the connector body hangs off the outside of the Edge.Cuts line. Pad 1 = signal, pad 2 = shell ground (top and bottom).")
+	(descr "Generic end-launch (edge-mount) SMA jack for a 0.8 mm two layer board. Origin sits on the board edge: the signal pad starts at x = 0 and the connector body hangs off the outside of the Edge.Cuts line. Pad 1 = signal, pad 2 = shell ground: two tabs either side of the signal pad on the top, one solid plane under the whole launch on the bottom, so the launch keeps its reference without relying on a zone fill.")
 	(tags "SMA edge launch end launch RF connector 50 ohm")
 	(attr smd)
 	(property "Reference" "REF**"
@@ -69,16 +69,10 @@
 		(uuid "b1b7b0d2-1a01-5a01-9001-000000000022")
 	)
 	(pad "2" smd rect
-		(at 1.75 -3.05)
-		(size 3.5 3)
+		(at 1.75 0)
+		(size 3.5 9.1)
 		(layers "B.Cu" "B.Paste" "B.Mask")
 		(uuid "b1b7b0d2-1a01-5a01-9001-000000000023")
-	)
-	(pad "2" smd rect
-		(at 1.75 3.05)
-		(size 3.5 3)
-		(layers "B.Cu" "B.Paste" "B.Mask")
-		(uuid "b1b7b0d2-1a01-5a01-9001-000000000024")
 	)
 	(embedded_fonts no)
 )

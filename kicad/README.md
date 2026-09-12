@@ -52,6 +52,41 @@ product lands off band.
 passive, so without it ERC reports the ground pins as power inputs that
 nothing drives.
 
+## The antenna is a DC short
+
+Worth knowing before any simulator or multimeter surprises you: **pad 1 and
+pad 2 are connected by the radiator**. The arm is one continuous piece of
+copper that lands on the feed pad at one end and on the ground pad at the
+other — that is the shorting strap, the "F" in inverted-F. The port sees
+0 Ω to ground at DC.
+
+The footprint does not make this obvious, which is why `check_project.py`
+asserts it. The polygon looks like it has an isolation ring around pad 2, but
+that 22-vertex ring is 0.147–0.152 mm in radius: it is the 0.15 mm **drill
+barrel** punched out of the copper, not a gap. Probe anywhere else on pad 2's
+land and you are on the radiator:
+
+```
+pad 1 centre                       inside radiator copper = True
+pad 2 centre (in the drill hole)   inside radiator copper = False
+pad 2 copper, +0.2 mm in y         inside radiator copper = True
+pad 2 copper, ±0.3 mm in x         inside radiator copper = True
+```
+
+**This is why a circuit-level RF extraction of this board reports VSWR → ∞.**
+A tool that turns the layout into transmission lines and lumped connectivity
+has no radiation mechanism, so the only thing it can see at the port is a
+shorted stub: |Γ| = 1. Radiation resistance — the ~50 Ω that makes the
+antenna work — exists only in a solver that lets power leave the board. So a
+huge VSWR from a quasi-static or TL extractor is that model being used outside
+its domain, not a fault in the feed line. Use openEMS (or any full-wave
+solver) for the antenna, and the lumped model in `sim/` for the match.
+
+If you want to check the *feed line* separately from the antenna, that is
+worth doing and it is easy: terminate the line into 50 Ω instead of the
+radiator — delete AE1 temporarily, or in RFsim put port 2 at the antenna feed
+pad and look at S21 and the port impedances.
+
 ## The symbols
 
 `library/SWRA117D_RF.kicad_sym` is the project's only symbol library. The
@@ -93,9 +128,12 @@ footprint converted to the modern format by `tools/convert_legacy_footprint.py`
 `connect` pad → `smd`, and a UUID on every item. The 53-vertex antenna
 polygon, the pads and the `Dwgs.User` keep-out box are carried over unchanged.
 
-The SMA and 0402 footprints are generic parts written for this board, not
-copies of the stock KiCad library; check them against your own connector and
-assembly rules before ordering.
+The SMA footprint is a generic end launch: a 1.5 mm signal pad with a ground
+tab 0.8 mm either side on the top, and one solid ground pad under the whole
+launch on the bottom so the port keeps its reference without a zone fill. It
+and the 0402 land are parts written for this board, not copies of the stock
+KiCad library; check them against your own connector and assembly rules
+before ordering.
 
 ## The board
 
@@ -226,35 +264,43 @@ SMA ground pads are left to the surrounding pour.
 
 ### 3. In-KiCad RFsim plugin — port setup
 
-RFsim reads the board directly, so two things need saying before it will model
-the launch correctly.
+RFsim reads the board directly, so three things need saying.
 
-**Fill the zones first.** The copper pours are stored unfilled (KiCad computes
-fills on **B**), so a fresh checkout has no B.Cu copper anywhere and RFsim
-reports *"no copper on reference layer B.Cu"* for Port 1. That is the missing
-fill, not a missing plane: the B.Cu ground pour outline covers the whole feed
-line, which `tools/check_project.py` verifies.
+**Set Port 1 to "Coplanar (CPW)".** RFsim reports coplanar copper 0.8 mm from
+the feed line, and it is right — that is the end-launch footprint doing its
+job. `SMA_EdgeMount_Generic` puts a 1.5 mm signal pad between two ground pads
+0.8 mm either side, with ground underneath: a grounded coplanar waveguide, not
+a microstrip. A Lumped or Microstrip port looks for its return directly
+beneath the signal only, so it mis-models the launch.
 
-**Set Port 1 to "Coplanar (CPW)".** RFsim also reports coplanar copper 0.8 mm
-from the feed line, and it is right — that is the end-launch footprint doing
-its job. `SMA_EdgeMount_Generic` puts a 1.5 mm signal pad between two ground
-pads 0.8 mm either side, with the plane underneath: a grounded coplanar
-waveguide, not a microstrip. A Lumped or Microstrip port looks for its return
-directly beneath the signal only, so it mis-models the launch.
+**The launch no longer needs a zone fill to have a reference.** The warning
+*"no copper on reference layer B.Cu"* was true of the first version of this
+board: the only B.Cu copper under the launch came from the ground pour, and
+pours are stored unfilled (KiCad computes fills on **B**), so nothing was
+there to reference. The SMA footprint now carries a solid 3.5 × 9.1 mm B.Cu
+ground pad under the whole launch — real copper in the file, net GND, directly
+under the port pad, which is also what an end-launch connector wants
+physically. `check_project.py` verifies the port pad sits fully inside it.
 
-The two geometries are deliberately the same impedance, which
+**Still fill the zones** (**B**) before DRC, and before simulating anything
+past the launch: the rest of the feed line is referenced to the B.Cu pour, and
+the checker warns while that fill is missing.
+
+The line impedances are deliberately all within a couple of ohms of 50, which
 `tools/line_impedance.py` computes from the stackup in the board file:
 
-| | | |
+| | Z₀ | |
 |---|---|---|
 | feed line, microstrip, 1.5 mm | **49.7 Ω** | εr,eff 3.33, λg 67.0 mm |
-| SMA launch, CPWG, 1.5 mm / 0.8 mm gap | **48.8 Ω** | εr,eff 3.19, λg 68.5 mm |
-| 50 Ω microstrip width for this stackup | 1.49 mm | Hammerstad + Wheeler thickness |
+| feed line with the pour at its 1.0 mm keep-away, CPWG | **49.8 Ω** | εr,eff 3.24 |
+| SMA launch, CPWG, 0.8 mm gap | **48.8 Ω** | εr,eff 3.19 |
+| 50 Ω microstrip width for this stackup | 1.49 mm | Hammerstad + Wheeler |
 
-So the launch is not a discontinuity — the CPW section is only as long as the
-connector pads (3.5 mm), and the coplanar ground stops there: the pour is held
-1.0 mm off the line by the `RF_POUR_KEEPAWAY_*` rule areas, so everything past
-the connector is a true microstrip over the bottom plane.
+The pour keep-away was chosen for this: at 1.0 mm the coplanar ground is far
+enough that the line is still 49.8 Ω, where 0.5 mm would pull it to 46.4 Ω.
+So if a simulation shows a badly matched *line*, the geometry is not the
+cause — check the port type and the reference layer first, and remember the
+radiator shorts the port (above).
 
 For other solvers, export from KiCad as usual: Gerbers or DXF for 2.5D tools
 (Sonnet, ADS Momentum), STEP for 3D (HFSS, CST).
@@ -284,16 +330,21 @@ positions (rotations included) and verifies that
 * copper of different nets keeps ≥ 0.15 mm apart,
 * nothing but the antenna lives above the ground plane edge,
 * every end of the feed line sits over the B.Cu ground pour, so the microstrip
-  has a return path — and it says so when the zones are still unfilled.
+  has a return path — and it says so when the zones are still unfilled,
+* the port pad sits inside the bottom-side ground pad, so an RF simulator
+  finds reference copper at the launch whether or not the pours are filled,
+* the radiator touches both antenna pads, which is the inverted-F short.
 
 ```
 ok   library: 6 symbols, 3 footprints parse cleanly
 ok   schematic: 4 embedded symbols all match library/SWRA117D_RF.kicad_sym (no lib_symbol_mismatch)
 ok   schematic: 7 pins placed, 5 wires, netlist matches the intended one
-ok   board: 7 pads, 4 tracks, 15 vias, clearances >= 0.15 mm, keep-out clean
+ok   board: 6 pads, 4 tracks, 15 vias, clearances >= 0.15 mm, keep-out clean
 ok   board: 28 antenna polygon vertices overlap the plane edge, all of them inside the antenna's own pads
 ok   board: all 8 feed line ends sit over the B.Cu ground pour (reference plane present)
 ok   board: 2 copper zones carry no fill yet - press B in the PCB editor before running DRC or an RF simulation, or tools that look for the reference layer will find it empty
+ok   board: port pad 3.5 x 1.5 mm sits inside a 3.5 x 9.1 mm B.Cu ground pad, so the launch is referenced without a zone fill
+ok   board: the radiator is one piece of copper touching both antenna pads (inverted-F short: the port is a DC short to GND)
 0 problem(s)
 ```
 

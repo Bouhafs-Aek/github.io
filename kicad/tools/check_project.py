@@ -347,6 +347,81 @@ def check_reference_plane():
                      "the PCB editor before running DRC or an RF simulation, or "
                      "tools that look for the reference layer will find it empty")
 
+def check_launch_and_radiator():
+    """Two things an RF simulator needs that a netlist check cannot see.
+
+    1. The port pad needs copper on the reference layer directly beneath it.
+       A zone outline is a promise; only a pad or a fill is copper in the
+       file, so the SMA footprint carries a solid B.Cu ground pad under the
+       launch and this check keeps it there.
+    2. An inverted-F is fed at one point and shorted to ground at another, so
+       its radiator must be one piece of copper touching pad 1 and pad 2.
+       That DC short is the antenna working, not a fault - and it is why a
+       circuit level extraction of this board reports VSWR -> infinity.
+    """
+    pcb = parse((PRJ_DIR / f"{PROJECT}.kicad_pcb").read_text())
+    nets = {int(n[1]): str(n[2]) for n in find_all(pcb, "net")}
+
+    launch = ground = None
+    radiator = pads = None
+    for fp in find_all(pcb, "footprint"):
+        ref = next(p[2] for p in find_all(fp, "property") if p[1] == "Reference")
+        at = find(fp, "at")
+        origin = (float(at[1]), float(at[2]))
+        rot = float(at[3]) if len(at) > 3 else 0.0
+        for pad in find_all(fp, "pad"):
+            pad_at = find(pad, "at")
+            rx, ry = rotate((float(pad_at[1]), float(pad_at[2])), -rot)
+            centre = (origin[0] + rx, origin[1] + ry)
+            size = find(pad, "size")
+            box = (centre, (float(size[1]), float(size[2])))
+            layers = [str(x) for x in find(pad, "layers")[1:]]
+            net = nets[int(find(pad, "net")[1])] if find(pad, "net") else ""
+            if "F.Cu" in layers and net not in ("", "GND"):
+                launch = launch or box
+            if "B.Cu" in layers and net == "GND":
+                ground = ground or box
+        poly = find(fp, "fp_poly")
+        if poly is not None:
+            radiator = [(origin[0] + rotate((float(xy[1]), float(xy[2])), -rot)[0],
+                         origin[1] + rotate((float(xy[1]), float(xy[2])), -rot)[1])
+                        for xy in find(poly, "pts")[1:]]
+            pads = {str(pad[1]): (origin[0] + rotate((float(find(pad, "at")[1]),
+                                                     float(find(pad, "at")[2])), -rot)[0],
+                                  origin[1] + rotate((float(find(pad, "at")[1]),
+                                                      float(find(pad, "at")[2])), -rot)[1])
+                    for pad in find_all(fp, "pad")}
+
+    if launch is None or ground is None:
+        fail("board: no port pad / bottom side ground pad pair found at the launch")
+    else:
+        (lx, ly), (lw, lh) = launch
+        (gx, gy), (gw, gh) = ground
+        covered = (abs(lx - gx) * 2 <= gw - lw + 1e-6
+                   and abs(ly - gy) * 2 <= gh - lh + 1e-6)
+        if not covered:
+            fail(f"board: the port pad at {q((lx, ly))} is not fully over the "
+                 "bottom side ground pad, so the launch has no reference copper "
+                 "unless the zones happen to be filled")
+        else:
+            notes.append(f"board: port pad {lw} x {lh} mm sits inside a {gw} x {gh} mm "
+                         "B.Cu ground pad, so the launch is referenced without a zone fill")
+
+    if radiator and pads:
+        # probe just off each pad centre: pad 2's centre falls in its drill barrel,
+        # which the polygon punches out with a keyhole
+        touching = {}
+        for number, centre in pads.items():
+            touching[number] = any(
+                point_in_polygon((centre[0] + dx, centre[1] + dy), radiator)
+                for dx, dy in ((0, 0), (0.2, 0), (-0.2, 0), (0, 0.2), (0, -0.2)))
+        if not all(touching.values()):
+            fail(f"board: the radiator does not reach every antenna pad ({touching}) - "
+                 "an inverted-F must be fed at pad 1 and shorted to ground at pad 2")
+        else:
+            notes.append("board: the radiator is one piece of copper touching both "
+                         "antenna pads (inverted-F short: the port is a DC short to GND)")
+
 def library_symbols():
     lib = parse((PRJ_DIR / "library" / "SWRA117D_RF.kicad_sym").read_text())
     return {str(s[1]): s for s in find_all(lib, "symbol")}
@@ -398,6 +473,7 @@ def main() -> int:
     check_schematic(expected)
     check_board(expected)
     check_reference_plane()
+    check_launch_and_radiator()
     for note in notes:
         print(f"ok   {note}")
     for err in errors:
