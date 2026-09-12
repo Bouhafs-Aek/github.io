@@ -171,6 +171,44 @@ python3 tools/scale_footprint.py \
 python3 tools/gen_project.py
 ```
 
+### Run log
+
+Three full-wave runs so far. The frequency a run reports is only as good as
+the setup behind it, so the setup is recorded with it:
+
+| run | ground plane | substrate | domain | resonance |
+|---|---|---|---|---|
+| 1 | **absent** (pours unfilled) | **1.6 mm** (preset) | **4 mm** | 2.83 GHz |
+| 2 | present | **1.6 mm** (mid-plane caption read 0.80 mm) | **4 mm** | 2.02 GHz |
+| 3 | to confirm | to confirm | to confirm | 2.82 GHz, VSWR 1.2 |
+
+Runs 1 and 3 agree, and that agreement means nothing on its own: a missing
+ground plane pushes the resonance up, a 1.6 mm substrate pulls it down, and in
+run 1 the two cancelled. Only the setup behind run 3 can make its number
+usable.
+
+**The gate before retuning.** Applying a scale factor is a two-line change, so
+the cost is not in the edit — it is in scaling on a bad measurement, which has
+already happened once here. Confirm all four before flipping it:
+
+1. copper pours filled in the exported geometry,
+2. substrate 0.8 mm, εr 4.4 (check the field-plot mid-plane caption reads
+   0.40 mm),
+3. domain margin ≥ 31 mm (check the field plot extends ~31 mm past the copper
+   and is dark at the boundary),
+4. port attached to the feed line, coplanar at the launch.
+
+With run 3 confirmed, k = 2.82 / 2.45 = **1.151** — within 0.3% of the x1.155
+copy already in the library, which is inside the first-order accuracy of the
+method, so no regeneration is needed. Set `ANT_SCALE = 1.155` and
+`ANT_FOOTPRINT = "SWRA117D_2G4_Left_retuned"` in `tools/gen_project.py`,
+regenerate, and expect resonance near 2.45 GHz.
+
+One encouraging detail from run 3 independent of its frequency: VSWR at the
+null is about 1.2, so the antenna is genuinely matched at whatever frequency
+it resonates. The feed tap sits in the right place relative to the short, and
+uniform scaling preserves that ratio — so the match should survive the retune.
+
 `SWRA117D_2G4_Left_retuned.kicad_mod` is still in the library at x1.155 as an
 example; the board is back on the published geometry. `ANT_ORIGIN` stays at
 66.5 mm — 0.9 mm of board beyond the antenna's keep-out box, which is routing
