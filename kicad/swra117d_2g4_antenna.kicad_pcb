@@ -303,7 +303,7 @@
 			(effects (font (size 0.8 0.8) (thickness 0.12)))
 			(unlocked yes)
 		)
-		(property "Value" "0.8nH"
+		(property "Value" "0R"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(uuid "c0402c0d-1a02-5a02-9002-000000000002")

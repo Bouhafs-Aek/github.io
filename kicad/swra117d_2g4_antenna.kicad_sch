@@ -402,7 +402,7 @@
 		(effects (font (size 1.27 1.27)) (justify left bottom))
 		(uuid "629d9a6f-80c8-58ba-975b-a2ae9d678d9d")
 	)
-	(text "RF test board for the TI SWRA117D 2.45 GHz printed inverted-F antenna.\n\nJ1 feeds a 1.5 mm wide 50 ohm microstrip on 0.8 mm FR4 (er 4.4, tan d 0.02).\nC1 / L1 / C2 form a pi matching network; only L1 is fitted by default.\nAE1 pin 2 must sit on the ground plane edge - see the keep-out on the PCB.\n\nSimulation: sim/s11_pi_match.cir (ngspice, lumped antenna model) and\nsim/openems/swra117d_openems.py (full wave S11, impedance, far field)."
+	(text "RF test board for the TI SWRA117D 2.45 GHz printed inverted-F antenna.\n\nJ1 feeds a 1.5 mm wide 50 ohm microstrip on 0.8 mm FR4 (er 4.4, tan d 0.02).\nThe antenna is a 50 ohm design, so the board ships unmatched: L1 is a 0 ohm\njumper and C1 / C2 are unpopulated. The pi network is there to retune the\nantenna once it is measured in its real enclosure - fit parts only then.\nAE1 pin 2 must sit on the ground plane edge - see the keep-out on the PCB.\n\nSimulation: sim/s11_pi_match.cir (ngspice, lumped antenna model) and\nsim/openems/swra117d_openems.py (full wave S11, impedance, far field)."
 		(exclude_from_sim no)
 		(at 76.2 112 0)
 		(effects (font (size 1.27 1.27)) (justify left top))
@@ -483,13 +483,13 @@
 			(at 101.6 85.09 0)
 			(effects (font (size 1.27 1.27)) (justify left))
 		)
-		(property "Value" "0.8nH" (at 101.6 92.71 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Value" "0R" (at 101.6 92.71 0) (effects (font (size 1.27 1.27)) (justify left)))
 		(property "Footprint" "SWRA117D_RF:Chip_0402_1005Metric_RF"
 			(at 101.6 88.9 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Datasheet" "~" (at 101.6 88.9 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Description" "Series element of the pi matching network"
+		(property "Description" "Series element of the pi matching network; 0 ohm jumper as built"
 			(at 101.6 88.9 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)

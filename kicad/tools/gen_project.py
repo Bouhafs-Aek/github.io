@@ -66,11 +66,11 @@ PARTS = [
          nets={"1": "RF_IN", "2": "GND"},
          ref_at=(93.98, 95.25), val_at=(93.98, 97.79),
          desc="Shunt element of the pi matching network (source side)"),
-    dict(ref="L1", lib=f"{LIB_NICK}:L", value="0.8nH", fp="Chip_0402_1005Metric_RF",
+    dict(ref="L1", lib=f"{LIB_NICK}:L", value="0R", fp="Chip_0402_1005Metric_RF",
          sch=(101.6, 88.9, 90), pcb=(118.0, FEED_Y, 0),
          nets={"1": "RF_IN", "2": "ANT_FEED"},
          ref_at=(101.6, 85.09), val_at=(101.6, 92.71),
-         desc="Series element of the pi matching network"),
+         desc="Series element of the pi matching network; 0 ohm jumper as built"),
     dict(ref="C2", lib=f"{LIB_NICK}:C", value="0.5pF", fp="Chip_0402_1005Metric_RF",
          sch=(111.76, 96.52, 0), pcb=(120.5, FEED_Y + 0.51, 270), dnp=True,
          nets={"1": "ANT_FEED", "2": "GND"},
@@ -112,7 +112,9 @@ SCH_NOTE = (
     "RF test board for the TI SWRA117D 2.45 GHz printed inverted-F antenna.\n"
     "\n"
     "J1 feeds a 1.5 mm wide 50 ohm microstrip on 0.8 mm FR4 (er 4.4, tan d 0.02).\n"
-    "C1 / L1 / C2 form a pi matching network; only L1 is fitted by default.\n"
+    "The antenna is a 50 ohm design, so the board ships unmatched: L1 is a 0 ohm\n"
+    "jumper and C1 / C2 are unpopulated. The pi network is there to retune the\n"
+    "antenna once it is measured in its real enclosure - fit parts only then.\n"
     "AE1 pin 2 must sit on the ground plane edge - see the keep-out on the PCB.\n"
     "\n"
     "Simulation: sim/s11_pi_match.cir (ngspice, lumped antenna model) and\n"

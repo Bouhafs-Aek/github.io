@@ -11,9 +11,13 @@
 
 .include antenna_swra117d.lib
 
-.param c1=1f          $ C1 shunt, DNP by default
-.param l1=0.8n        $ L1 series, fitted
-.param c2=1f          $ C2 shunt, DNP by default
+* As built: the antenna is a 50 ohm design, so nothing is matched out - L1 is
+* a 0 ohm jumper (1 pH here) and both shunts are unpopulated (1 fF here).
+* For comparison, l1=0.8n is what this lumped model would like to see; it buys
+* ~8 dB at band centre and moves the resonance from 2.49 GHz to 2.46 GHz.
+.param c1=1f          $ C1 shunt, not populated
+.param l1=1p          $ L1 series, 0 ohm jumper
+.param c2=1f          $ C2 shunt, not populated
 
 V1  src 0   dc 0 ac 1
 Rs  src in  50

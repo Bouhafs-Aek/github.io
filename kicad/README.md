@@ -93,7 +93,7 @@ the stackup is in the board file, so the 3D viewer and any EM export see it.
 | ground plane | y ≥ 65.75 mm only | its edge is the antenna's ground reference |
 | antenna keep-out | rule area above that edge, F.Cu **and** B.Cu | no pour, no tracks, no vias under or beside the antenna |
 | top pour keep-away | 1.0 mm either side of the feed | keeps the line a microstrip instead of a narrow-gap coplanar waveguide |
-| matching network | C1 / L1 / C2, 0402 | C1 and C2 are DNP, L1 = 0.8 nH fitted |
+| matching network | C1 / L1 / C2, 0402 | **not populated**: L1 is a 0 Ω jumper, C1 and C2 are DNP |
 | stitching | 17 vias | connector ground, both shunt caps, and a row along the plane edge |
 
 Signal path: `J1 → C1 shunt → L1 series → C2 shunt → AE1`, nets `RF_IN` and
@@ -102,6 +102,42 @@ Signal path: `J1 → C1 shunt → L1 series → C2 shunt → AE1`, nets `RF_IN` 
 The antenna polygon overlaps the plane edge by 0.25 mm at 28 of its vertices —
 that is the part of both legs that lands on the pads, so the pads' own
 clearance covers it. Nothing else crosses the line.
+
+### Why a matching network on a 50 Ω antenna?
+
+The SWRA117D antenna *is* a 50 Ω design, and this board ships with nothing
+matched out: **L1 is a 0 Ω jumper and C1/C2 are unpopulated**, so the RF path
+is just connector → 50 Ω line → antenna. The pi network is three empty
+footprints, not a correction applied to the antenna.
+
+They are there because "50 Ω" holds for the antenna *in the conditions the
+application note assumes*, and a real board is never quite those conditions:
+
+* **Stackup.** The published dimensions belong to a particular board thickness
+  and copper/dielectric stack. This one is 0.8 mm FR4, and the arm's
+  capacitance to the plane edge — hence the resonance — depends on that.
+* **Ground plane.** An IFA radiates against the plane it is fed from; it is
+  part of the antenna. A 40 × 30 mm plane is not the note's plane.
+* **FR4 tolerance.** εr is typically quoted 4.2–4.8 between vendors and
+  batches, and etch tolerance moves the arm width. Both shift resonance.
+* **The product.** Plastic housing, battery, display, screws, a hand — these
+  detune a printed antenna by tens of MHz, routinely more. This is the big one,
+  and it cannot be designed out in advance; it is measured.
+
+So the pads are cheap insurance: three 0402 sites cost nothing on the BOM when
+unpopulated, and they turn a re-spin into a component swap if the assembled
+product lands off band. Leaving them out of the layout is the expensive
+decision, not putting them in.
+
+The lumped model in `sim/` shows the scale of it. Unmatched, it is already
+under −10 dB across the whole ISM band — which is the point: the antenna does
+not *need* matching. Fitting the 0.8 nH the model asks for buys about 8 dB at
+band centre and shifts resonance 30 MHz down — worth having only once you know
+which way the real hardware moved.
+
+If you want the cleanest possible reference measurement of the bare antenna,
+say so and I will route a solid 50 Ω line straight from J1 to the feed pad; a
+0 Ω 0402 still adds a few tenths of a nH and two pad discontinuities.
 
 ### Antenna rules this board follows (keep them if you re-use it)
 
@@ -126,18 +162,20 @@ computes Γ = 2·v(in) − 1 directly from a 1 V source behind 50 Ω.
 cd kicad/sim && ngspice -b s11_pi_match.cir       # writes s11_results.csv
 ```
 
-With the default values (C1, C2 unpopulated, L1 = 0.8 nH):
+As built — L1 a 0 Ω jumper, C1/C2 unpopulated — and with 0.8 nH fitted in L1
+for comparison:
 
-| | |
-|---|---|
-| best match | −31 dB at 2.461 GHz |
-| 2.400 GHz | Zin 39.4 − 13.8j Ω, S11 −14.4 dB, VSWR 1.47 |
-| 2.442 GHz | Zin 44.6 − 3.9j Ω, S11 −23.0 dB, VSWR 1.15 |
-| 2.4835 GHz | Zin 51.4 + 7.7j Ω, S11 −22.2 dB, VSWR 1.17 |
-| −10 dB band | 2.358 – 2.568 GHz (210 MHz) |
+| | as built (0 Ω) | L1 = 0.8 nH |
+|---|---|---|
+| best match | −29 dB at 2.493 GHz | −31 dB at 2.461 GHz |
+| 2.400 GHz | 39.4 − 25.8j Ω, −10.5 dB, VSWR 1.86 | 39.4 − 13.8j Ω, −14.4 dB, VSWR 1.47 |
+| 2.442 GHz | 44.8 − 15.6j Ω, −15.3 dB, VSWR 1.41 | 44.9 − 3.4j Ω, −23.8 dB, VSWR 1.14 |
+| 2.4835 GHz | 51.4 − 4.7j Ω, −26.3 dB, VSWR 1.10 | 51.4 + 7.7j Ω, −22.2 dB, VSWR 1.17 |
+| −10 dB band | 2.394 – 2.595 GHz | 2.358 – 2.568 GHz |
 
-Change the match by editing the `.param` line (a DNP part is modelled as
-1 fF). **The antenna model is a plausible fit, not a field solution** — it
+The unmatched column is the one that matters: the antenna clears −10 dB across
+2.400–2.4835 GHz on its own. Change the population by editing the `.param`
+line (an unpopulated part is modelled as 1 fF, a jumper as 1 pH). **The antenna model is a plausible fit, not a field solution** — it
 reproduces the shape of an IFA response on a board this size, but the real
 resonance depends on your stackup, enclosure and ground plane. Refit it to
 openEMS or VNA data before trusting it to better than a few dB.
