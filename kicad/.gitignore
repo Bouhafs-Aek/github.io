@@ -7,3 +7,7 @@ sim/openems/*.h5
 *.kicad_prl
 *-backups/
 fp-info-cache
+
+# python bytecode from the tools
+__pycache__/
+*.pyc
