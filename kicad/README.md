@@ -181,6 +181,14 @@ the setup behind it, so the setup is recorded with it:
 | 1 | **absent** (pours unfilled) | **1.6 mm** (preset) | **4 mm** | 2.83 GHz |
 | 2 | present | **1.6 mm** (mid-plane caption read 0.80 mm) | **4 mm** | 2.02 GHz |
 | 3 | to confirm | to confirm | to confirm | 2.82 GHz, VSWR 1.2 |
+| 4 | present | **1.6 mm** (mid-plane caption again read 0.80 mm) | **4 mm**, bright field on the boundary | 2.65 GHz |
+
+Four runs on a board whose copper has not meaningfully changed, spanning
+**2.02 – 2.83 GHz: 810 MHz, or 33% of the target frequency.** No geometry
+moved by 33%. That spread is the measurement, not the antenna — and it is the
+strongest argument for fixing the setup before reading another number off a
+plot. A converged model gives the same answer twice; this one has not given
+the same answer twice yet.
 
 Runs 1 and 3 agree, and that agreement means nothing on its own: a missing
 ground plane pushes the resonance up, a 1.6 mm substrate pulls it down, and in

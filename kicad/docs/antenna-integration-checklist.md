@@ -127,6 +127,24 @@ results if you know where to look, and checking takes seconds:
       beats the speed of light, or VSWR → ∞ across an entire sweep are setup
       faults, not antenna behaviour.
 
+### 4c. Repeatability before belief
+
+A single plot is not a result. Before any number leaves the solver and turns
+into a design change:
+
+- [ ] **Run it twice** and get the same answer. A model whose boundary sits in
+      the near field, or whose mesh is too coarse, will happily produce a
+      different resonance each time the geometry is nudged.
+- [ ] **Change one thing per run**, and write down what changed. Two settings
+      moving at once is how two errors cancel and look like confirmation.
+- [ ] **Converge the mesh**: refine once and check the answer does not move.
+      If it moves, the earlier answer was mesh, not antenna.
+- [ ] **Converge the domain**: enlarge the air box and check the answer does
+      not move.
+- [ ] **Track the spread.** If successive runs on an unchanged board disagree
+      by more than the bandwidth you are designing for, none of them is
+      usable. Log the setup with every number so the spread is visible.
+
 ## 5. Tuning and validation
 
 - [ ] **Tune on the assembled, enclosed product**, not the bare board.
