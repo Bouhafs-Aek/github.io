@@ -240,7 +240,7 @@
 		(effects (font (size 1.27 1.27)) (justify left bottom))
 		(uuid "629d9a6f-80c8-58ba-975b-a2ae9d678d9d")
 	)
-	(text "Radiator on a 50 ohm port: the TI SWRA117D 2.45 GHz printed inverted-F\nantenna fed straight from J1, with no matching network in the path.\n\nJ1 -> 1.5 mm wide 50 ohm microstrip on 0.8 mm FR4 (er 4.4, tan d 0.02)\n-> AE1 pin 1.  AE1 pin 2 is the inverted-F ground pin and sits on the\nedge of the ground plane; see the keep-out on the PCB.\n\nSimulation: sim/s11_antenna.cir (ngspice, lumped antenna model) and\nsim/openems/swra117d_openems.py (full wave S11, impedance, far field)."
+	(text "Radiator on a 50 ohm port: the TI SWRA117D 2.45 GHz printed inverted-F\nantenna fed straight from J1, with no matching network in the path.\n\nJ1 -> 2.95 mm wide 50 ohm microstrip on 1.6 mm FR4 (er 4.5, tan d 0.02)\n-> AE1 pin 1.  AE1 pin 2 is the inverted-F ground pin and sits on the\nedge of the ground plane; see the keep-out on the PCB.\n\nSimulation: sim/s11_antenna.cir (ngspice, lumped antenna model) and\nsim/openems/swra117d_openems.py (full wave S11, impedance, far field)."
 		(exclude_from_sim no)
 		(at 76.2 112 0)
 		(effects (font (size 1.27 1.27)) (justify left top))

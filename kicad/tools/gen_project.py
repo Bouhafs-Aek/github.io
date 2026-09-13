@@ -64,13 +64,17 @@ FEED_X = ANT_ORIGIN[0]      # the feed runs straight down from it to the SMA
 ANT_SCALE = 1.0
 ANT_FOOTPRINT = "Texas_SWRA117D_2.4GHz_Left"
 W_NECK = 0.5                # neck into the 0.5 mm antenna feed pad
-SUB_H, SUB_ER, SUB_TAND = 0.8, 4.4, 0.02
+SUB_H, SUB_ER, SUB_TAND = 1.6, 4.5, 0.02   # the board is 1.6 mm FR4
 
 # The feed width is not a chosen number: it is whatever gives 50 ohm on the
 # stackup above, so changing the stackup changes it.  Rounded to 0.05 mm
 # because no fab holds better than that on an outer layer.
 W50 = round(synthesise_microstrip(50.0, SUB_H, SUB_ER, 0.035) / 0.05) * 0.05
 POUR_GAP = round(1.25 * SUB_H, 2)   # top pour keep-away either side of the line
+LAUNCH_GAP = 2.0            # coplanar gap at the connector: 49.8 ohm on this stackup
+LAUNCH_OFFSET = W50 / 2 + LAUNCH_GAP + 1.5      # centre of each SMA ground pad
+PAD_LEN_IN = 3.5            # how far the SMA pads reach in from the board edge
+TAPER_LEN, TAPER_STEPS = 4.5, 6     # 50 ohm line down to the 0.5 mm feed pad
 
 NETS = {"": 0, "GND": 1, "ANT_FEED": 2}
 
@@ -133,7 +137,7 @@ SCH_NOTE = (
     "Radiator on a 50 ohm port: the TI SWRA117D 2.45 GHz printed inverted-F\n"
     "antenna fed straight from J1, with no matching network in the path.\n"
     "\n"
-    "J1 -> 1.5 mm wide 50 ohm microstrip on 0.8 mm FR4 (er 4.4, tan d 0.02)\n"
+    "J1 -> 2.95 mm wide 50 ohm microstrip on 1.6 mm FR4 (er 4.5, tan d 0.02)\n"
     "-> AE1 pin 1.  AE1 pin 2 is the inverted-F ground pin and sits on the\n"
     "edge of the ground plane; see the keep-out on the PCB.\n"
     "\n"
@@ -519,8 +523,8 @@ def build_board() -> list:
             [Sym("title"), TITLE],
             [Sym("date"), "2026-09-12"],
             [Sym("rev"), "A"],
-            [Sym("comment"), Sym("1"), "2 layer, 0.8 mm FR4, 35 um Cu"],
-            [Sym("comment"), Sym("2"), "50 ohm microstrip w = 1.5 mm, no matching network"]],
+            [Sym("comment"), Sym("1"), f"2 layer, {SUB_H} mm FR4, 35 um Cu"],
+            [Sym("comment"), Sym("2"), f"50 ohm microstrip w = {W50} mm, no matching network"]],
            layer_nodes,
            [Sym("setup"), stackup(),
             [Sym("pad_to_mask_clearance"), Sym("0")],
@@ -545,17 +549,26 @@ def build_board() -> list:
     pcb.append(gr_text("ANTENNA KEEP-OUT", (BOARD_X0 + 0.8, 63.2), "F.SilkS", size=1.0))
     pcb.append(gr_text("SWRA117D 2.45 GHz IFA - RF test board",
                        (BOARD_X0 + 1.0, BOARD_Y1 - 7.0), "F.SilkS", size=1.2))
-    pcb.append(gr_text("50R microstrip w=1.5mm / 0.8mm FR4 er=4.4",
+    pcb.append(gr_text(f"50R microstrip w={W50}mm / {SUB_H}mm FR4 er={SUB_ER}",
                        (BOARD_X0 + 1.0, BOARD_Y1 - 5.6), "F.SilkS", size=0.9))
 
     # 50 ohm feed: the SMA sits on the bottom edge directly below the antenna
     # feed pad and faces it, so the line is one straight run with no corner.
-    # The last millimetre necks down to meet the 0.5 mm feed pad.
-    launch_y = BOARD_Y1 - 1.75          # SMA signal pad centre
-    tracks = [
-        ((FEED_X, launch_y), (FEED_X, ANT_ORIGIN[1] + 1.0), W50, "ANT_FEED"),
-        ((FEED_X, ANT_ORIGIN[1] + 1.0), (FEED_X, ANT_ORIGIN[1]), W_NECK, "ANT_FEED"),
-    ]
+    #
+    # On this stackup the 50 ohm line is W50 wide while the antenna's feed pad
+    # is 0.5 mm, so the two cannot butt together: the step would be a real
+    # discontinuity, and a line that wide would crowd the antenna's ground pin.
+    # The last TAPER_LEN mm steps down in TAPER_STEPS stages instead.
+    launch_y = BOARD_Y1 - PAD_LEN_IN / 2          # SMA signal pad centre
+    taper_top = ANT_ORIGIN[1] + 0.5               # where the 0.5 mm neck starts
+    taper_bot = taper_top + TAPER_LEN
+    tracks = [((FEED_X, launch_y), (FEED_X, taper_bot), W50, "ANT_FEED")]
+    for i in range(TAPER_STEPS):
+        y0 = taper_bot - i * TAPER_LEN / TAPER_STEPS
+        y1 = taper_bot - (i + 1) * TAPER_LEN / TAPER_STEPS
+        width = W50 + (W_NECK - W50) * (i + 0.5) / TAPER_STEPS
+        tracks.append(((FEED_X, y0), (FEED_X, y1), round(width, 3), "ANT_FEED"))
+    tracks.append(((FEED_X, taper_top), (FEED_X, ANT_ORIGIN[1]), W_NECK, "ANT_FEED"))
     for a, b, width, net in tracks:
         pcb.append(segment(a, b, width, net))
 
@@ -571,8 +584,8 @@ def build_board() -> list:
     #    the feed corridor would otherwise be - is half-wave resonant at
     #    3.25 GHz, inside the range this board gets simulated over.  At
     #    5.0 mm the patches resonate above 14 GHz.
-    stitch = [(FEED_X + dx, launch_y + dy)
-              for dx in (-3.6, -2.3, 2.3, 3.6) for dy in (-0.8, 0.8)]
+    stitch = [(FEED_X + sign * (LAUNCH_OFFSET + dx), launch_y + dy)
+              for sign in (-1, 1) for dx in (-1.0, 1.0) for dy in (-0.8, 0.8)]
     stitch += [(x, GND_EDGE_Y + 1.0) for x in
                (103, 106, 109, 112, 115, 118, 121, 127.5, 130.5, 133.5, 136.5)]
     stitch += stitch_grid(stitch, launch_y)
@@ -589,9 +602,13 @@ def build_board() -> list:
     # Keep the top pour POUR_GAP away from the 50 ohm line so it stays a
     # microstrip referenced to the bottom plane instead of turning into a
     # narrow-gap coplanar waveguide.  Tracks, vias and pads stay legal.
+    # The corridor starts below the plane edge, not at it: the antenna needs a
+    # straight ground plane edge, and a notch cut into it right under the feed
+    # would become part of the antenna. The line is already necked down there.
     half = W50 / 2 + POUR_GAP
+    corridor_top = GND_EDGE_Y + 3.0
     pcb.append(keepout_zone("RF_POUR_KEEPAWAY",
-                            [(FEED_X - half, GND_EDGE_Y), (FEED_X + half, GND_EDGE_Y),
+                            [(FEED_X - half, corridor_top), (FEED_X + half, corridor_top),
                              (FEED_X + half, BOARD_Y1 + 0.5), (FEED_X - half, BOARD_Y1 + 0.5)],
                             layers=("F.Cu",), tracks="allowed", vias="allowed"))
     pcb.append([Sym("embedded_fonts"), Sym("no")])

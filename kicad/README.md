@@ -267,38 +267,35 @@ ground plane edge is read from that box rather than typed in. And the note's
 "15.2 × 5.7 mm" envelope is the copper (14.4 × 5.4 mm) plus exactly those
 clearances.
 
-### What the note does not say: the stackup
+### The stackup: 1.6 mm, confirmed by the board owner
 
-SWRA117D does not give the stackup. It says: *"It is also recommended to use
+SWRA117D does not give the stackup. It says *"It is also recommended to use
 the same thickness and type of PCB material as used in the reference design.
 Information about the PCB can be found in a separate readme file included in
 the reference design"* — a readme we do not have. What it does give is the
 remedy: *"To compensate for a thicker/thinner PCB the antenna could be made
 slightly shorter/longer."*
 
-The 0.8 mm FR4 on this board is therefore not verified against SWRA117D, but
-it is not arbitrary either: TI's sibling note for the same antenna family
-(DN023 / SWRA228C, 868/915/955 MHz) states *"The antenna was implemented on a
-0.8 mm thick FR-4 substrate"*. Treat it as the best available default and a
-known open item, not as a specification.
+**The board is 1.6 mm FR4.** That is the fabricated reality, so the design
+follows it, and the simulator was right all along — it was this project's
+0.8 mm assumption that was wrong. Everything downstream is derived, so the
+change was one constant:
 
-If a different thickness is used, the feed follows automatically — the width
-is synthesised from the stackup rather than typed in:
-
-| stackup | 50 Ω line | pour keep-away |
+| | 0.8 mm (was) | 1.6 mm (is) |
 |---|---|---|
-| 0.8 mm FR4, εr 4.4 | 1.50 mm | 1.00 mm |
-| 1.0 mm FR4, εr 4.4 | 1.85 mm | 1.25 mm |
-| 1.6 mm FR4, εr 4.4 | 3.00 mm | 2.00 mm |
+| 50 Ω microstrip | 1.50 mm | **2.95 mm** (50.2 Ω) |
+| SMA signal pad | 1.5 mm | **2.95 mm**, footprint generated to match |
+| coplanar gap at the launch | 0.8 mm → 48.8 Ω | **2.0 mm → 49.8 Ω** |
+| top pour keep-away | 1.0 mm | **2.0 mm** |
+| taper into the antenna's 0.5 mm pad | 1 mm neck | **4.5 mm, 6 steps** |
 
-One thing does not follow automatically, and `check_project.py` now says so
-rather than letting it slide: the SMA footprint's signal pad is a fixed
-1.5 mm, so moving to a thicker board fails the build with
-
-```
-FAIL board: the feed line is 3.0 mm wide but the port pad is 1.5 mm -
-     the stackup changed and the connector footprint did not follow
-```
+Two consequences worth naming. A 2.95 mm line cannot simply butt against a
+0.5 mm feed pad — the step would be a real discontinuity and the wide line
+would crowd the antenna's ground pin, so the last 4.5 mm tapers down in six
+stages. And the pour keep-away corridor now stops 3 mm short of the plane
+edge: at 2.0 mm either side it would otherwise cut a 7 mm notch into the
+ground plane edge directly under the antenna, and that edge is part of the
+antenna.
 
 ### Board edge, keep-out edge, and domain edge are three different things
 
@@ -354,17 +351,17 @@ before ordering.
 
 ## The board
 
-2 layers, 40 × 30 mm, **0.8 mm FR4** (εr 4.4, tan δ 0.02), 35 µm copper —
+2 layers, 40 × 30 mm, **1.6 mm FR4** (εr 4.5, tan δ 0.02), 35 µm copper —
 the stackup is in the board file, so the 3D viewer and any EM export see it.
 
 | item | value | why |
 |------|-------|-----|
-| 50 Ω microstrip | **w = 1.5 mm** | not a chosen number: `gen_project.py` synthesises it from `SUB_H`/`SUB_ER`, so changing the stackup changes the line (1.6 mm FR4 would give 3.00 mm) |
-| feed length | 23.5 mm, board edge to feed pad | λg ≈ 67 mm at 2.45 GHz, so ≈ 126° of line |
+| 50 Ω microstrip | **w = 2.95 mm** | not a chosen number: `gen_project.py` synthesises it from `SUB_H`/`SUB_ER` (50.2 Ω), and the SMA footprint is generated to match |
+| feed length | 23.5 mm, board edge to feed pad | λg ≈ 66 mm at 2.45 GHz, so ≈ 128° of line; the last 4.5 mm tapers 2.95 → 0.5 mm in 6 steps to meet the antenna pad |
 | ground plane | y ≥ 66.25 mm only | its edge is the antenna's ground reference, and `gen_project.py` reads it from the footprint's own keep-out box so a rescaled antenna moves it |
 | antenna keep-out | rule area above that edge, F.Cu **and** B.Cu | no pour, no tracks, no vias under or beside the antenna |
-| top pour keep-away | 1.0 mm either side of the feed | keeps the line a microstrip instead of a narrow-gap coplanar waveguide |
-| stitching | 49 vias | 8 in the connector pads, an 11-via fence at 3 mm along the plane edge, and a 5 mm grid over the pour — see [Ground stitching](#ground-stitching-the-rule-and-what-it-is-for) |
+| top pour keep-away | 2.0 mm either side of the feed, starting 3 mm below the plane edge | keeps the line a microstrip; stopping short of the edge leaves the antenna a straight plane edge instead of a notch |
+| stitching | 41 vias | 8 in the connector pads, an 11-via fence at 3 mm along the plane edge, and a 5 mm grid over the pour (worst unstitched span 9.1 mm → 7.8 GHz) — see [Ground stitching](#ground-stitching-the-rule-and-what-it-is-for) |
 
 The 1.5 mm line necks down to 0.5 mm over the last millimetre to meet the
 antenna's 0.5 mm feed pad — much shorter than λg/20, so not worth modelling as
