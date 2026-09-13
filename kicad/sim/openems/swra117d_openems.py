@@ -12,13 +12,18 @@ are worth pointing it at, and they answer different questions:
       what a VNA on the connector would read - antenna *and* feed line.
 
   ``sim/board/swra117d_2g4_sim.kicad_pcb``  (--board)
-      SWRA117D Figure 3 and nothing else: no connector, no line.  The port is
-      a lumped port in the gap between the radiator and the ground pour, so
-      S11 is the antenna's own.  This is the one to compare against the note.
+      the same board with the SMA taken out, which is the project KiCad's
+      RFsim plugin is meant to be run on.  Geometrically identical here, since
+      this script never modelled the connector body either.
+
+A board with no feed line at all is also handled: the port then becomes a
+lumped port across the gap the ``RF_PORT_GAP`` keep-out holds open at the
+antenna's feed pad.  Neither board in this repository is built that way, but
+it is the right model for an antenna fed with no line in front of it.
 
 Simplifications: copper is a zero thickness sheet, vias are square barrels of
-the drill diameter, and on the fabrication board the connector body is not
-modelled (the port launches at the board edge in its place).
+the drill diameter, and the connector body is not modelled (the port launches
+at the board edge in its place).
 
 Usage:
     python3 swra117d_openems.py --dry-run        # geometry summary, no solver

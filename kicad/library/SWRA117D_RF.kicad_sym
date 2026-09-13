@@ -466,6 +466,46 @@
 		)
 		(embedded_fonts no)
 	)
+	(symbol "RF_PORT"
+		(pin_numbers (hide yes))
+		(pin_names (offset 0) (hide yes))
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board no)
+		(property "Reference" "P" (at 0 3.81 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "RF_PORT" (at 0 -3.81 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "~" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "50 ohm simulation port - where the solver excites the feed line. Not a part: it has no footprint and is not placed on the board"
+			(at 0 0 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "ki_keywords" "port RF simulation 50 ohm source"
+			(at 0 0 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(symbol "RF_PORT_0_1"
+			(circle
+				(center 0 0) (radius 1.27)
+				(stroke (width 0.254) (type default))
+				(fill (type none))
+			)
+			(polyline
+				(pts (xy -0.635 -0.635) (xy 0.635 0) (xy -0.635 0.635))
+				(stroke (width 0.254) (type default))
+				(fill (type none))
+			)
+		)
+		(symbol "RF_PORT_1_1"
+			(pin passive line
+				(at 3.81 0 180)
+				(length 2.54)
+				(name "P" (effects (font (size 1.27 1.27))))
+				(number "1" (effects (font (size 1.27 1.27))))
+			)
+		)
+		(embedded_fonts no)
+	)
 	(symbol "PWR_FLAG"
 		(power)
 		(pin_numbers

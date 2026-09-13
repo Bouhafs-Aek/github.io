@@ -204,8 +204,11 @@ choice. Two boards, both correct, answer different questions:
 | + feed line | what does the antenna plus my routing do? |
 | + connector footprint | what will the VNA on the connector read? |
 
-Run only the third and a wrong number has four suspects. Run the first and the
-antenna is on its own; each thing you add afterwards, you can price.
+Run only the third and a wrong number has three suspects. Start from the
+first and each thing you add afterwards, you can price. The middle one is
+usually the practical choice: most solvers want a transmission line to launch
+a port into, and a short line with a defined impedance is far better behaved
+than a gap port.
 
 - [ ] **Know which of the three you are running**, and say so when you quote
       the result. "Resonance is at 2.4 GHz" without this is not a claim anyone
@@ -213,11 +216,21 @@ antenna is on its own; each thing you add afterwards, you can price.
 - [ ] **Strip the connector for the antenna-only model.** Its pads are copper
       in the model and the port's return current runs through them; the bright
       field around them is real, not an artefact, and it is not the antenna's.
-- [ ] **A gap port needs a gap you control.** Feeding directly means a lumped
-      port across the gap between the radiator and the ground pour. Cut that
-      gap as a *keep-out*, not as the zone's pour clearance: pour clearance is
-      a design setting, so anyone who re-fills the zones with a different one
-      has changed the port without touching the antenna.
+- [ ] **Take the connector out before you blame the antenna.** Its pads are
+      copper in the model and the port's return current runs through them; the
+      bright field around them is real and is not the antenna's. Dropping the
+      connector footprint and launching the port off the bare feed line at the
+      board edge removes it as a suspect in one edit, and changes nothing else.
+- [ ] **Change the port model when you remove the connector.** An end-launch
+      footprint makes the line coplanar, so a CPW port fits it. With the
+      footprint gone there is no coplanar ground beside the line and it is a
+      plain microstrip — an MSL port is then the one that matches.
+- [ ] **A gap port needs a gap you control.** If you do feed with no line at
+      all, the port is a lumped port across the gap between the radiator and
+      the ground pour. Cut that gap as a *keep-out*, not as the zone's pour
+      clearance: pour clearance is a design setting, so anyone who re-fills the
+      zones with a different one has changed the port without touching the
+      antenna.
 - [ ] **Make the gap wider than two mesh cells.** A 0.2 mm clearance under a
       0.25 mm mesh is not a port, it is a rounding error. Widen the gap or
       refine the mesh locally, and check the field plot resolves it.

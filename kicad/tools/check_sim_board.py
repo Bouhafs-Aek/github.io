@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Static checks for the simulation-only board.
+"""Static checks for the RFsim project (schematic + board).
 
-The fabrication board has its own checker.  This one asks a different
-question: is what the solver will see actually the antenna alone?  A model
-quietly containing a connector, a stray track or a missing bottom ground is
-the single most common reason a published antenna "does not resonate where
-the datasheet says".
+The fabrication project has its own checker.  This one asks a different
+question: is what the solver sees the antenna and its feed, and nothing else?
+A model quietly containing a connector, or missing a ground plane, is the
+commonest reason a published antenna "does not resonate where the datasheet
+says".
 
     python3 kicad/tools/check_sim_board.py [board.kicad_pcb]
 """
@@ -22,9 +22,12 @@ from sexpr import find, find_all, parse  # noqa: E402
 PRJ_DIR = pathlib.Path(__file__).resolve().parent.parent
 DEFAULT_PCB = PRJ_DIR / "sim" / "board" / "swra117d_2g4_sim.kicad_pcb"
 PCB_PATH = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_PCB
+SCH_PATH = PCB_PATH.with_suffix(".kicad_sch")
+LIB_PATH = PRJ_DIR / "library" / "SWRA117D_RF.kicad_sym"
+
 MIN_CLEARANCE = 0.15
-MIN_PORT_GAP = 0.3          # below this the gap is thinner than the mesh
-PORT_VIA_RADIUS = 2.0       # "at the port" means this close to the feed pad
+LAUNCH_VIA_RADIUS = 6.0     # "at the launch" means this close to the track end
+EPS = 1e-6
 
 errors: list[str] = []
 notes: list[str] = []
@@ -34,10 +37,38 @@ def fail(msg: str) -> None:
     errors.append(msg)
 
 
+def q(pt):
+    return (round(pt[0], 3), round(pt[1], 3))
+
+
+def rotate(pt, deg):
+    rad = math.radians(deg)
+    return (pt[0] * math.cos(rad) - pt[1] * math.sin(rad),
+            pt[0] * math.sin(rad) + pt[1] * math.cos(rad))
+
+
+def on_segment(pt, a, b) -> bool:
+    (px, py), (ax, ay), (bx, by) = pt, a, b
+    if abs((bx - ax) * (py - ay) - (by - ay) * (px - ax)) > 1e-6:
+        return False
+    dot = (px - ax) * (bx - ax) + (py - ay) * (by - ay)
+    length2 = (bx - ax) ** 2 + (by - ay) ** 2
+    return -1e-6 <= dot <= length2 + 1e-6
+
+
 def plane_edge(pcb) -> float:
     return min(float(xy[2])
                for zone in find_all(pcb, "zone") if not find(zone, "keepout")
                for xy in find(find(zone, "polygon"), "pts")[1:])
+
+
+def outline(pcb):
+    pts = [(float(find(g, s)[1]), float(find(g, s)[2]))
+           for g in find_all(pcb, "gr_line")
+           if str(find(g, "layer")[1]) == "Edge.Cuts" for s in ("start", "end")]
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    return min(xs), min(ys), max(xs), max(ys)
 
 
 def zone_by_name(pcb, name):
@@ -56,7 +87,7 @@ def zone_bbox(zone):
 
 
 def antenna(pcb):
-    """The antenna footprint, its two pads and its radiator polygon."""
+    """The antenna footprint, its radiator polygon and its two pads."""
     for fp in find_all(pcb, "footprint"):
         if find(fp, "fp_poly") is None:
             continue
@@ -68,11 +99,11 @@ def antenna(pcb):
         pads = {}
         for pad in find_all(fp, "pad"):
             pat, size = find(pad, "at"), find(pad, "size")
-            cx = origin[0] + float(pat[1])
-            cy = origin[1] + float(pat[2])
+            cx, cy = origin[0] + float(pat[1]), origin[1] + float(pat[2])
             w, h = float(size[1]), float(size[2])
             net = find(pad, "net")
             pads[str(pad[1])] = dict(
+                centre=(cx, cy),
                 rect=(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2),
                 net=str(net[2]) if net is not None else "")
         poly = [(origin[0] + float(xy[1]), origin[1] + float(xy[2]))
@@ -83,29 +114,32 @@ def antenna(pcb):
 
 def rect_distance(rect, pt):
     x0, y0, x1, y1 = rect
-    dx = max(x0 - pt[0], 0.0, pt[0] - x1)
-    dy = max(y0 - pt[1], 0.0, pt[1] - y1)
-    return math.hypot(dx, dy)
+    return math.hypot(max(x0 - pt[0], 0.0, pt[0] - x1),
+                      max(y0 - pt[1], 0.0, pt[1] - y1))
+
+
+def feed_segments(pcb):
+    return [((float(find(s, "start")[1]), float(find(s, "start")[2])),
+             (float(find(s, "end")[1]), float(find(s, "end")[2])),
+             float(find(s, "width")[1]))
+            for s in find_all(pcb, "segment")]
 
 
 # ------------------------------------------------------------------- checks
-def check_only_the_antenna(pcb):
-    """Nothing on this board but the radiator: no connector, no feed line."""
+def check_no_connector(pcb):
+    """Nothing on this board but the radiator and its line."""
     fps = find_all(pcb, "footprint")
     radiators = [fp for fp in fps if find(fp, "fp_poly") is not None]
     others = [str(fp[1]) for fp in fps if find(fp, "fp_poly") is None]
     if len(radiators) != 1:
         fail(f"board: expected exactly one antenna footprint, found {len(radiators)}")
     if others:
-        fail("board: the simulation model still carries " + ", ".join(others) +
-             " - a connector inside the model is part of the answer it gives")
-    tracks = find_all(pcb, "segment") + find_all(pcb, "arc")
-    if tracks:
-        fail(f"board: {len(tracks)} track segment(s) on a board that is supposed to "
-             "be fed directly at the antenna pad - the line would be simulated too")
-    if not errors:
-        notes.append("board: one footprint (the radiator), no connector, no tracks - "
-                     "the model is the antenna and the ground plane, nothing else")
+        fail("board: the model still carries " + ", ".join(others) +
+             " - a connector inside the model is part of the answer it gives, "
+             "and its ground pads carry the port's return current")
+    else:
+        notes.append("board: one footprint (the radiator) and no connector - "
+                     "the port launches off the bare feed line")
 
 
 def check_exact_copy(pcb):
@@ -133,14 +167,15 @@ def check_exact_copy(pcb):
                      "the same footprint file the fabrication board uses")
 
 
-def check_bottom_ground(pcb):
-    """A bottom ground plane, congruent with the top pour and on the GND net."""
+def check_ground(pcb):
+    """A ground plane on both layers, congruent, on GND."""
     zones = {str(find(z, "layer")[1]): z for z in find_all(pcb, "zone")
              if not find(z, "keepout") and find(z, "layer") is not None}
     for layer in ("F.Cu", "B.Cu"):
         if layer not in zones:
             fail(f"board: no {layer} ground pour - an inverted-F radiates against "
-                 "its ground plane, so a model without one answers a different question")
+                 "its ground plane, so a model without one answers a different "
+                 "question")
     if len(zones) < 2:
         return
     if zone_bbox(zones["F.Cu"]) != zone_bbox(zones["B.Cu"]):
@@ -149,139 +184,143 @@ def check_bottom_ground(pcb):
         if str(find(zone, "net_name")[1]) != "GND":
             fail(f"board: the {layer} pour is not on GND")
     x0, y0, x1, y1 = zone_bbox(zones["B.Cu"])
-    notes.append(f"board: bottom ground plane {x1 - x0:.1f} x {y1 - y0:.1f} mm, "
-                 f"same outline as the top pour, both on GND")
-
-
-def check_port_gap(pcb):
-    """The port is a gap of known size, held open by a keep-out.
-
-    KiCad's pour clearance would also leave a gap, but it is a design setting:
-    someone re-fills the zones with a different clearance and the port they
-    simulated is no longer the port on the board.  The keep-out is geometry.
-    """
-    _fp, poly, pads = antenna(pcb)
-    if pads is None:
-        return
-    pad = pads.get("1")
-    if pad is None or pad["net"] != "ANT_FEED":
-        fail("board: the antenna's feed pad is not on ANT_FEED")
-        return
-    zone = zone_by_name(pcb, "RF_PORT_GAP")
-    if zone is None:
-        fail("board: no RF_PORT_GAP keep-out - nothing holds the port gap open "
-             "when the zones are re-filled")
-        return
-    layers = [str(l) for l in find(zone, "layers")[1:]]
-    if layers != ["F.Cu"]:
-        fail(f"board: RF_PORT_GAP is on {layers}; it must be F.Cu only, so the "
-             "bottom ground stays solid under the port")
-    nx0, ny0, nx1, ny1 = zone_bbox(zone)
-    edge = plane_edge(pcb)
-    if abs(ny0 - edge) > 1e-6:
-        fail(f"board: RF_PORT_GAP starts at y = {ny0}, not at the plane edge {edge}")
-
-    # the radiator's bottom bar: the only copper that reaches past the plane edge
-    bar = [p for p in poly if p[1] >= edge - 1e-9]
-    bar_left = min(p[0] for p in bar)
-    bar_bottom = max(p[1] for p in bar)
-    gap = ny1 - bar_bottom
-    if gap < MIN_PORT_GAP:
-        fail(f"board: the port gap is {gap:.2f} mm, under {MIN_PORT_GAP} mm - "
-             "thinner than the mesh cell the solver will put across it")
-    if nx0 > bar_left - MIN_PORT_GAP:
-        fail("board: RF_PORT_GAP does not reach past the left end of the radiator "
-             "bar, so the pour still touches it there")
-    if abs(nx1 - pads["2"]["rect"][0]) > 1e-6:
-        fail(f"board: RF_PORT_GAP ends at x = {nx1:.3f}, not at the short pad's "
-             f"left edge {pads['2']['rect'][0]:.3f} - the pour would then short "
-             "the bar at the wrong place and D5 would not be the feed-to-short "
-             "distance any more")
-    elif gap >= MIN_PORT_GAP:
-        d5 = pads["2"]["rect"][0] - pad["rect"][2]
-        notes.append(f"port: {gap:.2f} mm gap between the radiator and the ground "
-                     f"pour, held open by RF_PORT_GAP; the pour meets the radiator "
-                     f"at the short pad only, so D5 is {d5:.2f} mm")
-
-
-def check_port_vias(pcb):
-    """Ground vias at the port, not just somewhere on the board.
-
-    Everything between the port and the nearest via is series inductance in
-    front of the antenna: 0.54 nH per via, but several millimetres of top pour
-    detour is worth considerably more than that at 2.45 GHz.
-    """
-    _fp, _poly, pads = antenna(pcb)
-    if pads is None:
-        return
-    vias = [(float(find(v, "at")[1]), float(find(v, "at")[2]))
-            for v in find_all(pcb, "via")]
-    if not vias:
-        fail("board: no ground vias at all - the top pour is not a ground plane, "
-             "it is a floating sheet")
-        return
-    for v in find_all(pcb, "via"):
-        at = find(v, "at")
-        pos = (float(at[1]), float(at[2]))
-        if str(find(v, "net")[1]) != "1":
-            fail(f"board: via at {pos} is not on GND")
-        if [str(l) for l in find(v, "layers")[1:]] != ["F.Cu", "B.Cu"]:
-            fail(f"board: via at {pos} does not go F.Cu -> B.Cu - it ties the top "
-                 "pour to nothing")
-
-    pad = pads["1"]["rect"]
-    near = [v for v in vias if rect_distance(pad, v) <= PORT_VIA_RADIUS]
-    if len(near) < 4:
-        fail(f"board: only {len(near)} ground via(s) within {PORT_VIA_RADIUS} mm of "
-             "the port - the return current has to detour before it reaches the "
-             "bottom plane, and that detour is in series with the antenna")
-    else:
-        closest = min(rect_distance(pad, v) for v in near)
-        notes.append(f"port: {len(near)} ground vias within {PORT_VIA_RADIUS} mm of "
-                     f"the feed pad, nearest at {closest:.2f} mm")
-    notes.append(f"board: {len(vias)} ground vias total, all F.Cu -> B.Cu")
-
-
-def check_clearances(pcb):
-    """Nothing shorts the port, and nothing sits in the antenna keep-out."""
-    _fp, _poly, pads = antenna(pcb)
-    if pads is None:
-        return
-    pad = pads["1"]["rect"]
-    edge = plane_edge(pcb)
-    gap_zone = zone_by_name(pcb, "RF_PORT_GAP")
-    gap = zone_bbox(gap_zone) if gap_zone is not None else None
-    worst = None
-    for v in find_all(pcb, "via"):
-        at = find(v, "at")
-        pos = (float(at[1]), float(at[2]))
-        radius = float(find(v, "size")[1]) / 2
-        clear = rect_distance(pad, pos) - radius
-        if clear < MIN_CLEARANCE:
-            fail(f"board: via at {pos} is {clear:.3f} mm from the ANT_FEED pad")
-        worst = clear if worst is None else min(worst, clear)
-        if pos[1] - radius < edge:
-            fail(f"board: via at {pos} reaches into the antenna keep-out above "
-                 f"y = {edge}")
-        if gap and gap[0] - radius < pos[0] < gap[2] + radius \
-                and gap[1] - radius < pos[1] < gap[3] + radius:
-            fail(f"board: via at {pos} sits in the port gap")
-    if worst is not None:
-        notes.append(f"board: every via clears the port pad by at least "
-                     f"{worst:.2f} mm (minimum {MIN_CLEARANCE} mm)")
+    notes.append(f"board: ground plane {x1 - x0:.1f} x {y1 - y0:.1f} mm on F.Cu "
+                 "and B.Cu, same outline, both on GND")
 
     keepout = zone_by_name(pcb, "ANTENNA_KEEPOUT")
+    edge = plane_edge(pcb)
     if keepout is None:
         fail("board: no ANTENNA_KEEPOUT zone")
-    elif abs(zone_bbox(keepout)[3] - edge) > 1e-6:
+    elif abs(zone_bbox(keepout)[3] - edge) > EPS:
         fail("board: the antenna keep-out does not end at the plane edge")
     else:
         notes.append(f"board: antenna keep-out runs down to the plane edge at "
                      f"y = {edge}, on F.Cu and B.Cu")
 
 
+def check_feed(pcb):
+    """One continuous feed line, from the board edge to the antenna's feed pad."""
+    _fp, _poly, pads = antenna(pcb)
+    if pads is None:
+        return
+    segs = feed_segments(pcb)
+    if not segs:
+        fail("board: no feed line - RFsim attaches port 1 to a track, and there "
+             "is no track to attach it to")
+        return
+
+    ends = {}
+    for a, b, _w in segs:
+        for pt in (a, b):
+            ends[q(pt)] = ends.get(q(pt), 0) + 1
+    loose = [pt for pt, n in ends.items() if n == 1]
+    if len(loose) != 2:
+        fail(f"board: the feed line is not one unbranched run ({len(loose)} loose "
+             "ends) - RFsim would launch into whichever it finds first")
+        return
+
+    x0, y0, x1, y1 = outline(pcb)
+    feed_pad = pads["1"]["centre"]
+    at_pad = [pt for pt in loose if math.dist(pt, feed_pad) < EPS]
+    at_edge = [pt for pt in loose
+               if min(abs(pt[0] - x0), abs(pt[0] - x1),
+                      abs(pt[1] - y0), abs(pt[1] - y1)) < EPS]
+    if not at_pad:
+        fail(f"board: no end of the feed line lands on the antenna feed pad at "
+             f"{q(feed_pad)}")
+    if not at_edge:
+        fail("board: the feed line does not reach the board edge, so there is "
+             "nowhere at the edge for the port to launch from")
+    if not (at_pad and at_edge):
+        return
+
+    launch = at_edge[0]
+    width_at = {q(a): w for a, b, w in segs} | {q(b): w for a, b, w in segs}
+    length = sum(math.dist(a, b) for a, b, _w in segs)
+    notes.append(f"feed: {len(segs)} segments, {length:.1f} mm, from the board "
+                 f"edge at {launch} ({width_at[launch]} mm wide) down to the "
+                 f"{width_at[q(feed_pad)]} mm antenna pad - port 1 goes on the "
+                 "edge end")
+    return launch
+
+
+def check_launch_vias(pcb, launch):
+    """Ground vias at the launch, not just somewhere on the board."""
+    if launch is None:
+        return
+    vias = []
+    for v in find_all(pcb, "via"):
+        at = find(v, "at")
+        pos = (float(at[1]), float(at[2]))
+        vias.append(pos)
+        if str(find(v, "net")[1]) != "1":
+            fail(f"board: via at {pos} is not on GND")
+        if [str(l) for l in find(v, "layers")[1:]] != ["F.Cu", "B.Cu"]:
+            fail(f"board: via at {pos} does not go F.Cu -> B.Cu - it ties the "
+                 "top pour to nothing")
+    if not vias:
+        fail("board: no ground vias at all - the top pour is not a ground plane, "
+             "it is a floating sheet")
+        return
+    near = [v for v in vias if math.dist(v, launch) <= LAUNCH_VIA_RADIUS]
+    if len(near) < 4:
+        fail(f"board: only {len(near)} ground via(s) within {LAUNCH_VIA_RADIUS} mm "
+             "of the launch - the port's return current has to detour across the "
+             "top pour before it reaches the bottom plane, and that detour is in "
+             "series with everything downstream")
+    else:
+        notes.append(f"port: {len(near)} ground vias within {LAUNCH_VIA_RADIUS} mm "
+                     f"of the launch, nearest at "
+                     f"{min(math.dist(v, launch) for v in near):.2f} mm")
+    notes.append(f"board: {len(vias)} ground vias total, all F.Cu -> B.Cu")
+
+
+def check_clearances(pcb):
+    """Ground copper keeps away from the feed line and out of the keep-out."""
+    edge = plane_edge(pcb)
+    segs = feed_segments(pcb)
+    if not segs:
+        return                    # check_feed has already said so
+    worst = None
+    for v in find_all(pcb, "via"):
+        at = find(v, "at")
+        pos = (float(at[1]), float(at[2]))
+        radius = float(find(v, "size")[1]) / 2
+        for a, b, w in segs:
+            gap = point_to_segment(pos, a, b) - radius - w / 2
+            if gap < MIN_CLEARANCE:
+                fail(f"board: via at {pos} is {gap:.3f} mm from the feed line")
+            worst = gap if worst is None else min(worst, gap)
+        if pos[1] - radius < edge:
+            fail(f"board: via at {pos} reaches into the antenna keep-out above "
+                 f"y = {edge}")
+    if worst is not None:
+        notes.append(f"board: every via clears the feed line by at least "
+                     f"{worst:.2f} mm (minimum {MIN_CLEARANCE} mm)")
+
+    corridor = zone_by_name(pcb, "RF_POUR_KEEPAWAY")
+    if corridor is None:
+        fail("board: no RF_POUR_KEEPAWAY rule area - the top pour would come up "
+             "to the feed line and turn the microstrip into a narrow-gap "
+             "coplanar waveguide of a different impedance")
+    else:
+        cx0, _cy0, cx1, _cy1 = zone_bbox(corridor)
+        line_w = max(w for _a, _b, w in segs)
+        gap = (cx1 - cx0 - line_w) / 2
+        notes.append(f"board: the top pour is held {gap:.2f} mm off the "
+                     f"{line_w} mm line, so it stays a microstrip")
+
+
+def point_to_segment(p, a, b) -> float:
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    length2 = dx * dx + dy * dy
+    if length2 < EPS:
+        return math.dist(p, a)
+    t = max(0.0, min(1.0, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / length2))
+    return math.dist(p, (a[0] + t * dx, a[1] + t * dy))
+
+
 def check_zones_unfilled(pcb):
-    """Generated zones carry no fill: an unfilled pour is not a ground plane."""
     unfilled = [str(find(z, "layer")[1]) for z in find_all(pcb, "zone")
                 if not find(z, "keepout") and not find_all(z, "filled_polygon")]
     if unfilled:
@@ -290,18 +329,79 @@ def check_zones_unfilled(pcb):
                      "has no ground plane")
 
 
+def check_schematic():
+    """The sheet agrees with the board, and has no connector on it either."""
+    if not SCH_PATH.exists():
+        fail(f"schematic: {SCH_PATH.name} is missing - RFsim is run on a project, "
+             "not a loose board file")
+        return
+    sch = parse(SCH_PATH.read_text())
+    lib = {str(s[1]): s for s in find_all(parse(LIB_PATH.read_text()), "symbol")}
+    embedded = find_all(find(sch, "lib_symbols"), "symbol")
+    for sym in embedded:
+        lib_id = str(sym[1])
+        nickname, _, name = lib_id.partition(":")
+        if nickname != "SWRA117D_RF":
+            fail(f"schematic: {lib_id} comes from an external library, so KiCad "
+                 "will compare it against whatever version is installed")
+        elif name not in lib:
+            fail(f"schematic: {lib_id} is not in library/SWRA117D_RF.kicad_sym")
+        elif sym != [lib[name][0], lib_id] + lib[name][2:]:
+            fail(f"schematic: embedded copy of {lib_id} differs from the library")
+
+    wires = [[(float(p[1]), float(p[2])) for p in find(w, "pts")[1:]]
+             for w in find_all(sch, "wire")]
+    placed = []
+    for sym in find_all(sch, "symbol"):
+        if find(sym, "lib_id") is None:
+            continue
+        lib_id = str(find(sym, "lib_id")[1])
+        at = find(sym, "at")
+        pos = (float(at[1]), float(at[2]))
+        rot = float(at[3]) if len(at) > 3 else 0.0
+        ref = next(p[2] for p in find_all(sym, "property") if p[1] == "Reference")
+        defn = next((s for s in embedded if str(s[1]) == lib_id), None)
+        if defn is None:
+            fail(f"schematic: {ref} uses {lib_id}, which is not in lib_symbols")
+            continue
+        for unit in find_all(defn, "symbol"):
+            for pin in find_all(unit, "pin"):
+                pat = find(pin, "at")
+                rx, ry = rotate((float(pat[1]), float(pat[2])), rot)
+                placed.append((ref, str(find(pin, "number")[1]),
+                               (pos[0] + rx, pos[1] - ry), lib_id))
+    for ref, number, pos, _lib in placed:
+        if not any(on_segment(pos, a, b) for a, b in wires):
+            fail(f"schematic: pin {ref}.{number} at {q(pos)} touches no wire")
+
+    refs = {ref for ref, _n, _p, _l in placed}
+    if any(lib_id.endswith(("Conn_Coaxial_SMA", ":C", ":L")) for *_r, lib_id in placed):
+        fail("schematic: a connector or matching part is still on the sheet")
+    if "P1" not in refs:
+        fail("schematic: no P1 - nothing marks where the solver drives the line")
+    for sym in find_all(sch, "symbol"):
+        ref_node = [p for p in find_all(sym, "property") if p[1] == "Reference"]
+        if ref_node and ref_node[0][2] == "P1":
+            if str(find(sym, "on_board")[1]) != "no":
+                fail("schematic: P1 is marked on_board - it is the solver's "
+                     "source, not a part, and has no footprint to place")
+    notes.append(f"schematic: {len(embedded)} embedded symbols match the library, "
+                 f"{len(placed)} pins all land on wires, {sorted(refs)} placed")
+
+
 def main() -> int:
     if not PCB_PATH.exists():
         print(f"FAIL {PCB_PATH} does not exist - run tools/gen_sim_board.py")
         return 1
     pcb = parse(PCB_PATH.read_text())
-    check_only_the_antenna(pcb)
+    check_no_connector(pcb)
     check_exact_copy(pcb)
-    check_bottom_ground(pcb)
-    check_port_gap(pcb)
-    check_port_vias(pcb)
+    check_ground(pcb)
+    launch = check_feed(pcb)
+    check_launch_vias(pcb, launch)
     check_clearances(pcb)
     check_zones_unfilled(pcb)
+    check_schematic()
     for note in notes:
         print(f"ok   {note}")
     for err in errors:

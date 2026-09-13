@@ -1,0 +1,359 @@
+(kicad_sch
+	(version 20250114)
+	(generator "gen_project.py")
+	(generator_version "9.0")
+	(uuid "f0820ba2-7329-58cb-a18e-f65c6c3dd98c")
+	(paper "A4")
+	(title_block
+		(title "SWRA117D 2.45 GHz IFA - RFsim model: antenna + 50 ohm feed, no connector")
+		(date "2026-09-12")
+		(rev "A")
+		(comment 1 "Radiator fed straight from the SMA port, no matching network")
+		(comment 2 "Antenna keep-out: no copper on any layer")
+	)
+	(lib_symbols
+		(symbol "SWRA117D_RF:ANT_SWRA117D_2G4_Left"
+			(pin_names (offset 0.762))
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "AE"
+				(at 5.08 3.81 0)
+				(effects (font (size 1.27 1.27)) (justify left bottom))
+			)
+			(property "Value" "ANT_SWRA117D_2G4_Left"
+				(at 5.08 1.27 0)
+				(effects (font (size 1.27 1.27)) (justify left bottom))
+			)
+			(property "Footprint" "SWRA117D_RF:Texas_SWRA117D_2.4GHz_Left"
+				(at 0 -7.62 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "Datasheet" "https://www.ti.com/lit/an/swra117d/swra117d.pdf"
+				(at 0 -10.16 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "Description" "2.45 GHz printed inverted-F antenna (TI SWRA117D, left-hand layout). Pin 1 is the 50 ohm feed, pin 2 is the ground/short pin that must sit on the ground plane edge."
+				(at 0 -12.7 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "ki_keywords" "antenna IFA inverted-F PCB antenna 2.4GHz 2G4 WiFi BLE Zigbee SWRA117D"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "ki_fp_filters" "*SWRA117D*"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(symbol "ANT_SWRA117D_2G4_Left_0_1"
+				(polyline
+					(pts (xy 0 -2.54) (xy 0 1.27))
+					(stroke (width 0.254) (type default))
+					(fill (type none))
+				)
+				(polyline
+					(pts (xy -2.54 3.81) (xy 0 1.27) (xy 2.54 3.81))
+					(stroke (width 0.254) (type default))
+					(fill (type none))
+				)
+				(polyline
+					(pts (xy 1.27 -2.54) (xy 3.81 -2.54))
+					(stroke (width 0.254) (type default))
+					(fill (type none))
+				)
+			)
+			(symbol "ANT_SWRA117D_2G4_Left_1_1"
+				(pin passive line
+					(at 0 -5.08 90)
+					(length 2.54)
+					(name "FEED" (effects (font (size 1.27 1.27))))
+					(number "1" (effects (font (size 1.27 1.27))))
+				)
+				(pin passive line
+					(at 2.54 -5.08 90)
+					(length 2.54)
+					(name "GND" (effects (font (size 1.27 1.27))))
+					(number "2" (effects (font (size 1.27 1.27))))
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "SWRA117D_RF:GND"
+			(power)
+			(pin_numbers (hide yes))
+			(pin_names (offset 0) (hide yes))
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "#PWR" (at 0 -6.35 0) (effects (font (size 1.27 1.27)) (hide yes)))
+			(property "Value" "GND" (at 0 -3.81 0) (effects (font (size 1.27 1.27))))
+			(property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
+			(property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
+			(property "Description" "Power symbol creates a global label with name GND"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "ki_keywords" "global power GND ground"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(symbol "GND_0_1"
+				(polyline
+					(pts (xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54) (xy -1.27 -1.27) (xy 0 -1.27))
+					(stroke (width 0) (type default))
+					(fill (type none))
+				)
+			)
+			(symbol "GND_1_1"
+				(pin power_in line
+					(at 0 0 270)
+					(length 0)
+					(hide yes)
+					(name "GND" (effects (font (size 1.27 1.27))))
+					(number "1" (effects (font (size 1.27 1.27))))
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "SWRA117D_RF:RF_PORT"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0) (hide yes))
+			(exclude_from_sim no)
+			(in_bom no)
+			(on_board no)
+			(property "Reference" "P" (at 0 3.81 0) (effects (font (size 1.27 1.27))))
+			(property "Value" "RF_PORT" (at 0 -3.81 0) (effects (font (size 1.27 1.27))))
+			(property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
+			(property "Datasheet" "~" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
+			(property "Description" "50 ohm simulation port - where the solver excites the feed line. Not a part: it has no footprint and is not placed on the board"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "ki_keywords" "port RF simulation 50 ohm source"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(symbol "RF_PORT_0_1"
+				(circle (center 0 0) (radius 1.27) (stroke (width 0.254) (type default)) (fill (type none)))
+				(polyline
+					(pts (xy -0.635 -0.635) (xy 0.635 0) (xy -0.635 0.635))
+					(stroke (width 0.254) (type default))
+					(fill (type none))
+				)
+			)
+			(symbol "RF_PORT_1_1"
+				(pin passive line
+					(at 3.81 0 180)
+					(length 2.54)
+					(name "P" (effects (font (size 1.27 1.27))))
+					(number "1" (effects (font (size 1.27 1.27))))
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "SWRA117D_RF:PWR_FLAG"
+			(power)
+			(pin_numbers (hide yes))
+			(pin_names (offset 0) (hide yes))
+			(exclude_from_sim yes)
+			(in_bom no)
+			(on_board no)
+			(property "Reference" "#FLG" (at 0 1.905 0) (effects (font (size 1.27 1.27)) (hide yes)))
+			(property "Value" "PWR_FLAG" (at 0 3.81 0) (effects (font (size 1.27 1.27))))
+			(property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
+			(property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
+			(property "Description" "Tells ERC that this net is driven, for a board whose supplies come in from outside"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "ki_keywords" "flag power ERC"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(symbol "PWR_FLAG_0_1"
+				(polyline
+					(pts (xy 0 0) (xy 0 2.54) (xy 1.524 1.905) (xy 0 1.27))
+					(stroke (width 0) (type default))
+					(fill (type none))
+				)
+			)
+			(symbol "PWR_FLAG_1_1"
+				(pin power_out line
+					(at 0 0 90)
+					(length 0)
+					(hide yes)
+					(name "pwr" (effects (font (size 1.27 1.27))))
+					(number "1" (effects (font (size 1.27 1.27))))
+				)
+			)
+			(embedded_fonts no)
+		)
+	)
+	(wire
+		(pts (xy 80.01 88.9) (xy 127 88.9))
+		(stroke (width 0) (type default))
+		(uuid "620af1e4-dbb9-5bf2-b4fa-c9282d4dfbcb")
+	)
+	(wire
+		(pts (xy 127 88.9) (xy 127 86.36))
+		(stroke (width 0) (type default))
+		(uuid "87a6d407-7f45-5989-8020-83e74b679d3a")
+	)
+	(wire
+		(pts (xy 129.54 86.36) (xy 129.54 96.52))
+		(stroke (width 0) (type default))
+		(uuid "93b36822-d912-55ac-96c9-329b38d8e2db")
+	)
+	(wire
+		(pts (xy 129.54 96.52) (xy 134.62 96.52))
+		(stroke (width 0) (type default))
+		(uuid "79d12f18-96e5-5a73-afca-9eb1b1782ec7")
+	)
+	(junction
+		(at 129.54 96.52)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "51eafaad-340f-5a7b-a2c1-379db6f29a2a")
+	)
+	(label "ANT_FEED"
+		(at 95.25 88.9 0)
+		(effects (font (size 1.27 1.27)) (justify left bottom))
+		(uuid "ca9a78ba-90dc-559e-9376-67133c59f5bf")
+	)
+	(text "RFsim model of the SWRA117D 2.45 GHz inverted-F antenna.\n\nSame antenna and same feed as the fabrication project, with the SMA\nremoved: the 50 ohm line runs to the board edge and stops there, and\nP1 marks where port 1 attaches.  P1 has no footprint and is not placed\non the board - it is the solver's source, not a part.\n\n2.95 mm wide 50 ohm microstrip on 1.6 mm FR4 (er 4.5, tan d 0.02),\ntapering to 0.5 mm over the last 4.5 mm to meet AE1 pin 1.\nAE1 pin 2 is the inverted-F ground pin and sits on the ground plane edge.\n\nBefore simulating: fill the zones (B in the PCB editor).  An unfilled\npour is not a ground plane, and an inverted-F radiates against its plane."
+		(exclude_from_sim no)
+		(at 76.2 112 0)
+		(effects (font (size 1.27 1.27)) (justify left top))
+		(uuid "0875b758-0164-5df0-a9c0-fd9df1cc45bd")
+	)
+	(symbol
+		(lib_id "SWRA117D_RF:RF_PORT")
+		(at 76.2 88.9 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board no)
+		(dnp no)
+		(uuid "a9b2455d-5a59-5d68-bebf-343762691484")
+		(property "Reference" "P1"
+			(at 73.66 85.09 0)
+			(effects (font (size 1.27 1.27)) (justify left))
+		)
+		(property "Value" "50R port"
+			(at 73.66 92.71 0)
+			(effects (font (size 1.27 1.27)) (justify left))
+		)
+		(property "Footprint" "" (at 76.2 88.9 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "~" (at 76.2 88.9 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "50 ohm simulation port - attach RFsim port 1 to the feed track where it meets the board edge"
+			(at 76.2 88.9 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "c1806485-0730-564a-bb30-6f476febeecf"))
+		(instances
+			(project "swra117d_2g4_sim"
+				(path "/f0820ba2-7329-58cb-a18e-f65c6c3dd98c" (reference "P1") (unit 1))
+			)
+		)
+	)
+	(symbol
+		(lib_id "SWRA117D_RF:ANT_SWRA117D_2G4_Left")
+		(at 127 81.28 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "9406602a-d5ae-5dce-9096-88aa65861d3d")
+		(property "Reference" "AE1"
+			(at 132.08 77.47 0)
+			(effects (font (size 1.27 1.27)) (justify left))
+		)
+		(property "Value" "ANT_SWRA117D_2G4_Left"
+			(at 132.08 80.01 0)
+			(effects (font (size 1.27 1.27)) (justify left))
+		)
+		(property "Footprint" "SWRA117D_RF:Texas_SWRA117D_2.4GHz_Left"
+			(at 127 81.28 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" "~" (at 127 81.28 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "2.45 GHz printed inverted-F antenna (TI SWRA117D, left layout)"
+			(at 127 81.28 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Sim.Device" "SUBCKT" (at 127 81.28 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Sim.Name" "ANT_SWRA117D_2G4"
+			(at 127 81.28 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Sim.Library" "${KIPRJMOD}/sim/antenna_swra117d.lib"
+			(at 127 81.28 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Sim.Pins" "1=1 2=2" (at 127 81.28 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "296d8d2a-4804-5c35-98e0-e9171657458e"))
+		(pin "2" (uuid "d6db989a-f125-50e9-8f29-2ce85de2ff0c"))
+		(instances
+			(project "swra117d_2g4_sim"
+				(path "/f0820ba2-7329-58cb-a18e-f65c6c3dd98c" (reference "AE1") (unit 1))
+			)
+		)
+	)
+	(symbol
+		(lib_id "SWRA117D_RF:GND")
+		(at 129.54 96.52 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "052fa3ec-dbd4-5b3f-8d9e-9f2b2ffb3210")
+		(property "Reference" "#PWR01"
+			(at 129.54 102.87 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "GND" (at 129.54 100.33 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 129.54 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 129.54 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "Ground reference"
+			(at 129.54 96.52 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "b997f73a-8909-5c6c-b3c2-1871a78b5427"))
+		(instances
+			(project "swra117d_2g4_sim"
+				(path "/f0820ba2-7329-58cb-a18e-f65c6c3dd98c" (reference "#PWR01") (unit 1))
+			)
+		)
+	)
+	(symbol
+		(lib_id "SWRA117D_RF:PWR_FLAG")
+		(at 134.62 96.52 0)
+		(unit 1)
+		(exclude_from_sim yes)
+		(in_bom no)
+		(on_board no)
+		(dnp no)
+		(uuid "ea6f02d2-2e1e-5051-adf2-d809b706d767")
+		(property "Reference" "#FLG01"
+			(at 134.62 102.87 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "PWR_FLAG" (at 134.62 92.71 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 134.62 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 134.62 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "ERC power source flag"
+			(at 134.62 96.52 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "69cba6e0-874e-5036-9461-f46603cf793e"))
+		(instances
+			(project "swra117d_2g4_sim"
+				(path "/f0820ba2-7329-58cb-a18e-f65c6c3dd98c" (reference "#FLG01") (unit 1))
+			)
+		)
+	)
+	(sheet_instances (path "/" (page "1")))
+	(embedded_fonts no)
+)
