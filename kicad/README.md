@@ -375,7 +375,7 @@ the stackup is in the board file, so the 3D viewer and any EM export see it.
 | ground plane | y ≥ 66.25 mm only | its edge is the antenna's ground reference, and `gen_project.py` reads it from the footprint's own keep-out box so a rescaled antenna moves it |
 | antenna keep-out | rule area above that edge, F.Cu **and** B.Cu | no pour, no tracks, no vias under or beside the antenna |
 | top pour keep-away | 2.0 mm either side of the feed, starting 3 mm below the plane edge | keeps the line a microstrip; stopping short of the edge leaves the antenna a straight plane edge instead of a notch |
-| stitching | 41 vias | 8 in the connector pads, an 11-via fence at 3 mm along the plane edge, and a 5 mm grid over the pour (worst unstitched span 9.1 mm → 7.8 GHz) — see [Ground stitching](#ground-stitching-the-rule-and-what-it-is-for) |
+| stitching | 41 vias | 8 in the connector pads, an 11-via fence at 3 mm along the plane edge, and a 5 mm grid over the pour — `tools/stitching_span.py` measures the worst-stitched point at 4.67 mm from a via, a 9.35 mm span, half-wave resonant at 7.6 GHz; see [Ground stitching](#ground-stitching-the-rule-and-what-it-is-for) |
 
 The 2.95 mm line tapers to 0.5 mm over the last 4.5 mm to meet the antenna's
 0.5 mm feed pad. That is λg/15, long enough to matter, which is why it is six
@@ -660,6 +660,7 @@ python3 tools/check_sim_board.py     # check it: no connector, no line, real gro
 python3 tools/mutate_sim_board.py    # prove those checks actually fail when they should
 python3 tools/verify_against_swra117d.py   # the footprint against Table 1, dimension by dimension
 python3 tools/line_impedance.py      # microstrip and CPWG impedance, read from the board
+python3 tools/stitching_span.py      # largest patch of pour with no via in it
 python3 tools/gen_sma_footprint.py   # regenerate the SMA land for the stackup
 python3 tools/scale_footprint.py     # retune the antenna by uniform scaling
 python3 tools/board_to_svg.py docs/board-drawing.svg
