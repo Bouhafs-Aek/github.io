@@ -5,8 +5,8 @@
 * There is no matching network: the antenna is a 50 ohm design and nothing is
 * fitted between the connector and the radiator.
 *
-* T1 is the routed feed line, lossless: 1.5 mm wide microstrip on 0.8 mm FR4
-* gives eps_eff = 3.325, so 23.5 mm is TD = 143 ps (126 degrees at 2.45 GHz).
+* T1 is the routed feed line, lossless: 2.95 mm wide microstrip on 1.6 mm FR4
+* gives eps_eff = 3.394, so 23.5 mm is TD = 144 ps (127 degrees at 2.45 GHz).
 * A matched line cannot change |S11|, only its phase - which is exactly why a
 * lumped antenna model is still the right tool for return loss at the SMA.
 * To see the antenna on its own, short T1 out: comment it and uncomment Rjmp.
@@ -18,16 +18,18 @@
 
 * NOTE: antenna_swra117d.lib is the antenna this board is meant to have - a
 * 2.454 GHz resonator.  It is design intent, not a prediction of the etched
-* geometry: RFsim put the published footprint at 2.83 GHz on this stackup,
-* which is why the board now carries a x1.155 scaled radiator.  Use RFsim or
-* openEMS to find where the copper actually resonates, and this deck to work
-* out what to do about the impedance once you know.
+* geometry, and the board carries the published footprint unscaled: the runs
+* that suggested otherwise were not set up well enough to act on (see the
+* run log in ../README.md).  Use openEMS - preferably on the antenna-only
+* board, sim/board/swra117d_2g4_sim.kicad_pcb - to find where the copper
+* actually resonates, and this deck to work out what to do about the
+* impedance once you know.
 
 .include antenna_swra117d.lib
 
 V1  src 0    dc 0 ac 1
 Rs  src in   50
-T1  in  0 ant 0 Z0=50 TD=143p
+T1  in  0 ant 0 Z0=50 TD=144p
 *Rjmp in ant  1u
 XAE1 ant 0   ANT_SWRA117D_2G4
 

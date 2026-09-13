@@ -11,7 +11,7 @@ embedding the SVG can theme it:
 Footprint references are deliberately not drawn: at this scale they collide
 with the copper.  Name them in the legend of whatever embeds the drawing.
 
-    python3 board_to_svg.py [out.svg]
+    python3 board_to_svg.py [out.svg] [board.kicad_pcb]
 """
 
 from __future__ import annotations
@@ -111,6 +111,25 @@ def render(pcb_path: pathlib.Path) -> str:
         vias.append(f'<circle class="via" cx="{f(float(at[1]))}" cy="{f(float(at[2]))}" '
                     f'r="{f(float(find(v, "size")[1]) / 2)}"/>')
 
+    # Rule areas that keep the pour out, drawn where they are: the feed line's
+    # keep-away corridor on the fabrication board, the port gap on the
+    # simulation board.  Both are copper that is deliberately absent, and a
+    # drawing that leaves them out shows a ground plane the board does not have.
+    cuts = []
+    for zone in find_all(pcb, "zone"):
+        keepout = find(zone, "keepout")
+        if keepout is None or str(find(keepout, "copperpour")[1]) != "not_allowed":
+            continue
+        pts = [(float(xy[1]), float(xy[2]))
+               for xy in find(find(zone, "polygon"), "pts")[1:]]
+        zx0, zy0 = min(p[0] for p in pts), min(p[1] for p in pts)
+        zx1, zy1 = max(p[0] for p in pts), max(p[1] for p in pts)
+        if zy0 < plane - 1e-9:          # the antenna keep-out, drawn already
+            continue
+        cuts.append(f'<rect class="keepout" x="{f(max(zx0, x0))}" y="{f(zy0)}" '
+                    f'width="{f(min(zx1, x1) - max(zx0, x0))}" '
+                    f'height="{f(min(zy1, y1) - zy0)}" fill="url(#ko)"/>')
+
     pad = 7.0
     vb = (x0 - pad, y0 - pad, (x1 - x0) + 2 * pad, (y1 - y0) + 2 * pad)
     parts = [
@@ -125,7 +144,7 @@ def render(pcb_path: pathlib.Path) -> str:
         f'<rect class="board-edge" x="{f(x0)}" y="{f(y0)}" width="{f(x1 - x0)}" '
         f'height="{f(y1 - y0)}"/>',
     ]
-    parts += pads_b + body + pads_f + vias
+    parts += pads_b + cuts + body + pads_f + vias
     parts.append(f'<path class="plane-edge" d="M{f(x0 - 3)},{f(plane)} L{f(x1 + 3)},{f(plane)}"/>')
     parts.append(f'<text class="note" x="{f(x0 + 1.0)}" y="{f(plane + 2.4)}">'
                  f'GND plane edge &#8212; no copper above, any layer</text>')
@@ -138,5 +157,6 @@ def render(pcb_path: pathlib.Path) -> str:
 
 if __name__ == "__main__":
     dest = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else pathlib.Path("board.svg")
-    dest.write_text(render(PCB))
+    src = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else PCB
+    dest.write_text(render(src))
     print(f"wrote {dest} ({len(dest.read_text())} bytes)")

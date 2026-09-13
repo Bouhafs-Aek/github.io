@@ -1,6 +1,6 @@
 * ---------------------------------------------------------------------------
 * Lumped equivalent circuit of the TI SWRA117D 2.45 GHz printed inverted-F
-* antenna (left-hand layout), as fitted on 0.8 mm FR4 with the ground plane
+* antenna (left-hand layout), as fitted on 1.6 mm FR4 with the ground plane
 * edge at the antenna feed line.
 *
 *   node 1 = feed (pad 1)      node 2 = ground (pad 2 / ground plane)

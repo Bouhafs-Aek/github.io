@@ -3,8 +3,8 @@
 A printed antenna is cheap in BOM and expensive in mistakes. Everything below
 is checkable from a layout before anything is fabricated, and each item exists
 because getting it wrong costs a board spin or a failed range test. Numbers in
-brackets are for 2.45 GHz on 0.8 mm FR4 (εr 4.4) — recompute for your stackup
-with `tools/line_impedance.py`.
+brackets are for 2.45 GHz on 1.6 mm FR4 (εr 4.5) — recompute for your stackup
+with `tools/line_impedance.py`, which reads it out of the board file.
 
 ## 1. The antenna is not just the antenna
 
@@ -81,7 +81,8 @@ same topology as a 2.4 GHz IFA:
 - [ ] **No floating pour island.** Every piece of pour left by a keep-away or
       a split needs a via. A 22 mm island is half-wave resonant at 3.25 GHz.
 - [ ] **Two or more vias on any ground that matters.** One 0.3 mm via through
-      0.8 mm FR4 is 0.54 nH — 8.3 Ω at 2.45 GHz.
+      1.6 mm FR4 is about 1.30 nH — 20 Ω at 2.45 GHz (0.54 nH and 8.3 Ω
+      through 0.8 mm): via inductance scales with board thickness.
 - [ ] **No stitching inside the antenna keep-out.**
 
 ## 4. Before you trust a simulation
@@ -191,6 +192,52 @@ into a design change:
 - [ ] **Track the spread.** If successive runs on an unchanged board disagree
       by more than the bandwidth you are designing for, none of them is
       usable. Log the setup with every number so the spread is visible.
+
+## 4d. Decide what is *in* the model before you run it
+
+A simulation answers a question about a geometry, and the geometry is a
+choice. Two boards, both correct, answer different questions:
+
+| the model contains | it answers |
+|---|---|
+| antenna + ground plane only, port at the feed | what does this antenna do? |
+| + feed line | what does the antenna plus my routing do? |
+| + connector footprint | what will the VNA on the connector read? |
+
+Run only the third and a wrong number has four suspects. Run the first and the
+antenna is on its own; each thing you add afterwards, you can price.
+
+- [ ] **Know which of the three you are running**, and say so when you quote
+      the result. "Resonance is at 2.4 GHz" without this is not a claim anyone
+      can check.
+- [ ] **Strip the connector for the antenna-only model.** Its pads are copper
+      in the model and the port's return current runs through them; the bright
+      field around them is real, not an artefact, and it is not the antenna's.
+- [ ] **A gap port needs a gap you control.** Feeding directly means a lumped
+      port across the gap between the radiator and the ground pour. Cut that
+      gap as a *keep-out*, not as the zone's pour clearance: pour clearance is
+      a design setting, so anyone who re-fills the zones with a different one
+      has changed the port without touching the antenna.
+- [ ] **Make the gap wider than two mesh cells.** A 0.2 mm clearance under a
+      0.25 mm mesh is not a port, it is a rounding error. Widen the gap or
+      refine the mesh locally, and check the field plot resolves it.
+- [ ] **Do not let the pour decide where the short is.** On an inverted-F the
+      feed-to-short distance sets the input impedance (SWRA117D calls it D5 and
+      gives it as 1.40 mm). Anywhere the ground pour touches the radiator is a
+      short, so if the pour reaches the arm before the short pad does, that
+      dimension is silently something else. End the cut exactly at the short
+      pad, and have a checker assert it.
+- [ ] **Stitch at the port, not just on the board.** Everything between the
+      port and the nearest via to the bottom plane is series inductance in
+      front of the antenna. A few millimetres of detour across the top pour is
+      worth far more than the 0.5–1.3 nH of the via itself.
+- [ ] **Put the stitching vias in the model.** A top pour with no vias is a
+      sheet of copper floating over the plane — which is not the board, and
+      will not behave like it.
+- [ ] **Keep the two boards comparable.** Same outline, same stackup, same
+      plane edge, same antenna file. If the simulation board is also a
+      different size, the difference between the two results is not the feed
+      line any more.
 
 ## 5. Tuning and validation
 
