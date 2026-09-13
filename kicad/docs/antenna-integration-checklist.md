@@ -92,8 +92,12 @@ Every one of these has produced a confidently wrong answer in practice.
       ground plane — a different antenna, not a small error.
 - [ ] **Stackup matches the board**: thickness, εr, loss tangent, copper.
       Cross-check by asking the tool what width it thinks 50 Ω is.
-- [ ] **Air/domain margin ≥ λ/4** [31 mm]. A margin of a few mm puts the
-      absorbing boundary inside the antenna's near field.
+- [ ] **Air/domain margin ≥ λ/4 at the LOWEST frequency in the sweep**, not at
+      the design frequency. This catches people out: λ/4 is 31 mm at 2.45 GHz
+      but 75 mm at 1 GHz, and the domain volume grows with the cube — from a
+      5 mm margin, ×26 to reach 31 mm and ×223 to reach 75 mm. Runtime follows.
+      The cheap fix is to start the sweep at 2 GHz rather than 1 GHz, and to
+      state plainly that anything below the start is not modelled.
 - [ ] **Port type matches the physical launch** (microstrip / coplanar /
       lumped) and is actually attached to the feed line.
 - [ ] **Mesh resolves the narrowest copper** and the substrate thickness.
@@ -155,6 +159,12 @@ results if you know where to look, and checking takes seconds:
       few mm past the copper, the margin is a few mm, whatever you meant to
       set. Bright field sitting *on* that boundary means the absorber is
       inside the near field and the result is not trustworthy.
+- [ ] **Step the phase of a field animation.** This is the sharpest test for a
+      domain that is too small, and it costs nothing. At the phases where the
+      board's own field passes through a null, the boundary should go dark
+      too. If the absorbing boundary is ever the *brightest thing in the
+      frame*, it is holding energy that should have left — the domain is
+      inside the near field and the resonance it reports is not the antenna's.
 - [ ] **Port width the tool proposes.** A solver that offers a 50 Ω width is
       telling you which stackup it believes. Compare with your own
       calculation — 3.11 mm means 1.6 mm FR4, 1.49 mm means 0.8 mm.
