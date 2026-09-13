@@ -104,6 +104,43 @@ Every one of these has produced a confidently wrong answer in practice.
       shorted to ground by design. A circuit-level extractor sees only that
       short and reports VSWR → ∞.
 
+## 4a. Choosing the port model
+
+Every field solver offers two or three port models, and they differ in what
+they assume about the structure. Picking the wrong one produces a plausible
+answer that is wrong, so the rule is: **the port model must match the physical
+launch.**
+
+| model | what it does | reference plane | use it when |
+|---|---|---|---|
+| **Lumped** | a voltage source with a series resistance across one gap, a few mesh cells wide | undefined — wherever the gap is | the structure has no transmission line: a gap-fed antenna, a lumped component, a quick look |
+| **Microstrip (MSL)** | excites the microstrip *mode* over the line cross-section, with a feed shift and a measurement plane so incident and reflected waves separate | defined, and de-embedded to it | a trace with a solid ground plane directly beneath |
+| **Coplanar (CPW / GCPW)** | the same, for the coplanar mode: strip to the side grounds, plus the plane below if there is one | defined, and de-embedded to it | a trace with ground either side on the same layer |
+
+What the lumped port costs you: the excitation is a localised, non-physical
+field at one gap; the 50 Ω is a number you declared rather than the line's
+actual impedance; and nothing is de-embedded, so S11 mixes the port's own
+behaviour with the circuit's. It is sensitive to the local mesh in a way the
+mode-launched ports are not.
+
+**The field plot tells you which one is active.** A lumped port leaves an
+isolated hot blob at the pads; a mode-launched port produces a field that
+flows smoothly out of the port and down the line. If the launch is far
+brighter than the line, check the port model before believing the result.
+
+**For an end-launch SMA** the footprint is coplanar by construction — signal
+pad with ground either side — so the gap decides which model describes it
+better. Compute both and compare:
+
+| stackup | gap | as GCPW | as microstrip |
+|---|---|---|---|
+| 1.6 mm FR4, 2.95 mm line | 2.0 mm | 49.8 Ω | 50.2 Ω |
+| 0.8 mm FR4, 1.50 mm line | 0.8 mm | 48.8 Ω | 49.7 Ω |
+
+Where the two agree to a fraction of an ohm, either model works and the choice
+stops mattering. Where they diverge, the gap is tight enough that the coplanar
+ground really is carrying return current, and CPW is the honest answer.
+
 ## 4b. Read the solver's settings back out of its own output
 
 Dialog boxes lie by omission — a preset you forgot to change looks identical
@@ -127,7 +164,7 @@ results if you know where to look, and checking takes seconds:
       beats the speed of light, or VSWR → ∞ across an entire sweep are setup
       faults, not antenna behaviour.
 
-### 4c. Repeatability before belief
+## 4c. Repeatability before belief
 
 A single plot is not a result. Before any number leaves the solver and turns
 into a design change:
