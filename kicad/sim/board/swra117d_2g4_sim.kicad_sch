@@ -117,27 +117,36 @@
 		)
 		(symbol "SWRA117D_RF:RF_PORT"
 			(pin_numbers (hide yes))
-			(pin_names (offset 0) (hide yes))
+			(pin_names (offset 0.254))
 			(exclude_from_sim no)
 			(in_bom no)
-			(on_board no)
+			(on_board yes)
 			(property "Reference" "P" (at 0 3.81 0) (effects (font (size 1.27 1.27))))
-			(property "Value" "RF_PORT" (at 0 -3.81 0) (effects (font (size 1.27 1.27))))
-			(property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
+			(property "Value" "RF_PORT" (at 0 -5.08 0) (effects (font (size 1.27 1.27))))
+			(property "Footprint" "SWRA117D_RF:RF_Port_Land"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
 			(property "Datasheet" "~" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
-			(property "Description" "50 ohm simulation port - where the solver excites the feed line. Not a part: it has no footprint and is not placed on the board"
+			(property "Description" "50 ohm board-edge port land for a field solver. Pad 1 is the signal pad the solver drives; pad 2 is the ground pad directly under it on B.Cu, which is the port's reference. Not a connector: no coplanar ground, so the line stays a microstrip"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
-			(property "ki_keywords" "port RF simulation 50 ohm source"
+			(property "ki_keywords" "port RF simulation 50 ohm source launch"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
+			(property "ki_fp_filters" "RF_Port*" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
 			(symbol "RF_PORT_0_1"
 				(circle (center 0 0) (radius 1.27) (stroke (width 0.254) (type default)) (fill (type none)))
 				(polyline
 					(pts (xy -0.635 -0.635) (xy 0.635 0) (xy -0.635 0.635))
 					(stroke (width 0.254) (type default))
+					(fill (type none))
+				)
+				(polyline
+					(pts (xy 0 -1.27) (xy 0 -2.54))
+					(stroke (width 0) (type default))
 					(fill (type none))
 				)
 			)
@@ -147,6 +156,12 @@
 					(length 2.54)
 					(name "P" (effects (font (size 1.27 1.27))))
 					(number "1" (effects (font (size 1.27 1.27))))
+				)
+				(pin passive line
+					(at 0 -5.08 90)
+					(length 2.54)
+					(name "GND" (effects (font (size 1.27 1.27))))
+					(number "2" (effects (font (size 1.27 1.27))))
 				)
 			)
 			(embedded_fonts no)
@@ -200,20 +215,25 @@
 		(uuid "87a6d407-7f45-5989-8020-83e74b679d3a")
 	)
 	(wire
+		(pts (xy 76.2 93.98) (xy 76.2 96.52))
+		(stroke (width 0) (type default))
+		(uuid "a3cf291f-6d53-5751-ad11-698915fd2fb4")
+	)
+	(wire
+		(pts (xy 76.2 96.52) (xy 71.12 96.52))
+		(stroke (width 0) (type default))
+		(uuid "ec71715b-8501-5768-9c7f-fe5520f4ea83")
+	)
+	(wire
 		(pts (xy 129.54 86.36) (xy 129.54 96.52))
 		(stroke (width 0) (type default))
 		(uuid "93b36822-d912-55ac-96c9-329b38d8e2db")
 	)
-	(wire
-		(pts (xy 129.54 96.52) (xy 134.62 96.52))
-		(stroke (width 0) (type default))
-		(uuid "79d12f18-96e5-5a73-afca-9eb1b1782ec7")
-	)
 	(junction
-		(at 129.54 96.52)
+		(at 76.2 96.52)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "51eafaad-340f-5a7b-a2c1-379db6f29a2a")
+		(uuid "ec731763-a191-51f1-ac48-884efd257923")
 	)
 	(label "ANT_FEED"
 		(at 95.25 88.9 0)
@@ -232,24 +252,22 @@
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
-		(on_board no)
+		(on_board yes)
 		(dnp no)
 		(uuid "a9b2455d-5a59-5d68-bebf-343762691484")
-		(property "Reference" "P1"
-			(at 73.66 85.09 0)
-			(effects (font (size 1.27 1.27)) (justify left))
+		(property "Reference" "P1" (at 71.12 84 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Value" "50R port" (at 71.12 86 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Footprint" "SWRA117D_RF:RF_Port_Land"
+			(at 76.2 88.9 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(property "Value" "50R port"
-			(at 73.66 92.71 0)
-			(effects (font (size 1.27 1.27)) (justify left))
-		)
-		(property "Footprint" "" (at 76.2 88.9 0) (effects (font (size 1.27 1.27)) (hide yes)))
 		(property "Datasheet" "~" (at 76.2 88.9 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Description" "50 ohm simulation port - attach RFsim port 1 to the feed track where it meets the board edge"
+		(property "Description" "50 ohm board-edge port land - attach RFsim port 1 to pad 1, with pad 2 on B.Cu as its reference"
 			(at 76.2 88.9 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(pin "1" (uuid "c1806485-0730-564a-bb30-6f476febeecf"))
+		(pin "2" (uuid "6f7150e2-9208-5c12-bdbf-128b9eed04a0"))
 		(instances
 			(project "swra117d_2g4_sim"
 				(path "/f0820ba2-7329-58cb-a18e-f65c6c3dd98c" (reference "P1") (unit 1))
@@ -302,7 +320,7 @@
 	)
 	(symbol
 		(lib_id "SWRA117D_RF:GND")
-		(at 129.54 96.52 0)
+		(at 76.2 96.52 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -310,14 +328,14 @@
 		(dnp no)
 		(uuid "052fa3ec-dbd4-5b3f-8d9e-9f2b2ffb3210")
 		(property "Reference" "#PWR01"
-			(at 129.54 102.87 0)
+			(at 76.2 102.87 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(property "Value" "GND" (at 129.54 100.33 0) (effects (font (size 1.27 1.27))))
-		(property "Footprint" "" (at 129.54 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Datasheet" "" (at 129.54 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 76.2 100.33 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 76.2 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 76.2 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
 		(property "Description" "Ground reference"
-			(at 129.54 96.52 0)
+			(at 76.2 96.52 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(pin "1" (uuid "b997f73a-8909-5c6c-b3c2-1871a78b5427"))
@@ -328,8 +346,35 @@
 		)
 	)
 	(symbol
+		(lib_id "SWRA117D_RF:GND")
+		(at 129.54 96.52 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "d61770f5-c20a-5250-afe0-df3c94b9b5fc")
+		(property "Reference" "#PWR02"
+			(at 129.54 102.87 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "GND" (at 129.54 100.33 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 129.54 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 129.54 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "Ground reference"
+			(at 129.54 96.52 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "90558dd8-5550-5c92-8d2d-dff56b050f6a"))
+		(instances
+			(project "swra117d_2g4_sim"
+				(path "/f0820ba2-7329-58cb-a18e-f65c6c3dd98c" (reference "#PWR02") (unit 1))
+			)
+		)
+	)
+	(symbol
 		(lib_id "SWRA117D_RF:PWR_FLAG")
-		(at 134.62 96.52 0)
+		(at 71.12 96.52 0)
 		(unit 1)
 		(exclude_from_sim yes)
 		(in_bom no)
@@ -337,14 +382,14 @@
 		(dnp no)
 		(uuid "ea6f02d2-2e1e-5051-adf2-d809b706d767")
 		(property "Reference" "#FLG01"
-			(at 134.62 102.87 0)
+			(at 71.12 102.87 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(property "Value" "PWR_FLAG" (at 134.62 92.71 0) (effects (font (size 1.27 1.27))))
-		(property "Footprint" "" (at 134.62 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Datasheet" "" (at 134.62 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "PWR_FLAG" (at 71.12 92.71 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 71.12 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 71.12 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
 		(property "Description" "ERC power source flag"
-			(at 134.62 96.52 0)
+			(at 71.12 96.52 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(pin "1" (uuid "69cba6e0-874e-5036-9461-f46603cf793e"))

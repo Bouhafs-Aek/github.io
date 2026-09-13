@@ -468,19 +468,26 @@
 	)
 	(symbol "RF_PORT"
 		(pin_numbers (hide yes))
-		(pin_names (offset 0) (hide yes))
+		(pin_names (offset 0.254))
 		(exclude_from_sim no)
 		(in_bom no)
-		(on_board no)
+		(on_board yes)
 		(property "Reference" "P" (at 0 3.81 0) (effects (font (size 1.27 1.27))))
-		(property "Value" "RF_PORT" (at 0 -3.81 0) (effects (font (size 1.27 1.27))))
-		(property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Datasheet" "~" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Description" "50 ohm simulation port - where the solver excites the feed line. Not a part: it has no footprint and is not placed on the board"
+		(property "Value" "RF_PORT" (at 0 -5.08 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "SWRA117D_RF:RF_Port_Land"
 			(at 0 0 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(property "ki_keywords" "port RF simulation 50 ohm source"
+		(property "Datasheet" "~" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "50 ohm board-edge port land for a field solver. Pad 1 is the signal pad the solver drives; pad 2 is the ground pad directly under it on B.Cu, which is the port's reference. Not a connector: no coplanar ground, so the line stays a microstrip"
+			(at 0 0 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "ki_keywords" "port RF simulation 50 ohm source launch"
+			(at 0 0 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "ki_fp_filters" "RF_Port*"
 			(at 0 0 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -495,6 +502,11 @@
 				(stroke (width 0.254) (type default))
 				(fill (type none))
 			)
+			(polyline
+				(pts (xy 0 -1.27) (xy 0 -2.54))
+				(stroke (width 0) (type default))
+				(fill (type none))
+			)
 		)
 		(symbol "RF_PORT_1_1"
 			(pin passive line
@@ -502,6 +514,12 @@
 				(length 2.54)
 				(name "P" (effects (font (size 1.27 1.27))))
 				(number "1" (effects (font (size 1.27 1.27))))
+			)
+			(pin passive line
+				(at 0 -5.08 90)
+				(length 2.54)
+				(name "GND" (effects (font (size 1.27 1.27))))
+				(number "2" (effects (font (size 1.27 1.27))))
 			)
 		)
 		(embedded_fonts no)

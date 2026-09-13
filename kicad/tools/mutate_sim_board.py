@@ -55,9 +55,46 @@ def longest_segment(pcb):
 
 
 # --------------------------------------------------------------- mutations
+def land(pcb):
+    for fp in find_all(pcb, "footprint"):
+        if str(fp[1]).endswith("RF_Port_Land"):
+            return fp
+
+
 def add_connector(pcb, _sch):
     pcb.insert(-1, [Sym("footprint"), "X:SMA", [Sym("layer"), "F.Cu"],
                     [Sym("uuid"), "x"], [Sym("at"), num(124.0), num(89.0)]])
+
+
+def drop_port_land(pcb, _sch):
+    """No pad for RFsim to drive: it falls back to the antenna's own feed pad."""
+    pcb.remove(land(pcb))
+
+
+def drop_reference_pad(pcb, _sch):
+    """The B.Cu pad gone: exactly the error RFsim reports by name."""
+    fp = land(pcb)
+    for pad in list(find_all(fp, "pad")):
+        if "B.Cu" in [str(l) for l in find(pad, "layers")[1:]]:
+            fp.remove(pad)
+
+
+def narrow_reference_pad(pcb, _sch):
+    """Ground pad narrower than the signal pad: the port overhangs its reference."""
+    fp = land(pcb)
+    pad = next(p for p in find_all(fp, "pad")
+               if "B.Cu" in [str(l) for l in find(p, "layers")[1:]])
+    find(pad, "size")[2] = num(1.0)
+
+
+def coplanar_ground_at_the_port(pcb, _sch):
+    """Ground tabs beside the signal pad: the launch is CPW, not microstrip."""
+    fp = land(pcb)
+    fp.insert(-1, [Sym("pad"), "2", Sym("smd"), Sym("rect"),
+                   [Sym("at"), num(1.75), num(-4.975), num(90)],
+                   [Sym("size"), num(3.5), num(3.0)],
+                   [Sym("layers"), "F.Cu", "F.Paste", "F.Mask"],
+                   [Sym("uuid"), "cop"], [Sym("net"), Sym("1"), "GND"]])
 
 
 def delete_feed(pcb, _sch):
@@ -65,9 +102,9 @@ def delete_feed(pcb, _sch):
         pcb.remove(seg)
 
 
-def feed_short_of_the_edge(pcb, _sch):
-    """The line stops 2 mm inside the board: nothing at the edge to launch from."""
-    find(longest_segment(pcb), "start")[2] = num(88.0)
+def feed_off_the_port_pad(pcb, _sch):
+    """The line stops short of the port land: RFsim drives a disconnected pad."""
+    find(longest_segment(pcb), "start")[2] = num(84.0)
 
 
 def feed_misses_the_pad(pcb, _sch):
@@ -103,6 +140,11 @@ def strip_launch_vias(pcb, _sch):
             pcb.remove(v)
 
 
+def via_on_the_antenna_pad(pcb, _sch):
+    """A via in the keep-out, where no copper of any layer is allowed."""
+    find(next(iter(find_all(pcb, "via"))), "at")[2] = num(66.0)
+
+
 def via_on_the_line(pcb, _sch):
     find(next(iter(find_all(pcb, "via"))), "at")[1] = num(124.0)
 
@@ -121,12 +163,12 @@ def keepout_short(pcb, _sch):
             xy[2] = num(64.0)
 
 
-def port_placed_on_the_board(_pcb, sch):
-    """P1 given a footprint: it would land on the board as copper it is not."""
+def port_left_off_the_board(_pcb, sch):
+    """P1 marked sheet-only: its land never reaches the PCB, so there is no pad."""
     for sym in find_all(sch, "symbol"):
         refs = [p for p in find_all(sym, "property") if p[1] == "Reference"]
         if refs and refs[0][2] == "P1":
-            find(sym, "on_board")[1] = Sym("yes")
+            find(sym, "on_board")[1] = Sym("no")
 
 
 def symbol_edited_away_from_the_library(_pcb, sch):
@@ -144,8 +186,12 @@ def pin_off_the_wire(_pcb, sch):
 
 MUTATIONS = [
     ("a connector footprint back in the model", add_connector),
+    ("the port land deleted", drop_port_land),
+    ("the port's B.Cu reference pad deleted", drop_reference_pad),
+    ("a reference pad narrower than the port pad", narrow_reference_pad),
+    ("coplanar ground tabs added at the port", coplanar_ground_at_the_port),
     ("the feed line deleted", delete_feed),
-    ("the feed line stopping short of the board edge", feed_short_of_the_edge),
+    ("the feed line stopping short of the port pad", feed_off_the_port_pad),
     ("the feed line not landing on the antenna pad", feed_misses_the_pad),
     ("a stub branching off the feed line", feed_branches),
     ("the bottom ground plane deleted", drop_bottom_ground),
@@ -156,7 +202,9 @@ MUTATIONS = [
     ("a via left off the GND net", via_not_grounded),
     ("a via that does not reach B.Cu", via_top_layer_only),
     ("the antenna keep-out stopping short of the plane edge", keepout_short),
-    ("P1 marked as a part that goes on the board", port_placed_on_the_board),
+    ("a via pushed up into the antenna keep-out", via_on_the_antenna_pad),
+    ("P1 marked as sheet-only, so its land never reaches the PCB",
+     port_left_off_the_board),
     ("an embedded symbol edited away from the library",
      symbol_edited_away_from_the_library),
     ("a symbol pin no longer on its wire", pin_off_the_wire),

@@ -218,9 +218,17 @@ than a gap port.
       field around them is real, not an artefact, and it is not the antenna's.
 - [ ] **Take the connector out before you blame the antenna.** Its pads are
       copper in the model and the port's return current runs through them; the
-      bright field around them is real and is not the antenna's. Dropping the
-      connector footprint and launching the port off the bare feed line at the
-      board edge removes it as a suspect in one edit, and changes nothing else.
+      bright field around them is real and is not the antenna's. Replace the
+      connector land with a bare port land — signal pad, ground pad under it,
+      nothing else — and it stops being a suspect without changing anything
+      else.
+- [ ] **Give the port a pad, and give the pad reference copper.** Most tools
+      attach a port to a *pad*, not to a track end, and refuse to launch if
+      there is no copper on the reference layer beneath it. Put that copper in
+      as a **pad**, not a zone: zones are stored unfilled, so a reference that
+      depends on a fill is missing the first time anyone opens the project.
+      Left without one, the tool picks some other pad — often the antenna's own
+      feed pad, which by design has no plane under it.
 - [ ] **Change the port model when you remove the connector.** An end-launch
       footprint makes the line coplanar, so a CPW port fits it. With the
       footprint gone there is no coplanar ground beside the line and it is a

@@ -4,22 +4,34 @@
 This is a complete KiCad project - schematic, board and project file - not a
 stripped board.  Open it and run RFsim on it.
 
-It is the fabrication project with one part taken out: J1, the SMA.  The
-connector is real hardware and it belongs on the board that gets built, but
-inside a simulation it is copper that is not the antenna, its ground pads
-carry the port's return current, and the bright field around them gets read as
-an antenna problem.  So here the 50 ohm feed line simply runs to the board
-edge and stops, and that track end is where RFsim attaches port 1.
+It is the fabrication project with the connector replaced by a bare port
+land.  J1, the SMA, is real hardware and belongs on the board that gets built,
+but inside a simulation its coplanar ground tabs are copper that is not the
+antenna, they carry the port's return current, and the bright field around
+them gets read as an antenna problem.
+
+What is left in its place is the minimum a solver needs and nothing more:
+
+  * P1, ``RF_Port_Land`` - the signal pad the solver drives, the width of the
+    50 ohm line, with a solid B.Cu ground pad directly under it.  RFsim
+    attaches ports to *pads*, and it needs reference copper under the one it
+    drives, so a bare track end is not enough: without this land RFsim falls
+    back to the antenna's own feed pad, which has no plane under it, and stops
+    with "no copper on reference layer B.Cu under the pad".
+  * The B.Cu pad is real copper in the file, so the reference exists whether
+    or not the zones have been filled.
+  * No coplanar ground beside the line, which is the difference that matters
+    against the SMA: the line stays a plain microstrip, so a microstrip (MSL)
+    port is the model that fits it, not CPW.
 
 Everything else is shared with the fabrication project by construction: same
 antenna footprint, same 1.6 mm FR4 stackup, same 2.95 mm line and taper, same
 board outline and ground plane edge.  ``tools/gen_project.py`` is imported
 rather than copied, so the two cannot drift apart.
 
-  * P1 in the schematic is ``RF_PORT``: a one-pin symbol with no footprint,
-    marking where the solver drives the line.  It is not placed on the board.
-  * Ground vias sit either side of the track end, so the port's return current
-    reaches the bottom plane at the port rather than somewhere downstream.
+  * Ground vias sit either side of the land, inside its B.Cu ground pad, so
+    the port's return current reaches the bottom plane at the port rather than
+    somewhere downstream.
   * Copper is allowed to touch the board edge here (the project's edge
     clearance rule is 0), because a port launch is supposed to be at the edge.
 
@@ -57,11 +69,12 @@ TAPER_LEN, TAPER_STEPS = gp.TAPER_LEN, gp.TAPER_STEPS
 SUB_H, SUB_ER = gp.SUB_H, gp.SUB_ER
 NETS = gp.NETS
 
-LAUNCH_Y = BOARD_Y1                     # the line ends on the board edge
+PAD_LEN_IN = gp.PAD_LEN_IN
+LAUNCH_Y = BOARD_Y1 - PAD_LEN_IN / 2    # centre of the port land's signal pad
 VIA_SIZE, VIA_DRILL = 0.6, 0.3
-# first via centre clear of the pour keep-away corridor, plus a little margin
-LAUNCH_VIA_X = W50 / 2 + POUR_GAP + VIA_SIZE / 2 + 0.2
-LAUNCH_VIA_Y = (89.5, 88.0, 86.5)
+# clear of the pour keep-away corridor, inside the land's B.Cu ground pad
+LAUNCH_VIA_X = (W50 / 2 + POUR_GAP + VIA_SIZE / 2 + 0.2, gp.LAUNCH_OFFSET + 1.0)
+LAUNCH_VIA_Y = (LAUNCH_Y - 0.8, LAUNCH_Y + 0.8)
 FENCE_PITCH, GRID_PITCH = 3.0, 5.0
 
 TITLE = "SWRA117D 2.45 GHz IFA - RFsim model: antenna + 50 ohm feed, no connector"
@@ -87,23 +100,14 @@ def parts() -> list:
     """The fabrication project's parts, minus the connector, plus the port."""
     antenna = next(p for p in gp.PARTS if p["ref"] == "AE1")
     port = dict(ref="P1", lib=f"{LIB_NICK}:RF_PORT", value="50R port",
-                fp="", sch=(76.2, 88.9, 0), pcb=None,
-                nets={"1": "ANT_FEED"},
-                ref_at=(73.66, 85.09), val_at=(73.66, 92.71),
-                in_bom=False, on_board=False,
-                desc="50 ohm simulation port - attach RFsim port 1 to the "
-                     "feed track where it meets the board edge")
+                fp="RF_Port_Land", sch=(76.2, 88.9, 0),
+                pcb=(FEED_X, BOARD_Y1, 90),
+                nets={"1": "ANT_FEED", "2": "GND"},
+                ref_at=(71.12, 84.0), val_at=(71.12, 86.0),
+                in_bom=False,
+                desc="50 ohm board-edge port land - attach RFsim port 1 to "
+                     "pad 1, with pad 2 on B.Cu as its reference")
     return [port, antenna]
-
-
-def schematic_only(node: list) -> list:
-    """Mark a placed symbol as belonging to the sheet only, with no footprint."""
-    for child in node:
-        if child[0] in ("on_board", "in_bom"):
-            child[1] = Sym("no")
-        if child[0] == "property" and child[1] == "Footprint":
-            child[2] = ""
-    return node
 
 
 def build_schematic() -> list:
@@ -113,29 +117,17 @@ def build_schematic() -> list:
     gp.SCH_NOTE = SCH_NOTE
     gp.PARTS = parts()
     gp.WIRES = [
-        ((80.01, 88.9), (127.0, 88.9)),       # P1 -> antenna feed
+        ((80.01, 88.9), (127.0, 88.9)),       # P1 pin 1 -> antenna feed
         ((127.0, 88.9), (127.0, 86.36)),      # up into AE1 pin 1
+        ((76.2, 93.98), (76.2, 96.52)),       # P1 ground pad -> GND
+        ((76.2, 96.52), (71.12, 96.52)),      # GND -> PWR_FLAG
         ((129.54, 86.36), (129.54, 96.52)),   # AE1 ground pin -> GND
-        ((129.54, 96.52), (134.62, 96.52)),   # GND -> PWR_FLAG
     ]
-    gp.JUNCTIONS = [(129.54, 96.52)]
+    gp.JUNCTIONS = [(76.2, 96.52)]
     gp.LABELS = [("ANT_FEED", (95.25, 88.9))]
-    gp.POWER = [("#PWR01", (129.54, 96.52))]
-    gp.PWR_FLAGS = [("#FLG01", (134.62, 96.52))]
-
-    # P1 is the only symbol that needs treating differently, and the generator
-    # it is reused from has no hook for that, so wrap the one function.
-    original = gp.sch_symbol
-
-    def placed(part):
-        node = original(part)
-        return schematic_only(node) if part["ref"] == "P1" else node
-
-    gp.sch_symbol = placed
-    try:
-        return gp.build_schematic()
-    finally:
-        gp.sch_symbol = original
+    gp.POWER = [("#PWR01", (76.2, 96.52)), ("#PWR02", (129.54, 96.52))]
+    gp.PWR_FLAGS = [("#FLG01", (71.12, 96.52))]
+    return gp.build_schematic()
 
 
 def feed_tracks() -> list:
@@ -154,8 +146,8 @@ def feed_tracks() -> list:
 
 def stitching() -> list[tuple[float, float]]:
     """Vias at the launch, along the plane edge, then over the rest of the pour."""
-    out = [(FEED_X + sign * LAUNCH_VIA_X, y)
-           for sign in (-1, 1) for y in LAUNCH_VIA_Y]
+    out = [(FEED_X + sign * dx, y)
+           for sign in (-1, 1) for dx in LAUNCH_VIA_X for y in LAUNCH_VIA_Y]
 
     x = BOARD_X0 + 1.5
     while x <= BOARD_X1 - 1.5:
@@ -169,7 +161,7 @@ def stitching() -> list[tuple[float, float]]:
 def build_board() -> list:
     gp.PROJECT = PROJECT
     gp.TITLE = TITLE
-    gp.PARTS = [p for p in parts() if p["pcb"]]
+    gp.PARTS = parts()
 
     pcb = gp.build_board()
 
@@ -194,9 +186,9 @@ def build_board() -> list:
                           (BOARD_X0 + 1.0, BOARD_Y1 - 7.0), "F.SilkS", size=1.2))
     pcb.append(gp.gr_text(f"50R microstrip w={W50}mm / {SUB_H}mm FR4 er={SUB_ER}",
                           (BOARD_X0 + 1.0, BOARD_Y1 - 5.6), "F.SilkS", size=0.9))
-    pcb.append(gp.gr_text("PORT 1: attach RFsim here, at the track end on the "
-                          "board edge", (BOARD_X0 + 0.8, BOARD_Y1 - 1.0),
-                          "Cmts.User", size=0.8))
+    pcb.append(gp.gr_text("PORT 1: P1 pad 1, referenced to its B.Cu ground pad - "
+                          "microstrip (MSL), not CPW: no coplanar ground here",
+                          (BOARD_X0 + 0.8, BOARD_Y1 - 1.0), "Cmts.User", size=0.8))
     pcb.append(tail)
     return pcb
 

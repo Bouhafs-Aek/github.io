@@ -26,7 +26,9 @@ SCH_PATH = PCB_PATH.with_suffix(".kicad_sch")
 LIB_PATH = PRJ_DIR / "library" / "SWRA117D_RF.kicad_sym"
 
 MIN_CLEARANCE = 0.15
-LAUNCH_VIA_RADIUS = 6.0     # "at the launch" means this close to the track end
+PORT_LAND = "RF_Port_Land"
+LAUNCH_VIA_RADIUS = 7.0     # "at the launch" means this close to the port pad
+LAUNCH_VIA_MIN = 6         # how many have to be that close
 EPS = 1e-6
 
 errors: list[str] = []
@@ -126,20 +128,48 @@ def feed_segments(pcb):
 
 
 # ------------------------------------------------------------------- checks
+def port_land(pcb):
+    for fp in find_all(pcb, "footprint"):
+        if str(fp[1]).split(":", 1)[-1] == PORT_LAND:
+            return fp
+    return None
+
+
 def check_no_connector(pcb):
-    """Nothing on this board but the radiator and its line."""
+    """The radiator, and a bare port land - no connector."""
     fps = find_all(pcb, "footprint")
     radiators = [fp for fp in fps if find(fp, "fp_poly") is not None]
     others = [str(fp[1]) for fp in fps if find(fp, "fp_poly") is None]
     if len(radiators) != 1:
         fail(f"board: expected exactly one antenna footprint, found {len(radiators)}")
-    if others:
-        fail("board: the model still carries " + ", ".join(others) +
+    strays = [n for n in others if n.split(":", 1)[-1] != PORT_LAND]
+    if strays:
+        fail("board: the model still carries " + ", ".join(strays) +
              " - a connector inside the model is part of the answer it gives, "
              "and its ground pads carry the port's return current")
+    land = port_land(pcb)
+    if land is None:
+        fail(f"board: no {PORT_LAND} - RFsim attaches its port to a pad, so "
+             "without one it falls back to the antenna's own feed pad, which "
+             "has no ground plane under it")
+        return
+    if len(others) != 1:
+        fail(f"board: {len(others)} non-antenna footprints; expected just the "
+             "port land")
+
+    # what makes it a port land and not a connector, and what makes MSL the
+    # right port model: no coplanar ground beside the signal pad
+    coplanar = [pad for pad in find_all(land, "pad")
+                if str(pad[1]) != "1"
+                and "F.Cu" in [str(l) for l in find(pad, "layers")[1:]]]
+    if coplanar:
+        fail(f"board: {PORT_LAND} has {len(coplanar)} ground pad(s) on F.Cu - "
+             "that is a coplanar launch, so the line is no longer a plain "
+             "microstrip and an MSL port no longer describes it")
     else:
-        notes.append("board: one footprint (the radiator) and no connector - "
-                     "the port launches off the bare feed line")
+        notes.append("board: the radiator plus a bare port land - no connector, "
+                     "and no coplanar ground beside the line, so the launch is "
+                     "microstrip (use an MSL port, not CPW)")
 
 
 def check_exact_copy(pcb):
@@ -198,8 +228,59 @@ def check_ground(pcb):
                      f"y = {edge}, on F.Cu and B.Cu")
 
 
-def check_feed(pcb):
-    """One continuous feed line, from the board edge to the antenna's feed pad."""
+def check_port_reference(pcb):
+    """The port pad must have B.Cu copper under it, fill or no fill.
+
+    This is the error RFsim reports by name: "no copper on reference layer
+    B.Cu under the pad".  A zone would satisfy it once filled, but zones ship
+    unfilled, so the reference is a real pad in the file instead.
+    """
+    land = port_land(pcb)
+    if land is None:
+        return
+    at = find(land, "at")
+    origin = (float(at[1]), float(at[2]))
+    rot = float(at[3]) if len(at) > 3 else 0.0
+
+    def pad_rect(pad):
+        pat, size = find(pad, "at"), find(pad, "size")
+        rx, ry = rotate((float(pat[1]), float(pat[2])), -rot)
+        cx, cy = origin[0] + rx, origin[1] + ry
+        w, h = float(size[1]), float(size[2])
+        if rot % 180:
+            w, h = h, w
+        return (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+
+    signal = [p for p in find_all(land, "pad") if str(p[1]) == "1"]
+    ground = [p for p in find_all(land, "pad")
+              if "B.Cu" in [str(l) for l in find(p, "layers")[1:]]]
+    if not signal:
+        fail(f"board: {PORT_LAND} has no pad 1 for the port to drive")
+        return
+    if not ground:
+        fail(f"board: {PORT_LAND} has no B.Cu pad - the port would have no "
+             "reference copper until someone remembers to fill the zones")
+        return
+    sig, gnd = pad_rect(signal[0]), pad_rect(ground[0])
+    if str(find(signal[0], "net")[2]) != "ANT_FEED":
+        fail("board: the port pad is not on ANT_FEED")
+    if str(find(ground[0], "net")[2]) != "GND":
+        fail("board: the port's reference pad is not on GND")
+    if not (gnd[0] <= sig[0] and gnd[1] <= sig[1]
+            and gnd[2] >= sig[2] and gnd[3] >= sig[3]):
+        fail(f"board: the port pad {sig} is not fully inside its B.Cu ground "
+             f"pad {gnd} - RFsim reports 'no copper on reference layer B.Cu "
+             "under the pad' for exactly this")
+    else:
+        notes.append(f"port: pad 1 is {sig[2] - sig[0]:.2f} x {sig[3] - sig[1]:.2f} mm "
+                     f"over a {gnd[2] - gnd[0]:.2f} x {gnd[3] - gnd[1]:.2f} mm B.Cu "
+                     "ground pad, so the reference is real copper and does not "
+                     "wait on a zone fill")
+    return sig
+
+
+def check_feed(pcb, port_pad):
+    """One continuous feed line, from the port pad to the antenna's feed pad."""
     _fp, _poly, pads = antenna(pcb)
     if pads is None:
         return
@@ -219,28 +300,26 @@ def check_feed(pcb):
              "ends) - RFsim would launch into whichever it finds first")
         return
 
-    x0, y0, x1, y1 = outline(pcb)
     feed_pad = pads["1"]["centre"]
     at_pad = [pt for pt in loose if math.dist(pt, feed_pad) < EPS]
-    at_edge = [pt for pt in loose
-               if min(abs(pt[0] - x0), abs(pt[0] - x1),
-                      abs(pt[1] - y0), abs(pt[1] - y1)) < EPS]
+    on_port = [pt for pt in loose if port_pad and
+               port_pad[0] - EPS <= pt[0] <= port_pad[2] + EPS and
+               port_pad[1] - EPS <= pt[1] <= port_pad[3] + EPS]
     if not at_pad:
         fail(f"board: no end of the feed line lands on the antenna feed pad at "
              f"{q(feed_pad)}")
-    if not at_edge:
-        fail("board: the feed line does not reach the board edge, so there is "
-             "nowhere at the edge for the port to launch from")
-    if not (at_pad and at_edge):
+    if port_pad and not on_port:
+        fail("board: the feed line does not reach the port pad, so RFsim would "
+             "drive a pad that is not connected to the antenna")
+    if not (at_pad and on_port):
         return
 
-    launch = at_edge[0]
+    launch = on_port[0]
     width_at = {q(a): w for a, b, w in segs} | {q(b): w for a, b, w in segs}
     length = sum(math.dist(a, b) for a, b, _w in segs)
-    notes.append(f"feed: {len(segs)} segments, {length:.1f} mm, from the board "
-                 f"edge at {launch} ({width_at[launch]} mm wide) down to the "
-                 f"{width_at[q(feed_pad)]} mm antenna pad - port 1 goes on the "
-                 "edge end")
+    notes.append(f"feed: {len(segs)} segments, {length:.1f} mm, from the port pad "
+                 f"at {launch} ({width_at[launch]} mm wide) down to the "
+                 f"{width_at[q(feed_pad)]} mm antenna pad")
     return launch
 
 
@@ -263,7 +342,7 @@ def check_launch_vias(pcb, launch):
              "it is a floating sheet")
         return
     near = [v for v in vias if math.dist(v, launch) <= LAUNCH_VIA_RADIUS]
-    if len(near) < 4:
+    if len(near) < LAUNCH_VIA_MIN:
         fail(f"board: only {len(near)} ground via(s) within {LAUNCH_VIA_RADIUS} mm "
              "of the launch - the port's return current has to detour across the "
              "top pour before it reaches the bottom plane, and that detour is in "
@@ -381,10 +460,15 @@ def check_schematic():
         fail("schematic: no P1 - nothing marks where the solver drives the line")
     for sym in find_all(sch, "symbol"):
         ref_node = [p for p in find_all(sym, "property") if p[1] == "Reference"]
-        if ref_node and ref_node[0][2] == "P1":
-            if str(find(sym, "on_board")[1]) != "no":
-                fail("schematic: P1 is marked on_board - it is the solver's "
-                     "source, not a part, and has no footprint to place")
+        if not ref_node or ref_node[0][2] != "P1":
+            continue
+        fp = next(p[2] for p in find_all(sym, "property") if p[1] == "Footprint")
+        if not fp.endswith(PORT_LAND):
+            fail(f"schematic: P1 is footprinted {fp!r}, not {PORT_LAND} - the "
+                 "port needs a pad on the board with ground under it")
+        if str(find(sym, "on_board")[1]) != "yes":
+            fail("schematic: P1 is not marked on_board, so its land never "
+                 "reaches the PCB and RFsim has no pad to drive")
     notes.append(f"schematic: {len(embedded)} embedded symbols match the library, "
                  f"{len(placed)} pins all land on wires, {sorted(refs)} placed")
 
@@ -397,7 +481,8 @@ def main() -> int:
     check_no_connector(pcb)
     check_exact_copy(pcb)
     check_ground(pcb)
-    launch = check_feed(pcb)
+    port_pad = check_port_reference(pcb)
+    launch = check_feed(pcb, port_pad)
     check_launch_vias(pcb, launch)
     check_clearances(pcb)
     check_zones_unfilled(pcb)
