@@ -57,11 +57,19 @@ def measure(path: pathlib.Path) -> tuple[dict, dict]:
         if find(other, "pts") != find(polys[0], "pts"):
             raise SystemExit("the two copper layers do not carry the same polygon")
 
-    pad = next(p for p in find_all(fp, "pad") if str(p[1]) == "1")
-    pad_at, pad_size = find(pad, "at"), find(pad, "size")
-    feed = (float(pad_at[1]), float(pad_at[2]))
-    if feed != (0.0, 0.0):
-        raise SystemExit(f"the feed pad is at {feed}, not at the origin")
+    # the radiator's pads are all on net 1: the feed, and the vias that stitch
+    # the two layers together.  The feed is the one at the origin.
+    all_pads = [p for p in find_all(fp, "pad")]
+    feed_pads = [p for p in all_pads
+                 if (float(find(p, "at")[1]), float(find(p, "at")[2])) == (0.0, 0.0)]
+    if not feed_pads:
+        raise SystemExit("no feed pad at the footprint origin")
+    pad = feed_pads[0]
+    pad_size = find(pad, "size")
+    stitches = [p for p in all_pads if p is not pad]
+    if not stitches:
+        raise SystemExit("the radiator is on two layers but nothing stitches "
+                         "them together except the feed")
 
     # horizontal ladder: the copper's left and right edges, and the feed trace
     left, right = xs[0], xs[-1]
@@ -92,9 +100,16 @@ def measure(path: pathlib.Path) -> tuple[dict, dict]:
 
     pitch = spans(arm_edges)
     arms = (len(pitch)) // 2
+    gaps = []
+    centres = [(float(find(p, "at")[1]), float(find(p, "at")[2]))
+               for p in [pad] + stitches]
+    for i, c in enumerate(centres):
+        others = [d for j, d in enumerate(centres) if j != i]
+        gaps.append(min((c[0] - d[0]) ** 2 + (c[1] - d[1]) ** 2 for d in others) ** 0.5)
     return got, dict(vertices=len(pts), layers=layers, arms=arms,
                      pad=(float(pad_size[1]), float(pad_size[2])),
                      drill=float(find(pad, "drill")[1]),
+                     stitches=len(stitches), stitch_pitch=max(gaps),
                      envelope=(right - left, bottom - top))
 
 
@@ -105,7 +120,9 @@ def main() -> int:
           f"{' + '.join(info['layers'])}, {info['arms']} meander arms")
     print(f"  copper envelope {info['envelope'][0]:.2f} x {info['envelope'][1]:.2f} mm, "
           f"feed pad {info['pad'][0]} x {info['pad'][1]} mm with a "
-          f"{info['drill']} mm plated hole\n")
+          f"{info['drill']} mm plated hole")
+    print(f"  {info['stitches']} vias tie the two layers together, no more than "
+          f"{info['stitch_pitch']:.2f} mm apart\n")
     print(f"{'dim':4} {'SWRA227E':>10} {'measured':>10} {'error':>8}   what it is")
     bad = 0
     for name, want in TABLE_1.items():

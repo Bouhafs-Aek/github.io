@@ -134,6 +134,12 @@ Every one of these has produced a confidently wrong answer in practice.
       copper on both, "for lower resistive loss and slightly wider bandwidth".
       A model or a fabrication drawing that carries only the top layer is a
       different antenna.
+- [ ] **If it is two, stitch them.** Two identical traces joined only at the
+      feed are not one conductor — they are a parallel-plate line, open at the
+      tip, with resonances of its own. Stitch along the centre line at the same
+      pitch you would use for ground: λ/20 in the dielectric at the highest
+      frequency of interest. Check the vias sit inside the copper and clear the
+      trace edge by their own radius, and never put one on the open tip.
 - [ ] **Sanity-check against physics.** If a result implies εr,eff < 1, or a
       quarter-wave length that beats the speed of light, the setup is wrong,
       not the antenna.

@@ -20,8 +20,20 @@ The path, from the feed up (this is the whole antenna):
 
 Copper goes on F.Cu *and* B.Cu: section 3 says the layout is on both layers,
 "this enables a lower resistive loss and gives a slightly wider bandwidth
-compared to a single sided layout solution".  The two are tied at the feed,
-which is a plated hole.
+compared to a single sided layout solution".
+
+Two sheets of copper only count as one conductor if they are tied along their
+length.  Joined at the feed alone, they are a 150 mm parallel-plate line -
+1.6 mm apart, about 140 ohm - open at the tip, and it has resonances of its
+own inside the band the antenna is meant to work in.  So the radiator is
+stitched at VIA_PITCH along its centre line, which is inside lambda/20 in FR4
+at 2.44 GHz - the same rule used for ground stitching on the other boards,
+applied here to the top band of the dual band build.
+
+DN024 does not dimension this - it says nothing about vias at all, and the
+authoritative geometry is a Gerber we do not have.  The pitch is therefore an
+engineering choice, and it is the one place in this footprint that is not
+Table 1.
 
     python3 kicad/tools/gen_dn024_footprint.py
 """
@@ -32,6 +44,8 @@ import pathlib
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import math  # noqa: E402
+
 from sexpr import Sym, dumps, num  # noqa: E402
 
 NAME = "TI_DN024_Monopole_868_2440"
@@ -52,6 +66,8 @@ TABLE_1 = {
     "X1": 63.0,   # reference board ground plane height
 }
 ARMS = 4
+VIA_PITCH = 2.8      # lambda/20.7 in FR4 at 2.44 GHz
+VIA_PAD, VIA_DRILL = 0.6, 0.3
 
 # Observed, not invented: the reference board centres a 38 mm antenna on a
 # 43 mm ground plane, so it leaves this much clear either side.
@@ -122,6 +138,30 @@ def offset_outline(path, width) -> list[tuple[float, float]]:
         return out
 
     return side(path, 1) + list(reversed(side(path, -1)))
+
+
+def stitch_points(path, pitch, end_margin):
+    """Points every *pitch* along a polyline, from the feed onward.
+
+    The feed itself is already a plated hole, so the walk starts one pitch in,
+    and it stops *end_margin* short of the open tip: a via on the tip would sit
+    on the flat end cap with no copper around it.  Everywhere else a point on
+    the centre line is half the trace width from either edge - more at the
+    corners, since a right-angle mitre puts its inner vertex further out.
+    """
+    total = sum(math.dist(a, b) for a, b in zip(path, path[1:]))
+    out, carry, walked = [], pitch, 0.0
+    for a, b in zip(path, path[1:]):
+        length = math.dist(a, b)
+        travelled = carry
+        while travelled <= length + 1e-9:
+            if walked + travelled <= total - end_margin:
+                f = travelled / length
+                out.append((a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f))
+            travelled += pitch
+        carry = travelled - length
+        walked += length
+    return out
 
 
 def intersect(p1, p2, p3, p4):
@@ -204,19 +244,30 @@ def build() -> list:
                    (keepout[2] + 0.25, keepout[3] + 0.25), "F.CrtYd", 0.05))
     fp.append(rect((box[0], box[1]), (box[2], box[3]), "F.Fab", 0.1))
 
-    # Feed: a plated hole, so the two sides of the antenna are one conductor.
+    # Feed: a plated hole, so the two sides of the antenna meet at the port.
     fp.append([Sym("pad"), "1", Sym("thru_hole"), Sym("rect"),
                [Sym("at"), num(0), num(0)],
                [Sym("size"), num(t["W"]), num(t["W"])],
                [Sym("drill"), num(0.6)],
                [Sym("layers"), "*.Cu", "*.Mask"],
                [Sym("remove_unused_layers"), Sym("no")], uid()])
+
+    # ... and stitched along its length, so the two sides are one conductor
+    # rather than a transmission line with the antenna's own current on it.
+    stitches = stitch_points(path, VIA_PITCH, VIA_PAD / 2 + 0.2)
+    for x, y in stitches:
+        fp.append([Sym("pad"), "1", Sym("thru_hole"), Sym("circle"),
+                   [Sym("at"), num(round(x, 4)), num(round(y, 4))],
+                   [Sym("size"), num(VIA_PAD), num(VIA_PAD)],
+                   [Sym("drill"), num(VIA_DRILL)],
+                   [Sym("layers"), "*.Cu"],
+                   [Sym("remove_unused_layers"), Sym("no")], uid()])
     fp.append([Sym("embedded_fonts"), Sym("no")])
-    return fp, box, keepout
+    return fp, box, keepout, stitches
 
 
 def main() -> None:
-    fp, box, keepout = build()
+    fp, box, keepout, stitches = build()
     DEST.parent.mkdir(parents=True, exist_ok=True)
     DEST.write_text(dumps(fp) + "\n")
     print(f"wrote {DEST.relative_to(DEST.parents[2])}")
@@ -224,7 +275,8 @@ def main() -> None:
           f"(note: {TABLE_1['L4']} x {TABLE_1['X2'] - TABLE_1['L5']} above the feed)")
     print(f"  clear area       {keepout[2] - keepout[0]:.2f} x "
           f"{keepout[3] - keepout[1]:.2f} mm, {SIDE_CLEARANCE} mm either side")
-    print("  copper on F.Cu and B.Cu, tied at the plated feed hole")
+    print(f"  copper on F.Cu and B.Cu, stitched by {len(stitches)} vias at "
+          f"{VIA_PITCH} mm plus the plated feed hole")
 
 
 if __name__ == "__main__":

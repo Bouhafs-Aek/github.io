@@ -29,6 +29,8 @@ EPS = 1e-6
 # SWRA227E Table 3, the dual band build
 TABLE_3 = {"Z61": "DNP", "Z62": "3.9pF", "Z63": "DNP"}
 GND_SIZE = (43.0, 63.0)          # Table 2 and Table 3 both name it
+TOP_BAND = 2.44e9                # the dual band build's upper band
+ER = 4.5
 EXPECTED = {
     ("J1", "1"): "RF_IN", ("J1", "2"): "GND",
     ("Z61", "1"): "RF_IN", ("Z61", "2"): "GND",
@@ -223,6 +225,80 @@ def check_pi_network(pcb, pads):
                      "through a via of their own")
 
 
+def check_two_layer_radiator(pcb):
+    """The radiator is on both layers, and they are stitched into one conductor.
+
+    Section 3 of SWRA227E puts the layout on both layers "for lower resistive
+    loss and slightly wider bandwidth".  Two sheets joined only at the feed are
+    not that: they are a 150 mm parallel-plate line, open at the tip, with
+    resonances inside the band the antenna works in.  So the stitching is
+    checked the way ground stitching is - by pitch against the wavelength in
+    the dielectric - and every via has to sit in the copper it is tying.
+    """
+    fp = next((f for f in find_all(pcb, "footprint")
+               if find(f, "fp_poly") is not None), None)
+    if fp is None:
+        return
+    layers = sorted({str(find(poly, "layer")[1]) for poly in find_all(fp, "fp_poly")})
+    if layers != ["B.Cu", "F.Cu"]:
+        fail(f"board: the radiator is on {layers}; SWRA227E puts it on both")
+        return
+
+    at = find(fp, "at")
+    origin = (float(at[1]), float(at[2]))
+    poly = [(origin[0] + float(xy[1]), origin[1] + float(xy[2]))
+            for xy in find(find_all(fp, "fp_poly")[0], "pts")[1:]]
+    # the feed is a rectangular plated pad straddling the end of the ribbon;
+    # the stitches are round and sit on the centre line
+    holes = [p for p in find_all(fp, "pad") if str(p[2]) == "thru_hole"]
+    vias = [p for p in holes if str(p[3]) == "circle"]
+    if len(holes) < 2 or not vias:
+        fail("board: nothing stitches the radiator's two layers together except "
+             "the feed, so they are a transmission line rather than one conductor")
+        return
+
+    centres = [(origin[0] + float(find(p, "at")[1]),
+                origin[1] + float(find(p, "at")[2])) for p in holes]
+    for pad in vias:
+        pat = find(pad, "at")
+        c = (origin[0] + float(pat[1]), origin[1] + float(pat[2]))
+        radius = max(float(x) for x in find(pad, "size")[1:]) / 2
+        if not inside(poly, c):
+            fail(f"board: a stitching via at {q(c)} is not inside the radiator")
+        elif edge_distance(poly, c) < radius:
+            fail(f"board: a stitching via at {q(c)} is {edge_distance(poly, c):.2f} mm "
+                 f"from the edge of a {radius * 2} mm trace - it would break out")
+        if [str(l) for l in find(pad, "layers")[1:]] not in (["*.Cu"], ["*.Cu", "*.Mask"]):
+            fail(f"board: the stitching via at {q(c)} does not reach both layers")
+
+    worst = max(min(math.dist(a, b) for j, b in enumerate(centres) if j != i)
+                for i, a in enumerate(centres))
+    limit = 299792458.0 / (TOP_BAND * math.sqrt(ER)) * 1e3 / 20
+    if worst > limit + EPS:
+        fail(f"board: the radiator's two layers are stitched at {worst:.2f} mm, "
+             f"over the {limit:.2f} mm that is lambda/20 in FR4 at "
+             f"{TOP_BAND / 1e9:.2f} GHz")
+    else:
+        notes.append(f"board: the radiator is on F.Cu and B.Cu, stitched by "
+                     f"{len(vias)} vias no more than {worst:.2f} mm apart "
+                     f"(lambda/20 at {TOP_BAND / 1e9:.2f} GHz is {limit:.2f} mm), "
+                     "so the two layers are one conductor")
+
+
+def inside(poly, pt) -> bool:
+    x, y = pt
+    hit = False
+    for (x1, y1), (x2, y2) in zip(poly, poly[1:] + poly[:1]):
+        if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
+            hit = not hit
+    return hit
+
+
+def edge_distance(poly, pt) -> float:
+    return min(point_to_segment(pt, a, b)
+               for a, b in zip(poly, poly[1:] + poly[:1]))
+
+
 def check_board(pcb, pads, nets):
     for pad in pads:
         want = EXPECTED.get((pad["ref"], pad["number"]))
@@ -399,6 +475,7 @@ def main() -> int:
     check_schematic()
     check_exact_copy()
     check_ground_plane(pcb)
+    check_two_layer_radiator(pcb)
     check_board(pcb, pads, nets)
     check_pi_network(pcb, pads)
     check_zones_unfilled(pcb)

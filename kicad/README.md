@@ -1104,7 +1104,7 @@ of them contradict advice that is correct for the first antenna:
 | | SWRA117D inverted-F | DN024 monopole |
 |---|---|---|
 | **matching** | none — "the antenna is a 50 Ω design" | **required.** "It is recommended to use a pi-matching network at the feed point ... since the geometry of the ground plane affects the impedance of the antenna" |
-| **copper** | one layer | **both layers**, "this enables a lower resistive loss and gives a slightly wider bandwidth" |
+| **copper** | one layer | **both layers**, "this enables a lower resistive loss and gives a slightly wider bandwidth" — and stitched, see below |
 | **DC** | short to ground (the F's strap) | **open** — a monopole has one terminal |
 | **ground plane** | part of the antenna, size matters | part of the antenna, size matters **and changes the match**: "For larger ground planes L4 would have to be further reduced or the antenna match re-calculated" |
 
@@ -1145,6 +1145,32 @@ the single band BOM — series 1.8 nH with a shunt 2.7 pF — is an L match that
 only works with the shunt on the source side. Both readings put Z61 nearest
 the connector, which is how it is laid out.
 
+### Two layers only count as one conductor if you stitch them
+
+Section 3 puts the layout on both layers *"for lower resistive loss and
+slightly wider bandwidth"*. Joining them at the feed alone does not deliver
+that. Two identical traces 1.6 mm apart, shorted at one end and open at the
+other, are a **150 mm parallel-plate line of about 140 Ω** — with resonances
+of its own inside the band the antenna is supposed to work in.
+
+So the radiator is stitched along its centre line at **2.8 mm**, which is
+inside λ/20 in FR4 at 2.44 GHz (2.90 mm) — the same rule this repo uses for
+ground stitching, applied to the top band of the dual-band build. 53 vias,
+plus the plated feed hole.
+
+**This is the one thing in the footprint that is not Table 1.** DN024 does not
+dimension it and does not mention vias at all; the authoritative geometry is a
+Gerber we do not have. The pitch is an engineering choice, and it is labelled
+as one in the generator.
+
+`check_dn024.py` holds it to the rule: every via inside the copper and clear
+of the trace edge by its own radius, both layers reached, and the worst gap
+under λ/20. Writing that check found three things — the feed pad being counted
+as a stitch, a via landing exactly on the open tip with no copper around it,
+and a first pitch of 3.0 mm that was over λ/20 while the comment next to it
+claimed λ/19. The geometry was moved to meet the rule rather than the rule
+relaxed to meet the geometry.
+
 ### The radiator is arithmetic, not tracing
 
 DN024 gives the antenna as a picture and nine numbers, and says the
@@ -1168,6 +1194,7 @@ and re-derives Table 1 from it *without using the generator*:
 ```
 TI_DN024_Monopole_868_2440.kicad_mod: 18 polygon vertices on B.Cu + F.Cu, 4 meander arms
   copper envelope 38.00 x 24.00 mm, feed pad 2.0 x 2.0 mm with a 0.6 mm plated hole
+  53 vias tie the two layers together, no more than 2.80 mm apart
 
 dim    SWRA227E   measured    error   what it is
 L1        9.00      9.000    +0.000    feed trace, foot to the top of the bottom arm
@@ -1181,6 +1208,7 @@ X2       25.00     25.000    +0.000    ground plane edge to the top of the anten
 all 7 dimensions match SWRA227E Table 1 within 11 um: this is an exact copy
 ```
 
+
 ### Running it
 
 ```sh
@@ -1192,17 +1220,19 @@ python3 tools/check_dn024.py
 ```
 
 ```
-ok   library: TI_DN024 has 7 symbols and 1 footprints, all parsing cleanly
+ok   library: TI_DN024 has 8 symbols and 1 footprints, all parsing cleanly
 ok   schematic: 5 embedded symbols match their libraries, 13 pins on wires, netlist matches the intended one
 ok   board: TI_DN024_Monopole_868_2440 matches all 7 dimensions of SWRA227E Table 1 within 11 um (exact copy), on B.Cu + F.Cu
 ok   board: ground plane 43.0 x 63.0 mm on F.Cu and B.Cu, the size SWRA227E Table 3 measured the match on
-ok   board: 11 pads, 14 tracks, 152 vias, every track end lands, keep-out above y = 91.0 clean, closest different-net tracks 0.36 mm
+ok   board: the radiator is on F.Cu and B.Cu, stitched by 53 vias no more than 2.80 mm apart (lambda/20 at 2.44 GHz is 2.90 mm), so the two layers are one conductor
+ok   board: 64 pads, 14 tracks, 152 vias, every track end lands, keep-out above y = 91.0 clean, closest different-net tracks 0.36 mm
 ok   pi network: Z62 series between RF_IN and ANT_FEED, Z61 shunt on the connector side, Z63 shunt on the antenna side; Z61 and Z63 laid out and unfitted, as Table 3 says
 ok   pi network: both shunt ground pads reach the bottom plane through a via of their own
 ok   board: 2 copper zone(s) carry no fill yet - press B in the PCB editor before DRC or any simulation
 
 0 problem(s)
 ```
+
 
 The two projects share `tools/gen_project.py`: parts name their symbol and
 footprint libraries, so one generator serves both. Symbols are duplicated into
@@ -1228,7 +1258,7 @@ is then matched. Say the word and it is the same machinery as the first board.
 ## Reusing this on someone else's board
 
 [`docs/antenna-integration-checklist.md`](docs/antenna-integration-checklist.md)
-is the checklist these projects produced: 73 items across antenna placement,
+is the checklist these projects produced: 74 items across antenna placement,
 feed, stitching, simulation setup, what to leave out of a model, bench
 measurement, and tuning —
 each one there because getting it wrong here cost a wrong answer. It is written to be applied to any printed
