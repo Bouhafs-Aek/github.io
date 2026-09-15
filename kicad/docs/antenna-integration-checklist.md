@@ -114,6 +114,16 @@ Every one of these has produced a confidently wrong answer in practice.
       tolerance moves a narrow strip by a few percent of its width. A few
       percent of frequency error is inside that envelope, and scaling copper to
       cancel it is fitting geometry to an uncertainty. Measure a board first.
+- [ ] **Read the note you are copying, not the one you copied last time.**
+      Two TI reference antennas, two opposite answers: SWRA117D says the
+      inverted-F is a 50 Ω design and wants nothing in the path, while DN024
+      says the monopole needs a pi network at the feed and publishes its
+      values. "No matching network" is a finding about one antenna, not a
+      principle.
+- [ ] **Check whether the radiator is one layer or two.** DN024 puts its
+      copper on both, "for lower resistive loss and slightly wider bandwidth".
+      A model or a fabrication drawing that carries only the top layer is a
+      different antenna.
 - [ ] **Sanity-check against physics.** If a result implies εr,eff < 1, or a
       quarter-wave length that beats the speed of light, the setup is wrong,
       not the antenna.

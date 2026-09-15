@@ -1,10 +1,18 @@
-# 2.45 GHz PCB antenna (TI SWRA117D) — KiCad symbol, schematic, board and RF simulation
+# TI reference PCB antennas in KiCad — symbols, boards, checks and RF simulation
 
-A complete, self-contained KiCad project built around the TI SWRA117D
-**2.4 GHz printed inverted-F antenna** (left-hand layout): the radiator fed
-straight from a 50 Ω SMA port, with no matching network in the path. Plus a
-second project for RFsim, drawn the way the application note's Figure 3 draws
-it — ground on layer 2 only, one via, no connector — and two simulation
+Two TI reference antennas, each as a complete self-contained KiCad project,
+each an exact copy of its application note's dimension table and each with a
+checker that fails the build if it stops being one:
+
+* **TI SWRA117D**, a **2.45 GHz printed inverted-F** (left-hand layout) — the
+  radiator fed straight from a 50 Ω SMA port, with no matching network,
+  because the note says it is already a 50 Ω design.
+* **TI DN024 / SWRA227E**, a **868 + 2440 MHz meandering monopole** — copper
+  on both layers and a pi matching network at the feed, because this note says
+  it needs one and gives the values.
+
+Plus a third project for RFsim, the inverted-F drawn the way its Figure 3
+draws it — ground on layer 2 only, one via, no connector — and two simulation
 flows: a lumped **ngspice** return-loss testbench and a
 full-wave **openEMS** model that reads its geometry out of whichever board
 file you point it at.
@@ -17,14 +25,19 @@ kicad/
 ├── sym-lib-table / fp-lib-table     point KiCad at the project libraries
 ├── library/
 │   ├── SWRA117D_RF.kicad_sym        antenna, SMA, RF_PORT, GND, PWR_FLAG (+ C, L)
+│   ├── TI_DN024.kicad_sym           the second antenna's symbols
+│   ├── TI_DN024.pretty/             the DN024 monopole footprint
 │   └── SWRA117D_RF.pretty/
 │       ├── Texas_SWRA117D_2.4GHz_Left.kicad_mod  antenna, as published
 │       ├── SWRA117D_2G4_Left_retuned.kicad_mod   antenna, scaled x1.155
 │       ├── SMA_EdgeMount_Generic.kicad_mod       50 Ω connector land
 │       ├── RF_Port_Land.kicad_mod                the same land, no connector
 │       └── Chip_0402_1005Metric_RF.kicad_mod     spare 0402 land
+├── dn024/                           second antenna: TI DN024 monopole
+│   └── dn024_monopole_868_2440.*    868 + 2440 MHz, sch + pcb + pro
 ├── docs/
 │   ├── board-drawing.svg            dimensioned drawing, generated from the PCB
+│   ├── dn024-board-drawing.svg      the same, for the DN024 board
 │   ├── sim-board-drawing.svg        the same, for the simulation board
 │   └── antenna-integration-checklist.md   design review list for any project
 ├── sim/
@@ -727,6 +740,11 @@ python3 tools/stitching_span.py      # largest patch of top pour with no via in 
 python3 tools/gen_sma_footprint.py               # the SMA land, for the stackup
 python3 tools/gen_sma_footprint.py --style port # the same land with no coplanar tabs
 python3 tools/scale_footprint.py     # retune the antenna by uniform scaling
+python3 tools/gen_dn024_symbols.py    # the second antenna's symbol library
+python3 tools/gen_dn024_footprint.py # its radiator, from SWRA227E Table 1
+python3 tools/gen_dn024_project.py   # its schematic + board + project
+python3 tools/check_dn024.py         # and its checks
+python3 tools/verify_against_swra227e.py   # its footprint against Table 1
 python3 tools/board_to_svg.py docs/board-drawing.svg
 python3 tools/board_to_svg.py docs/sim-board-drawing.svg sim/board/swra117d_2g4_sim.kicad_pcb
 ```
@@ -982,10 +1000,144 @@ A mutation that exits non-zero without printing a finding is reported as
 [`docs/sim-board-drawing.svg`](docs/sim-board-drawing.svg) is the drawing,
 generated from this board by the same renderer as the other one.
 
+## The second antenna: TI DN024 meandering monopole
+
+`dn024/dn024_monopole_868_2440.*` is a separate, complete project for a
+different antenna: the TI DN024 / **SWRA227E** meandering monopole, dual band
+**868 + 2440 MHz**. It shares the toolchain and nothing else — different
+radiator, different band, different rules.
+
+Four differences from the inverted-F are worth stating up front, because three
+of them contradict advice that is correct for the first antenna:
+
+| | SWRA117D inverted-F | DN024 monopole |
+|---|---|---|
+| **matching** | none — "the antenna is a 50 Ω design" | **required.** "It is recommended to use a pi-matching network at the feed point ... since the geometry of the ground plane affects the impedance of the antenna" |
+| **copper** | one layer | **both layers**, "this enables a lower resistive loss and gives a slightly wider bandwidth" |
+| **DC** | short to ground (the F's strap) | **open** — a monopole has one terminal |
+| **ground plane** | part of the antenna, size matters | part of the antenna, size matters **and changes the match**: "For larger ground planes L4 would have to be further reduced or the antenna match re-calculated" |
+
+So the matching network here is not this project's invention — it is TI's, and
+the values are published. That is the opposite of the first board, where
+adding one would have been meddling.
+
+### What is built, and the two choices behind it
+
+**Dual band, not single band.** The dual band configuration keeps L4 at its
+published 38.0 mm, so the radiator is an exact copy of Table 1 with nothing
+guessed. The single band 868/915/920 MHz variant needs L4 *"shortened to the
+silkscreen marking"* — and SWRA227E dimensions that marking nowhere. It can
+only be read off Figure 2 by eye, which would stop the antenna being an exact
+copy. If you need single band, that is the one number to get from the
+CC-Antenna-DK Gerber rather than from the note.
+
+**The reference ground plane, 43 × 63 mm.** Table 2 and Table 3 both name it,
+and it is the only plane on which the published matching values apply as
+given. `check_dn024.py` fails if it changes size, because that quietly
+invalidates the BOM.
+
+| | value | where it comes from |
+|---|---|---|
+| board | 45 × 95 mm, 1.6 mm FR4 | Table 2/3; the note specifies 1.6 mm FR4 |
+| ground plane | 43 × 63 mm | Table 2/3 |
+| antenna | 38 × 25 mm, 2.0 mm trace | Table 1 — `L4 × X2`, `W` |
+| clear either side | 2.5 mm | **observed**: the reference centres 38 mm of antenna on 43 mm of ground. DN024 gives no clearance dimension of its own |
+| Z62 | **3.9 pF series** | Table 3, dual band |
+| Z61, Z63 | **not fitted** | Table 3 — laid out anyway, which is the note's own reason for the network: somewhere to compensate detuning from an enclosure |
+| measured | SWR 1.2 @ 868, 1.6 @ 2.44 GHz | section 4.3 |
+| bandwidth | 73 MHz @ 868, 354 MHz @ 2.4 GHz | section 4.3.2 |
+| efficiency | 94–95 %, gain 3.4–4.9 dBi | OTA summary, Table 4 |
+
+One thing is inferred rather than stated: **which of Z61/Z63 sits on which
+side of Z62.** Figure 2 draws Z63 above Z61 with the connector below both, and
+the single band BOM — series 1.8 nH with a shunt 2.7 pF — is an L match that
+only works with the shunt on the source side. Both readings put Z61 nearest
+the connector, which is how it is laid out.
+
+### The radiator is arithmetic, not tracing
+
+DN024 gives the antenna as a picture and nine numbers, and says the
+authoritative source is the CC-Antenna-DK board 6 Gerber — which we do not
+have — but also that *"If the CAD tool being used does not support import of
+Gerber files, Figure 2 and Table 1 can be used."*
+
+Table 1 closes on itself, and that is what makes the reading of Figure 2
+checkable rather than a guess: four arms of `W` with three `L3` gaps between
+them is 17.0 mm; `X2 − 17.0` leaves 8.0 mm below the bottom arm; and
+`L1 + L5 − W` is also 8.0 mm. Two independent routes to the same number. The
+envelope that falls out, `L4 × X2` = 38 × 25 mm, is the size the note quotes
+in its own introduction — a third.
+
+`tools/gen_dn024_footprint.py` builds the meander as a centre-line path and
+offsets it into a constant-width ribbon; every segment is axis aligned and
+every turn a right angle, so the mitres are exact rather than approximated.
+`tools/verify_against_swra227e.py` then reads the polygon back out of the file
+and re-derives Table 1 from it *without using the generator*:
+
+```
+TI_DN024_Monopole_868_2440.kicad_mod: 18 polygon vertices on B.Cu + F.Cu, 4 meander arms
+  copper envelope 38.00 x 24.00 mm, feed pad 2.0 x 2.0 mm with a 0.6 mm plated hole
+
+dim    SWRA227E   measured    error   what it is
+L1        9.00      9.000    +0.000    feed trace, foot to the top of the bottom arm
+L2       18.00     18.000    +0.000    bottom arm, feed trace's far edge to the right end
+L3        3.00      3.000    +0.000    gap between meander arms
+L4       38.00     38.000    +0.000    top arm, the full width of the antenna
+L5        1.00      1.000    +0.000    ground plane edge to the foot of the feed trace
+W         2.00      2.000    +0.000    trace width
+X2       25.00     25.000    +0.000    ground plane edge to the top of the antenna
+
+all 7 dimensions match SWRA227E Table 1 within 11 um: this is an exact copy
+```
+
+### Running it
+
+```sh
+python3 tools/gen_dn024_symbols.py     # library/TI_DN024.kicad_sym
+python3 tools/gen_dn024_footprint.py   # the radiator, from Table 1
+python3 tools/gen_dn024_project.py     # schematic + board + project
+python3 tools/verify_against_swra227e.py
+python3 tools/check_dn024.py
+```
+
+```
+ok   library: TI_DN024 has 7 symbols and 1 footprints, all parsing cleanly
+ok   schematic: 5 embedded symbols match their libraries, 13 pins on wires, netlist matches the intended one
+ok   board: TI_DN024_Monopole_868_2440 matches all 7 dimensions of SWRA227E Table 1 within 11 um (exact copy), on B.Cu + F.Cu
+ok   board: ground plane 43.0 x 63.0 mm on F.Cu and B.Cu, the size SWRA227E Table 3 measured the match on
+ok   board: 11 pads, 14 tracks, 152 vias, every track end lands, keep-out above y = 91.0 clean, closest different-net tracks 0.36 mm
+ok   pi network: Z62 series between RF_IN and ANT_FEED, Z61 shunt on the connector side, Z63 shunt on the antenna side; Z61 and Z63 laid out and unfitted, as Table 3 says
+ok   pi network: both shunt ground pads reach the bottom plane through a via of their own
+ok   board: 2 copper zone(s) carry no fill yet - press B in the PCB editor before DRC or any simulation
+
+0 problem(s)
+```
+
+The two projects share `tools/gen_project.py`: parts name their symbol and
+footprint libraries, so one generator serves both. Symbols are duplicated into
+`TI_DN024.kicad_sym` rather than shared across libraries — a schematic embeds
+a copy of every symbol it places and KiCad raises `lib_symbol_mismatch` on any
+difference, so each project resolving everything it places inside one
+in-project library is what keeps ERC quiet. Footprints are not compared that
+way, so the DN024 board reuses the SMA and 0402 lands from the first library.
+
+[`docs/dn024-board-drawing.svg`](docs/dn024-board-drawing.svg) is the drawing,
+from the same renderer as the other two.
+
+### Not done yet
+
+No simulation and no RFsim project for this antenna. Two reasons, and the
+second is the real one: 868 MHz needs a domain margin of λ/4 = **86 mm**
+against the 37.5 mm the 2.4 GHz board needs, so the domain volume is about
+12× larger and the run is correspondingly slower; and the pi network is a
+lumped part of the answer here, so a full-wave run of the copper alone does
+not give the S11 the note quotes — it gives the antenna's raw impedance, which
+is then matched. Say the word and it is the same machinery as the first board.
+
 ## Reusing this on someone else's board
 
 [`docs/antenna-integration-checklist.md`](docs/antenna-integration-checklist.md)
-is the checklist this project produced: 57 items across antenna placement,
+is the checklist these projects produced: 59 items across antenna placement,
 feed, stitching, simulation setup, what to leave out of a model, and tuning —
 each one there because getting it wrong here cost a wrong answer. It is written to be applied to any printed
 antenna, not just this one, and the "before you trust a simulation" section is
@@ -998,5 +1150,8 @@ page embedding it can theme it.
 
 ## Reference
 
-TI application note SWRA117D, *2.4 GHz Inverted F Antenna*:
+TI application note SWRA117D (DN007), *2.4 GHz Inverted F Antenna*:
 <https://www.ti.com/lit/an/swra117d/swra117d.pdf>
+
+TI application note SWRA227E (DN024), *Monopole PCB Antenna with Single or
+Dual Band Option*: <https://www.ti.com/lit/an/swra227e/swra227e.pdf>

@@ -167,6 +167,11 @@ def effects(size=1.27, hide=False, justify=None, thickness=None):
     return out
 
 
+def qualify(fp: str) -> str:
+    """A footprint reference as a full lib_id, defaulting to this project's."""
+    return fp if ":" in fp else f"{LIB_NICK}:{fp}"
+
+
 def prop(name, value, at, hide=False, justify=None):
     x, y, rot = at
     return [Sym("property"), name, value,
@@ -189,14 +194,17 @@ def lib_symbols() -> list:
     if PWR_FLAGS:
         used.add(f"{LIB_NICK}:PWR_FLAG")
     out = [Sym("lib_symbols")]
-    lib = parse((LIB_DIR / f"{LIB_NICK}.kicad_sym").read_text())
-    for child in lib[1:]:
-        if isinstance(child, list) and child[0] == "symbol":
-            lib_id = f"{LIB_NICK}:{child[1]}"
-            if lib_id in used:
-                sym = copy.deepcopy(child)
-                sym[1] = lib_id
-                out.append(sym)
+    # grouped by library nickname, so a sheet can place symbols from more than
+    # one in-project library and each copy still comes from the file it names
+    for nick in sorted({lib_id.split(":", 1)[0] for lib_id in used}):
+        lib = parse((LIB_DIR / f"{nick}.kicad_sym").read_text())
+        for child in lib[1:]:
+            if isinstance(child, list) and child[0] == "symbol":
+                lib_id = f"{nick}:{child[1]}"
+                if lib_id in used:
+                    sym = copy.deepcopy(child)
+                    sym[1] = lib_id
+                    out.append(sym)
     return out
 
 
@@ -214,7 +222,7 @@ def sch_symbol(part) -> list:
             [Sym("uuid"), U("sym", ref)],
             prop("Reference", ref, (*part["ref_at"], 0), justify="left"),
             prop("Value", value, (*part["val_at"], 0), justify="left"),
-            prop("Footprint", f"{LIB_NICK}:{part['fp']}", (x, y, 0), hide=True),
+            prop("Footprint", qualify(part["fp"]), (x, y, 0), hide=True),
             prop("Datasheet", part.get("datasheet", "~"), (x, y, 0), hide=True),
             prop("Description", part["desc"], (x, y, 0), hide=True)]
     for name, value in part.get("extra_props", []):
@@ -319,9 +327,13 @@ def rotate_at(node, rot):
 
 
 def board_footprint(part) -> list:
-    src = parse((FP_DIR / f"{part['fp']}.kicad_mod").read_text())
+    # "Name" resolves in this project's default footprint library; "NICK:Name"
+    # names another one, which the second antenna's project needs
+    nick, _, name = part["fp"].rpartition(":")
+    nick = nick or LIB_NICK
+    src = parse((LIB_DIR / f"{nick}.pretty" / f"{name}.kicad_mod").read_text())
     x, y, rot = part["pcb"]
-    out = [Sym("footprint"), f"{LIB_NICK}:{src[1]}",
+    out = [Sym("footprint"), f"{nick}:{src[1]}",
            [Sym("layer"), "F.Cu"],
            [Sym("uuid"), U("fp", part["ref"])],
            [Sym("at"), num(x), num(y)] + ([num(rot)] if rot else [])]
