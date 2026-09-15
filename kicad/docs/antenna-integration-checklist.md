@@ -102,6 +102,18 @@ Every one of these has produced a confidently wrong answer in practice.
 - [ ] **Port type matches the physical launch** (microstrip / coplanar /
       lumped) and is actually attached to the feed line.
 - [ ] **Mesh resolves the narrowest copper** and the substrate thickness.
+- [ ] **Separate the match from the frequency before you act on either.** A
+      deep null in the wrong place and a shallow null in the right one are
+      different faults with different fixes. The null's *depth* is the feed tap
+      against the short; its *position* is the radiator's electrical length.
+      Uniform scaling moves the second and preserves the first, so read them
+      apart before touching copper.
+- [ ] **Ask whether the error is bigger than the model's own uncertainty.**
+      FR4 εr is quoted 4.2–4.8; solder mask over the radiator is typically
+      absent from the model and pulls resonance down about a percent; etch
+      tolerance moves a narrow strip by a few percent of its width. A few
+      percent of frequency error is inside that envelope, and scaling copper to
+      cancel it is fitting geometry to an uncertainty. Measure a board first.
 - [ ] **Sanity-check against physics.** If a result implies εr,eff < 1, or a
       quarter-wave length that beats the speed of light, the setup is wrong,
       not the antenna.

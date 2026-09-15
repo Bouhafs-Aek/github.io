@@ -152,7 +152,7 @@ Before trusting any result from this board, check all four:
 |---|---|---|
 | **copper zones** | **filled** — press **B** in the PCB editor before exporting | An inverted-F radiates *against its ground plane*; the plane is half the antenna. With the pours unfilled there is no plane at all, only the connector's pads, and the 41 stitching vias connect to nothing. This is not a small error — it is a different antenna. |
 | **substrate** | **1.6 mm, εr 4.5** | This is the fabricated stackup, and it happens to be RFsim's FR-4 preset, so this setting is usually right by accident. Check it anyway: the field-plot caption names the mid-plane, and it should read 0.80 mm. On 0.8 mm the 2.95 mm line would be **32 Ω**, not 50. |
-| **domain margin** | **≥ 31 mm** (λ/4 at 2.45 GHz) | At the 4 mm default the absorbing boundary sits inside the antenna's near field — λ/31 away — so it truncates the fields that make the antenna an antenna. `sim/openems/swra117d_openems.py` uses 30 mm for the same reason. |
+| **domain margin** | **≥ λ/4 at the lowest frequency in the sweep** — 31 mm from 2.45 GHz, but **37.5 mm** from a sweep that starts at 2 GHz | At the 4 mm default the absorbing boundary sits inside the antenna's near field — λ/31 away — so it truncates the fields that make the antenna an antenna. The number follows the sweep, not the design frequency: starting at 2.3 GHz instead of 2.0 asks for 32.6 mm rather than 37.5 and cuts the domain volume by a third. `sim/openems/swra117d_openems.py` uses 30 mm, which suits its own 1.45–3.45 GHz excitation. |
 | **port** | attached to the feed line: **Coplanar (CPW)** on the fabrication board, **Microstrip (MSL)** on the RFsim project, which has no connector pads beside the line | The dialog showed *Port 1 [No Track]*, *Feed: No Line*, Lumped, width 3.114 mm. The width was never the problem: 3.11 mm is the 50 Ω width for this stackup with copper thickness ignored, and the board's 2.95 mm is the same width with it. *No Track* and *No Line* were the problem — a lumped port that is not attached to anything excites nothing. |
 
 The stackup leaves a usable fingerprint in RFsim's own guess:
@@ -182,61 +182,111 @@ python3 tools/gen_project.py
 
 ### Run log
 
-Three full-wave runs so far. The frequency a run reports is only as good as
+Five full-wave runs so far. The frequency a run reports is only as good as
 the setup behind it, so the setup is recorded with it:
 
-| run | ground plane | substrate | domain | resonance |
-|---|---|---|---|---|
-| 1 | **absent** (pours unfilled) | 1.6 mm (preset) | **4 mm** | 2.83 GHz |
-| 2 | present | 1.6 mm (mid-plane caption read 0.80 mm) | **4 mm** | 2.02 GHz |
-| 3 | to confirm | to confirm | to confirm | 2.82 GHz, VSWR 1.2 |
-| 4 | present | 1.6 mm (mid-plane caption again read 0.80 mm) | **4 mm**, bright field on the boundary | 2.65 GHz |
+| run | board | ground plane | substrate | domain | resonance |
+|---|---|---|---|---|---|
+| 1 | fabrication | **absent** (pours unfilled) | 1.6 mm (preset) | **4 mm** | 2.83 GHz |
+| 2 | fabrication | present | 1.6 mm (mid-plane caption read 0.80 mm) | **4 mm** | 2.02 GHz |
+| 3 | fabrication | to confirm | to confirm | to confirm | 2.82 GHz, VSWR 1.2 |
+| 4 | fabrication | present | 1.6 mm (mid-plane caption again read 0.80 mm) | **4 mm**, bright field on the boundary | 2.65 GHz |
+| 5 | **RFsim project** (Figure 3) | present, layer 2 | 1.6 mm | to confirm | **2.575 GHz, −38.5 dB** |
+
+Run 5 is the first with a model that is not obviously wrong: no connector, no
+top pour, ground on one layer, MSL port on a pad with reference copper under
+it. It is also the first that looks like an antenna rather than like a setup
+artefact — one clean resonance, smooth either side, no ripple against the
+boundary.
 
 The substrate column is no longer bolded as a fault: the board owner has since
 confirmed 1.6 mm, so the simulator's preset was right and this project's
 0.8 mm assumption was the error. What remains wrong in every one of these runs
 is the 4 mm domain, and in run 1 the missing ground plane.
 
-Four runs on a board whose copper has not meaningfully changed, spanning
-**2.02 – 2.83 GHz: 810 MHz, or 33% of the target frequency.** No geometry
-moved by 33%. That spread is the measurement, not the antenna — and it is the
-strongest argument for fixing the setup before reading another number off a
-plot. A converged model gives the same answer twice; this one has not given
-the same answer twice yet.
+Runs 1–4 span **2.02 – 2.83 GHz: 810 MHz, or 33% of the target frequency**, on
+a board whose copper did not meaningfully change. No geometry moved by 33%.
+That spread was the measurement, not the antenna. Runs 1 and 3 agree, and that
+agreement means nothing on its own: run 1 had no ground plane at all, which is
+a different antenna, and it landed on the same number as a run that had one.
 
-Runs 1 and 3 agree, and that agreement means nothing on its own: run 1 had no
-ground plane at all, which is a different antenna, and it landed on the same
-number as a run that had one. Two setups this different agreeing is a
-coincidence, not a convergence. Only the setup behind run 3 can make its
-number usable.
+#### What run 5 says
 
-**The gate before retuning.** Applying a scale factor is a two-line change, so
-the cost is not in the edit — it is in scaling on a bad measurement, which has
-already happened once here. Confirm all four before flipping it:
+Read off the plot, so ±0.01 GHz and ±1 dB:
 
-1. copper pours filled in the exported geometry,
-2. substrate 1.6 mm, εr 4.5 (check the field-plot mid-plane caption reads
-   0.80 mm),
-3. domain margin ≥ 31 mm (check the field plot extends ~31 mm past the copper
-   and is dark at the boundary),
-4. port attached to the feed line, coplanar at the launch.
+| | |
+|---|---|
+| resonance | **2.575 GHz**, 5.1% above 2.45 |
+| depth | **−38.5 dB**, VSWR **1.02** |
+| −10 dB band | ≈ 2.48 – 2.68 GHz, **200 MHz**, 7.8% |
+| at 2.400 GHz | ≈ −5.5 dB, VSWR 3.3 |
+| at 2.4835 GHz | ≈ −11 dB, VSWR 1.8 |
 
-With run 3 confirmed, k = 2.82 / 2.45 = **1.151** — within 0.3% of the x1.155
-copy already in the library, which is inside the first-order accuracy of the
-method, so no regeneration is needed. Set `ANT_SCALE = 1.155` and
-`ANT_FOOTPRINT = "SWRA117D_2G4_Left_retuned"` in `tools/gen_project.py`,
-regenerate, and expect resonance near 2.45 GHz.
+Two separate results, and it is worth keeping them apart.
 
-One encouraging detail from run 3 independent of its frequency: VSWR at the
-null is about 1.2, so the antenna is genuinely matched at whatever frequency
-it resonates. The feed tap sits in the right place relative to the short, and
-uniform scaling preserves that ratio — so the match should survive the retune.
+**The match is excellent and that is a real finding.** −38.5 dB is not
+something a mis-set port produces by accident: it says the feed tap sits in
+the right place relative to the short, which is Table 1's D5 = 1.40 mm doing
+its job. The bandwidth is 200 MHz where the ISM band needs 83 MHz, so there is
+more than twice the bandwidth required — the antenna does not need widening,
+only centring.
 
-`SWRA117D_2G4_Left_retuned.kicad_mod` is still in the library at x1.155 as an
-example; the board is back on the published geometry. `ANT_ORIGIN` stays at
-66.5 mm — 0.9 mm of board beyond the antenna's keep-out box, which is routing
-margin, and the ground plane edge follows the footprint automatically either
-way.
+**The frequency is 5.1% high**, which as it stands leaves 2.400 GHz at VSWR
+3.3: the band is not covered at the low end. Resonance high means the radiator
+is electrically short, and uniform scaling by k = 2.575 / 2.45 = **1.051**
+would centre it while preserving the feed-to-short ratio, so the match should
+survive.
+
+#### Before scaling anything
+
+5.1% is small enough to be the model rather than the antenna, and that
+distinction decides whether to touch copper at all:
+
+* **εr is a guess.** FR4 is quoted 4.2–4.8 between vendors and batches. The
+  antenna has no ground under it so it sits mostly in air and is less sensitive
+  than the feed line is, but not insensitive — and 4.5 is a nominal value, not
+  a measurement of this laminate.
+* **The model has no solder mask.** The real board has ~25 µm of εr ≈ 3.5
+  resin over the radiator, which loads it and pulls resonance *down* by roughly
+  a percent. That is a third of this error, in the right direction, and it is
+  absent from the model by construction.
+* **Etch tolerance** moves a 0.5 mm strip by a few percent of its width.
+
+So a 5% error is inside the envelope of the model's own inputs. Scaling the
+copper to cancel it would be fitting the geometry to an uncertainty.
+
+**The gate**, unchanged in principle and now down to two items for run 5:
+
+1. ~~copper pours filled~~ — the ground is a filled zone in the exported
+   geometry, or there would be no resonance at all.
+2. ~~substrate 1.6 mm, εr 4.5~~ — confirmed by the board owner.
+3. **domain margin ≥ 37.5 mm.** λ/4 at the *lowest* frequency in the sweep,
+   and this sweep starts at 2 GHz, not 2.45 — so 31 mm is not enough here,
+   37.5 mm is. Check the field plot extends that far past the copper and is
+   dark at the boundary. Starting the sweep at 2.3 GHz instead would drop the
+   requirement to 32.6 mm and shrink the domain volume by a third.
+4. **Run it twice.** A converged model gives the same answer twice, and this
+   one has not yet been asked to.
+
+Confirm those two and `k = 1.051` is a two-line change:
+
+```sh
+python3 tools/scale_footprint.py     library/SWRA117D_RF.pretty/Texas_SWRA117D_2.4GHz_Left.kicad_mod     library/SWRA117D_RF.pretty/SWRA117D_2G4_Left_retuned.kicad_mod     --scale 1.051 --name SWRA117D_2G4_Left_retuned
+# then ANT_SCALE = 1.051 and ANT_FOOTPRINT = "SWRA117D_2G4_Left_retuned"
+```
+
+The scaled radiator is 15.13 × 5.68 mm of copper against 14.40 × 5.40 mm, and
+its keep-out box reaches y = 60.77 mm against a board edge at 60.00, so it
+still fits with 0.77 mm to spare. `SWRA117D_2G4_Left_retuned.kicad_mod` is in
+the library at ×1.155 from the discredited run 3 and has not been regenerated:
+**the board carries the published geometry**, and it stays that way until a
+confirmed run says otherwise.
+
+The honest alternative to scaling is to build one board and put a VNA on it.
+A 5% model error against an unmeasured laminate is exactly the situation the
+application note's own remedy addresses — *"To compensate for a
+thicker/thinner PCB the antenna could be made slightly shorter/longer"* — and
+it is cheaper to trim after a measurement than to guess before one.
 
 ### Verified against the application note
 
@@ -849,7 +899,8 @@ is never a valid port here: it sits on the ground plane edge with the keep-out
 above it, so there is no reference copper under it by design.
 
 The other three settings are unchanged: zones filled, substrate 1.6 mm /
-εr 4.5, domain margin ≥ 31 mm.
+εr 4.5, and a domain margin of λ/4 at the bottom of your sweep — 37.5 mm if
+it starts at 2 GHz.
 
 `sim/openems/swra117d_openems.py --board sim/board/swra117d_2g4_sim.kicad_pcb`
 models the same file, if you want a second opinion from a different solver.
@@ -934,7 +985,7 @@ generated from this board by the same renderer as the other one.
 ## Reusing this on someone else's board
 
 [`docs/antenna-integration-checklist.md`](docs/antenna-integration-checklist.md)
-is the checklist this project produced: 55 items across antenna placement,
+is the checklist this project produced: 57 items across antenna placement,
 feed, stitching, simulation setup, what to leave out of a model, and tuning —
 each one there because getting it wrong here cost a wrong answer. It is written to be applied to any printed
 antenna, not just this one, and the "before you trust a simulation" section is
