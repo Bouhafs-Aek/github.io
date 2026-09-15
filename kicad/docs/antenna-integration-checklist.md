@@ -108,6 +108,9 @@ Every one of these has produced a confidently wrong answer in practice.
       against the short; its *position* is the radiator's electrical length.
       Uniform scaling moves the second and preserves the first, so read them
       apart before touching copper.
+- [ ] **Do not aim at the band centre in free space.** An enclosure only ever
+      pulls resonance down. Aim high by the amount your own casing takes away,
+      measured — not by the band centre.
 - [ ] **Ask whether the error is bigger than the model's own uncertainty.**
       FR4 εr is quoted 4.2–4.8; solder mask over the radiator is typically
       absent from the model and pulls resonance down about a percent; etch
@@ -290,6 +293,69 @@ than a gap port.
       plane edge, same antenna file. If the simulation board is also a
       different size, the difference between the two results is not the feed
       line any more.
+
+## 4e. Measuring it on the bench (from AN058)
+
+Everything above is checkable from a layout. None of it is a measurement, and
+TI's own guide is blunt that the measurement is the thing: *"The optimum
+method to characterize the antenna is to use a Network Analyzer so the Return
+Loss, Impedance and Bandwidth can be determined."* This section is AN058
+section 6, as a list.
+
+- [ ] **Disconnect the antenna from the radio.** Solder a semi-rigid coax at
+      the feed point: shield to the ground plane first, then the inner to the
+      feed. *"It is important that the antenna is disconnected from the rest of
+      the circuitry when this measurement is performed."*
+- [ ] **Keep the unshielded inner conductor as short as possible** and solder
+      the shield to ground as close as possible to the cable end — exposed
+      inner is series inductance you will read as antenna impedance.
+- [ ] **Calibrate, and know what the reference plane is.** Open / short / 50 Ω
+      at the SMA. Return loss needs nothing more: *"Return Loss is only
+      dependent of the absolute value of the reflection coefficient and hence
+      there is no need to move the reference plane."* **Impedance does** — set
+      the electrical delay so a shorted cable end reads hard left on the Smith
+      chart and an open reads hard right; if the two disagree slightly, average
+      them.
+- [ ] **Tie the cables down and leave them there.** *"The placement of the
+      cable can affect the measurement result, especially if there are strong
+      currents traveling back and forth on the ground plane."* Ferrites help.
+- [ ] **Expect this to be worse on a small board.** *"PCBs which have a ground
+      plane with dimensions that are a fraction of a wavelength tend to have
+      larger currents running on the ground plane. This could potentially cause
+      more unstable results."* A 40 × 30 mm board at 2.45 GHz and a 43 × 63 mm
+      board at 868 MHz are both in that class, so treat cable-position
+      repeatability as part of the measurement, not noise around it.
+- [ ] **Measure it where it will live**, in the real casing, and in a hand if
+      it is handheld. AN058's own figures show plastic encapsulation pulling
+      the resonance *down*, and a hand pulling it down further still.
+      *"Optimizing the antenna when it is not placed in the correct environment
+      can result in decreased performance."*
+- [ ] **Design free space deliberately high, then.** If the enclosure only
+      ever moves resonance downward, an antenna centred on the band in free
+      space is an antenna that sits below the band once assembled. Decide the
+      free-space target from the measured enclosure shift, not from the
+      band centre.
+- [ ] **Use TI's thresholds when quoting bandwidth.** *"A VSWR of 1.5
+      (RL = 14 dB) is a good match, when the VSWR is > 2.0 (RL = 9.5 dB) then
+      the matching network should be reviewed. VSWR of 2.0 (RL = 9.5 dB) is
+      usually used as the acceptable match level to determine the bandwidth."*
+      The −10 dB line everyone draws is VSWR 1.92, slightly stricter than the
+      VSWR 2.0 / −9.54 dB TI means.
+- [ ] **Which way to move a resonant antenna.** *"For resonant antennas the
+      main factor is the length ... if the resonance frequency is too low, the
+      antenna should be made shorter. If the resonance frequency is too high,
+      the antenna length should be increased."* Length first; components only
+      when geometry cannot be changed.
+- [ ] **Know the other five things that move the impedance** before reaching
+      for a capacitor: *"Size of ground plane, distance from antenna to ground
+      plane, dimensions of antenna elements, feed point, and plastic casing."*
+- [ ] **A spectrum analyser gives you a poor-man's bandwidth check.** Step a
+      carrier across the band and watch radiated power. It is relative, not
+      absolute, without a chamber — but it answers "is the peak in the middle
+      of my band", which is most of what you need early.
+- [ ] **For a pattern, you need the far field**: R > 2D²/λ with D the largest
+      antenna dimension. Below that you are measuring the near field and
+      calling it a pattern.
 
 ## 5. Tuning and validation
 

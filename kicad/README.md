@@ -231,7 +231,7 @@ Read off the plot, so ±0.01 GHz and ±1 dB:
 |---|---|
 | resonance | **2.575 GHz**, 5.1% above 2.45 |
 | depth | **−38.5 dB**, VSWR **1.02** |
-| −10 dB band | ≈ 2.48 – 2.68 GHz, **200 MHz**, 7.8% |
+| −10 dB band | ≈ 2.48 – 2.68 GHz, **200 MHz**, 7.8% (TI quotes bandwidth at VSWR 2.0 = −9.5 dB, marginally wider) |
 | at 2.400 GHz | ≈ −5.5 dB, VSWR 3.3 |
 | at 2.4835 GHz | ≈ −11 dB, VSWR 1.8 |
 
@@ -267,6 +267,22 @@ distinction decides whether to touch copper at all:
 
 So a 5% error is inside the envelope of the model's own inputs. Scaling the
 copper to cancel it would be fitting the geometry to an uncertainty.
+
+**And there is a reason not to aim at 2.45 GHz in free space at all.** AN058's
+measurements of a handheld PCB antenna show plastic encapsulation pulling the
+resonance *down*, and a hand holding the encapsulated device pulling it down
+further still — the effect only ever goes one way. An antenna centred on the
+band on the bench is an antenna sitting below the band once it is in its case.
+So the free-space target is not the band centre; it is the band centre plus
+whatever the enclosure takes away, which is a number you get by measuring your
+enclosure. Run 5 being 5% high is, on its own, not obviously the wrong place
+to be.
+
+AN058 does confirm the *direction*, for when there is something to correct:
+*"if the resonance frequency is too low, the antenna should be made shorter.
+If the resonance frequency is too high, the antenna length should be
+increased."* Uniform scaling by k > 1 lengthens every path at once, which is
+what `tools/scale_footprint.py` does.
 
 **The gate**, unchanged in principle and now down to two items for run 5:
 
@@ -469,7 +485,32 @@ The antenna polygon overlaps the plane edge by 0.25 mm at 28 of its vertices —
 that is the part of both legs that lands on the pads, so the pads' own
 clearance covers it. Nothing else crosses the line.
 
-### No matching network
+### No matching network — components, but AN058 says lay out the pads
+
+Two TI documents, and they are not in conflict once you separate *values* from
+*footprints*.
+
+**SWRA117D on this antenna:** it is a 50 Ω design, so nothing goes between the
+connector and the radiator. That is why this board has no L and no C in the
+path, and it is the right answer to "what value should I fit".
+
+**AN058 as a general rule, section 3.4:** *"Mismatching of the antenna is one
+of the largest factors that reduce the total RF link budget. To avoid
+unnecessary mismatch losses, it is recommended to add a pi-matching network so
+that the antenna can always be matched. If the antenna design is adequately
+matched then it just takes one zero ohm resistor or DC block cap to be
+inserted into the pi-matching network."*
+
+That is about **pads, not parts**: lay the pi network out, and populate it
+with a 0 Ω link when the antenna needs no correction. The second antenna's
+board does exactly that — `Z61` and `Z63` are on the PCB and unfitted. This
+board has neither, so there is nowhere to put a component if an enclosure
+detunes it, and AN058's own measurements say an enclosure will.
+
+Adding three unpopulated 0402 lands and a 0 Ω link in the feed would close
+that gap without putting anything in the signal path today. It is not done
+here because it was ruled out for this board explicitly; the evidence above
+is new, so the decision is worth revisiting rather than reversing quietly.
 
 The SWRA117D antenna *is* a 50 Ω design, so the board is built without one:
 connector → 50 Ω line → radiator. That is also the only honest way to
@@ -1137,8 +1178,9 @@ is then matched. Say the word and it is the same machinery as the first board.
 ## Reusing this on someone else's board
 
 [`docs/antenna-integration-checklist.md`](docs/antenna-integration-checklist.md)
-is the checklist these projects produced: 59 items across antenna placement,
-feed, stitching, simulation setup, what to leave out of a model, and tuning —
+is the checklist these projects produced: 72 items across antenna placement,
+feed, stitching, simulation setup, what to leave out of a model, bench
+measurement, and tuning —
 each one there because getting it wrong here cost a wrong answer. It is written to be applied to any printed
 antenna, not just this one, and the "before you trust a simulation" section is
 the part that has earned its place most.
@@ -1150,8 +1192,25 @@ page embedding it can theme it.
 
 ## Reference
 
-TI application note SWRA117D (DN007), *2.4 GHz Inverted F Antenna*:
+TI application note **SWRA117D (AN043)**, *Small Size 2.4 GHz PCB antenna*:
 <https://www.ti.com/lit/an/swra117d/swra117d.pdf>
 
-TI application note SWRA227E (DN024), *Monopole PCB Antenna with Single or
-Dual Band Option*: <https://www.ti.com/lit/an/swra227e/swra227e.pdf>
+TI design note **SWRA227E (DN024)**, *Monopole PCB Antenna with Single or Dual
+Band Option*: <https://www.ti.com/lit/an/swra227e/swra227e.pdf>
+
+TI application note **SWRA161B (AN058)**, *Antenna Selection Guide*:
+<https://www.ti.com/lit/an/swra161b/swra161b.pdf> — the methodology note the
+other two point at, and the source for the bench procedure in the checklist.
+Its Table 9 identifies these two antennas among TI's reference designs:
+
+| | AN058 Table 9 | measured here |
+|---|---|---|
+| AN043 | "2.4 GHz PCB **Meandered** Inverted-F Antenna", 15 × 6 mm, *small size & small BW* | keep-out envelope 15.2 × 5.7 mm |
+| DN024 board 6 | "Meandering Monopole", 39 × 25 mm, dual band 2.4 GHz & 868 MHz | copper envelope 38 × 25 mm |
+
+Two things fall out of that table. The first antenna is **AN043**, not DN007 —
+DN007 is a *different* inverted-F, 26 × 8 mm, which Table 9 describes as
+*large BW & easy to tune* where AN043 is *small BW*. An earlier revision of
+this file named the wrong one. The second is that both size columns land
+within a millimetre of what the footprints here measure, which is a third
+party's arithmetic agreeing with ours.
