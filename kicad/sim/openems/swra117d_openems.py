@@ -175,19 +175,68 @@ def load_board(path: pathlib.Path) -> dict:
              float(find(v, "drill")[1]))
             for v in find_all(pcb, "via")]
 
+    # Every non-ground track on the top layer, not just the antenna's own net:
+    # a pi network splits the feed into two nets either side of its series
+    # part, and both halves are the same piece of RF path.
     feed = [((float(find(s, "start")[1]), float(find(s, "start")[2])),
              (float(find(s, "end")[1]), float(find(s, "end")[2])),
              float(find(s, "width")[1]))
             for s in find_all(pcb, "segment")
-            if nets[int(find(s, "net")[1])] == antenna["net"]
+            if nets[int(find(s, "net")[1])] not in ("", "GND")
             and str(find(s, "layer")[1]) == "F.Cu"]
+
+    # The matching parts' own copper.  A fitted 0 ohm link is a conductor, so
+    # the series position's two pads and the gap between them are modelled as
+    # one piece of metal; an unfitted shunt is its pad and nothing more.
+    extra, launch_pad = [], None
+    for fp in find_all(pcb, "footprint"):
+        if find(fp, "fp_poly") is not None:
+            continue                                   # the antenna
+        at = find(fp, "at")
+        origin = (float(at[1]), float(at[2]))
+        rot = float(at[3]) if len(at) > 3 else 0.0
+        boxes, layers = [], set()
+        for pad in find_all(fp, "pad"):
+            pad_layers = [str(x) for x in find(pad, "layers")[1:]]
+            layers |= set(pad_layers)
+            net = find(pad, "net")
+            if not net or nets[int(net[1])] in ("", "GND"):
+                continue
+            if "F.Cu" not in pad_layers and "*.Cu" not in pad_layers:
+                continue
+            pat, size = find(pad, "at"), find(pad, "size")
+            rx, ry = rotate((float(pat[1]), float(pat[2])), -rot)
+            w, h = float(size[1]), float(size[2])
+            if rot % 180:
+                w, h = h, w
+            cx, cy = origin[0] + rx, origin[1] + ry
+            boxes.append((cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2))
+        if "B.Cu" in layers:                           # the connector's launch
+            launch_pad = boxes[0] if boxes else None
+            continue
+        if len(boxes) == 2:                            # series part, bridged
+            extra.append((min(b[0] for b in boxes), min(b[1] for b in boxes),
+                          max(b[2] for b in boxes), max(b[3] for b in boxes)))
+        else:
+            extra += boxes
 
     board = dict(outline=outline, substrate=substrate, gnd_top=gnd_top,
                  corridors=corridors, antenna=antenna, vias=vias,
                  ground_layers=ground_layers)
     if feed:
-        launch = min((p for seg in feed for p in seg[:2]), key=lambda p: p[0])
-        board.update(feed=order_path(feed, launch), launch=launch, port_gap=None)
+        # the launch is the track end sitting on the connector's signal pad
+        def on_launch(pt):
+            return launch_pad and (launch_pad[0] <= pt[0] <= launch_pad[2]
+                                   and launch_pad[1] <= pt[1] <= launch_pad[3])
+        ends = [p for seg in feed for p in seg[:2]]
+        launch = next((p for p in ends if on_launch(p)),
+                      min(ends, key=lambda p: p[0]))
+        first = next(i for i, seg in enumerate(feed)
+                     if launch in seg[:2])
+        feed = [feed[first]] + feed[:first] + feed[first + 1:]
+        if feed[0][1] == launch:                       # point it away from the port
+            feed[0] = (feed[0][1], feed[0][0], feed[0][2])
+        board.update(feed=feed, launch=launch, port_gap=None, extra=extra)
         return board
 
     # No feed line: the board is fed directly at the antenna pad, and the port
@@ -204,7 +253,7 @@ def load_board(path: pathlib.Path) -> dict:
     bar_bottom = max(y for _x, y in antenna["points"] if y >= gnd_top - 1e-9)
     fx, _fy = antenna["feed"]
     half = antenna["feed_size"][0] / 2
-    board.update(feed=[], launch=None,
+    board.update(feed=[], launch=None, extra=extra,
                  port_gap=(fx - half, bar_bottom, fx + half, gap_bottom))
     return board
 
@@ -239,6 +288,7 @@ def to_sim(board: dict) -> dict:
                 antenna=[conv(p) for p in board["antenna"]["points"]],
                 feed_point=conv(board["antenna"]["feed"]), feed=feed,
                 vias=[(conv(pos), drill) for pos, drill in board["vias"]],
+                extra=[conv_rect(r) for r in board.get("extra", [])],
                 port_gap=conv_rect(board["port_gap"]) if board["port_gap"] else None)
 
 
@@ -257,15 +307,58 @@ def pour_boxes(rect, corridors):
 
 
 def track_polygon(a, b, width):
-    """A track as a rectangle; the mesher staircases the 45 degree corner."""
+    """A track as a rectangle, with its end caps.
+
+    KiCad tracks are round-capped: the copper reaches width/2 beyond each
+    endpoint.  That is not cosmetic here - a track that stops short of a pad
+    and reaches it only through its cap is a connection on the board and a
+    broken net in the model, which is how a pi network's standoffs would
+    silently cut the feed in two.  Square caps over-fill the corners a little
+    and the mesh staircases them anyway.
+    """
     dx, dy = b[0] - a[0], b[1] - a[1]
     length = math.hypot(dx, dy)
-    nx, ny = -dy / length * width / 2, dx / length * width / 2
+    ux, uy = dx / length * width / 2, dy / length * width / 2
+    a = (a[0] - ux, a[1] - uy)
+    b = (b[0] + ux, b[1] + uy)
+    nx, ny = -uy, ux
     return [(a[0] + nx, a[1] + ny), (b[0] + nx, b[1] + ny),
             (b[0] - nx, b[1] - ny), (a[0] - nx, a[1] - ny)]
 
 
 # ----------------------------------------------------------------- the model
+def rf_copper_is_contiguous(geo: dict) -> tuple[int, int]:
+    """Does the modelled RF copper form one piece, starting at the port?
+
+    A pi network stands its tracks off the pads and relies on their end caps
+    to close the gap.  Get that wrong and the model quietly has a feed line in
+    three disconnected pieces, which does not announce itself - it just gives
+    an answer.  So it is checked rather than assumed.
+    """
+    def bounds(poly):
+        xs = [p[0] for p in poly]
+        ys = [p[1] for p in poly]
+        return (min(xs), min(ys), max(xs), max(ys))
+
+    boxes = [bounds(track_polygon(a, b, w)) for a, b, w in geo["feed"]]
+    boxes += list(geo["extra"])
+    if not boxes:
+        return 0, 0
+
+    def touching(p, q):
+        return not (p[2] < q[0] - 1e-9 or q[2] < p[0] - 1e-9
+                    or p[3] < q[1] - 1e-9 or q[3] < p[1] - 1e-9)
+
+    seen, stack = {0}, [0]
+    while stack:
+        i = stack.pop()
+        for j in range(len(boxes)):
+            if j not in seen and touching(boxes[i], boxes[j]):
+                seen.add(j)
+                stack.append(j)
+    return len(seen), len(boxes)
+
+
 def build(geo: dict, resolution: float, air: float):
     from CSXCAD import ContinuousStructure
     from openEMS import openEMS
@@ -339,6 +432,10 @@ def build(geo: dict, resolution: float, air: float):
         port_x = {px0, px1}
         port_y = {py0, (py0 + py1) / 2, py1}
 
+    # the matching parts' pads, and the link across the series position
+    for x0, y0, x1, y1 in geo["extra"]:
+        metal.AddBox([x0, y0, h], [x1, y1, h], priority=15)
+
     # antenna copper
     metal.AddPolygon([c for pt in geo["antenna"] for c in pt], "z", h, priority=15)
 
@@ -351,7 +448,7 @@ def build(geo: dict, resolution: float, air: float):
         for pt, other in ((a, b), (b, a)):
             xs |= {pt[0], pt[0] - width / 2, pt[0] + width / 2}
             ys |= {pt[1], pt[1] - width / 2, pt[1] + width / 2}
-    for x0, y0, x1, y1 in geo["corridors"]:
+    for x0, y0, x1, y1 in geo["corridors"] + geo["extra"]:
         xs |= {x0, x1}
         ys |= {y0, y1}
     for px, py in geo["antenna"]:
@@ -453,6 +550,17 @@ def main() -> None:
         for a, b, width in geo["feed"]:
             print(f"                 ({a[0]:6.2f},{a[1]:6.2f}) -> "
                   f"({b[0]:6.2f},{b[1]:6.2f})  w = {width} mm")
+    if geo["extra"]:
+        print(f"matching parts : {len(geo['extra'])} pad areas in the model "
+              "(a fitted series link is modelled as metal across its two pads)")
+    if geo["feed"]:
+        joined, total = rf_copper_is_contiguous(geo)
+        if joined != total:
+            raise SystemExit(
+                f"the modelled RF copper is in {total - joined + 1} pieces: only "
+                f"{joined} of {total} boxes reach the port. A track that only "
+                "touches its pad through its end cap needs that cap modelled.")
+        print(f"RF path        : {total} copper areas, all connected to the port")
     else:
         px0, py0, px1, py1 = geo["port_gap"]
         print(f"feed           : direct - no line.  Lumped port, 50 ohm, "

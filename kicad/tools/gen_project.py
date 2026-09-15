@@ -76,7 +76,33 @@ LAUNCH_OFFSET = W50 / 2 + LAUNCH_GAP + 1.5      # centre of each SMA ground pad
 PAD_LEN_IN = 3.5            # how far the SMA pads reach in from the board edge
 TAPER_LEN, TAPER_STEPS = 4.5, 6     # 50 ohm line down to the 0.5 mm feed pad
 
-NETS = {"": 0, "GND": 1, "ANT_FEED": 2}
+# The pi network, at the antenna end of the 50 ohm line.  AN058 section 3.4:
+# "it is recommended to add a pi-matching network so that the antenna can
+# always be matched.  If the antenna design is adequately matched then it just
+# takes one zero ohm resistor or DC block cap to be inserted".  SWRA117D says
+# this antenna is already a 50 ohm design and publishes no matching values, so
+# the series position carries a 0 ohm link and the two shunts are laid out
+# empty - somewhere to compensate an enclosure, which AN058's own measurements
+# say will detune it downwards.
+#
+# The line is NOT necked down to the pads.  A 0402 land is 0.56 mm wide, which
+# is 103 ohm on this stackup, but only 0.5 mm long: 2.6 degrees at 2.45 GHz.
+# Narrowing the line to match the pads would trade that for several
+# millimetres of genuinely wrong impedance.
+Z3_AT = (FEED_X + 3.0, 72.5)        # shunt, antenna side
+Z2_AT = (FEED_X, 76.0)              # series, the 0 ohm link
+Z1_AT = (FEED_X + 3.0, 79.5)        # shunt, connector side
+PAD_DX = 0.48                       # 0402 land, pad centre offset
+# How far short of the series pad the wide line stops.  KiCad tracks have
+# round caps, so a 2.95 mm track bulges W50/2 past its endpoint: ending it on
+# the pad centre would put that bulge across the opposite pad, 0.96 mm away.
+# Stopping 2.0 mm short leaves the cap reaching 0.525 mm into its own pad and
+# 0.725 mm clear of the other one.
+Z2_STANDOFF = 2.0
+PI_BOX = (FEED_X - 4.0, 70.5, FEED_X + 5.5, 81.5)
+PI_VIA_DX = 4.9                     # shunt ground vias, inside the box
+
+NETS = {"": 0, "GND": 1, "ANT_FEED": 2, "RF_IN": 3}
 
 
 def plane_edge() -> float:
@@ -97,16 +123,39 @@ def plane_edge() -> float:
 
 GND_EDGE_Y = plane_edge()
 
-TITLE = "2.45 GHz PCB antenna (TI SWRA117D) - radiator on a 50 ohm SMA port"
+TITLE = ("2.45 GHz PCB antenna (TI SWRA117D/AN043) - radiator on a 50 ohm SMA "
+         "port, pi network fitted as a 0 ohm link")
 
 # reference, library id, value, footprint, schematic placement, board placement
 PARTS = [
     dict(ref="J1", lib=f"{LIB_NICK}:Conn_Coaxial_SMA", value="SMA edge launch",
          fp="SMA_EdgeMount_Generic", sch=(76.2, 88.9, 0),
          pcb=(FEED_X, BOARD_Y1, 90),
-         nets={"1": "ANT_FEED", "2": "GND"},
+         nets={"1": "RF_IN", "2": "GND"},
          ref_at=(76.2, 81.28), val_at=(76.2, 83.82),
          desc="Coaxial connector, 50 ohm test port"),
+    dict(ref="Z1", lib=f"{LIB_NICK}:C", value="DNP",
+         fp="Chip_0402_1005Metric_RF", sch=(88.9, 92.71, 0),
+         pcb=(Z1_AT[0], Z1_AT[1], 0), nets={"1": "RF_IN", "2": "GND"},
+         ref_at=(91.44, 91.44), val_at=(91.44, 93.98), dnp=True, in_bom=False,
+         desc="Pi network, shunt on the connector side. Not fitted: SWRA117D "
+              "publishes no matching values for this antenna. Laid out because "
+              "AN058 asks for somewhere to compensate an enclosure"),
+    dict(ref="Z2", lib=f"{LIB_NICK}:R", value="0R",
+         fp="Chip_0402_RF_WideLand", sch=(101.6, 88.9, 90),
+         pcb=(Z2_AT[0], Z2_AT[1], 0), nets={"1": "RF_IN", "2": "ANT_FEED"},
+         ref_at=(99.06, 85.09), val_at=(99.06, 82.55),
+         desc="Pi network, series. 0 ohm link: AN058 section 3.4 - an already "
+              "matched antenna 'just takes one zero ohm resistor or DC block "
+              "cap'. A 100 pF is the drop-in alternative where the radio needs "
+              "DC isolation, which this antenna's DC short to ground makes "
+              "worth checking"),
+    dict(ref="Z3", lib=f"{LIB_NICK}:C", value="DNP",
+         fp="Chip_0402_1005Metric_RF", sch=(114.3, 92.71, 0),
+         pcb=(Z3_AT[0], Z3_AT[1], 0), nets={"1": "ANT_FEED", "2": "GND"},
+         ref_at=(116.84, 91.44), val_at=(116.84, 93.98), dnp=True, in_bom=False,
+         desc="Pi network, shunt on the antenna side. Not fitted, same reason "
+              "as Z1"),
     dict(ref="AE1", lib=f"{LIB_NICK}:ANT_SWRA117D_2G4_Left",
          value="ANT_SWRA117D_2G4_Left", fp=ANT_FOOTPRINT,
          sch=(127.0, 81.28, 0), pcb=ANT_ORIGIN + (0,),
@@ -124,22 +173,42 @@ PARTS = [
 ]
 
 WIRES = [
-    ((81.28, 88.9), (127.0, 88.9)),      # J1 signal -> antenna feed
+    ((81.28, 88.9), (97.79, 88.9)),      # J1 signal -> Z2 pin 1
+    ((105.41, 88.9), (127.0, 88.9)),     # Z2 pin 2 -> antenna feed
     ((127.0, 88.9), (127.0, 86.36)),     # up into AE1 pin 1
     ((76.2, 93.98), (76.2, 96.52)),      # J1 shell -> GND
     ((76.2, 96.52), (71.12, 96.52)),     # GND -> PWR_FLAG
+    ((88.9, 96.52), (88.9, 99.06)),      # Z1 -> GND
+    ((114.3, 96.52), (114.3, 99.06)),    # Z3 -> GND
     ((129.54, 86.36), (129.54, 96.52)),  # AE1 ground pin -> GND
 ]
 JUNCTIONS = [(76.2, 96.52)]
-LABELS = [("ANT_FEED", (95.25, 88.9))]
+LABELS = [("RF_IN", (85.09, 88.9)), ("ANT_FEED", (110.49, 88.9))]
 
 SCH_NOTE = (
-    "Radiator on a 50 ohm port: the TI SWRA117D 2.45 GHz printed inverted-F\n"
-    "antenna fed straight from J1, with no matching network in the path.\n"
+    "TI SWRA117D (AN043) 2.45 GHz printed inverted-F antenna on a 50 ohm port.\n"
     "\n"
     "J1 -> 2.95 mm wide 50 ohm microstrip on 1.6 mm FR4 (er 4.5, tan d 0.02)\n"
-    "-> AE1 pin 1.  AE1 pin 2 is the inverted-F ground pin and sits on the\n"
-    "edge of the ground plane; see the keep-out on the PCB.\n"
+    "-> pi network -> AE1 pin 1.  AE1 pin 2 is the inverted-F ground pin and\n"
+    "sits on the edge of the ground plane; see the keep-out on the PCB.\n"
+    "\n"
+    "The pi network carries NO matching values, and that is deliberate.\n"
+    "SWRA117D says this antenna is already a 50 ohm design and publishes no\n"
+    "matching BOM, so there is no value to fit and inventing one would be\n"
+    "fitting copper to a guess.  AN058 section 3.4 asks for the network to\n"
+    "exist anyway: 'If the antenna design is adequately matched then it just\n"
+    "takes one zero ohm resistor or DC block cap to be inserted into the\n"
+    "pi-matching network.'  So:\n"
+    "\n"
+    "  Z2  0R     series, the link.  100 pF is the drop-in alternative where\n"
+    "             the radio needs DC isolation - worth checking here, because\n"
+    "             this antenna is a DC short to ground through its own arm.\n"
+    "  Z1  DNP    shunt, connector side\n"
+    "  Z3  DNP    shunt, antenna side\n"
+    "\n"
+    "Z1 and Z3 are there because AN058's measurements show an enclosure only\n"
+    "ever pulls resonance downwards, and a board with nowhere to compensate\n"
+    "that is a board that has to be respun.\n"
     "\n"
     "Simulation: sim/s11_antenna.cir (ngspice, lumped antenna model) and\n"
     "sim/openems/swra117d_openems.py (full wave S11, impedance, far field)."
@@ -148,6 +217,8 @@ SCH_NOTE = (
 POWER = [  # ground symbols: reference, sheet position
     ("#PWR01", (76.2, 96.52)),
     ("#PWR02", (129.54, 96.52)),
+    ("#PWR03", (88.9, 99.06)),
+    ("#PWR04", (114.3, 99.06)),
 ]
 # A passive RF board has no power source of its own, so ERC reports
 # "Input Power pin not driven by any Output Power pins" on the ground net.
@@ -273,7 +344,7 @@ def build_schematic() -> list:
             [Sym("title"), TITLE],
             [Sym("date"), "2026-09-12"],
             [Sym("rev"), "A"],
-            [Sym("comment"), Sym("1"), "Radiator fed straight from the SMA port, no matching network"],
+            [Sym("comment"), Sym("1"), "Pi network laid out, fitted as a 0 ohm link: no matching values are published for this antenna"],
             [Sym("comment"), Sym("2"), "Antenna keep-out: no copper on any layer"]],
            lib_symbols()]
 
@@ -371,6 +442,11 @@ def board_footprint(part) -> list:
     return out
 
 
+def in_pi_box(x, y, margin=0.8) -> bool:
+    return (PI_BOX[0] - margin <= x <= PI_BOX[2] + margin
+            and PI_BOX[1] - margin <= y <= PI_BOX[3] + margin)
+
+
 def stitch_grid(existing, launch_y, pitch=5.0, keepaway=2.0):
     """A grid of ground vias over the top pour, avoiding everything that matters.
 
@@ -388,7 +464,7 @@ def stitch_grid(existing, launch_y, pitch=5.0, keepaway=2.0):
             at_connector = (abs(x - FEED_X) <= 5.3 and y >= launch_y - 2.8)
             crowded = any(math.dist((x, y), pos) < keepaway
                           for pos in existing + out)
-            if not (in_corridor or at_connector or crowded):
+            if not (in_corridor or at_connector or crowded or in_pi_box(x, y)):
                 out.append((x, y))
             x += pitch
         y += pitch
@@ -536,7 +612,7 @@ def build_board() -> list:
             [Sym("date"), "2026-09-12"],
             [Sym("rev"), "A"],
             [Sym("comment"), Sym("1"), f"2 layer, {SUB_H} mm FR4, 35 um Cu"],
-            [Sym("comment"), Sym("2"), f"50 ohm microstrip w = {W50} mm, no matching network"]],
+            [Sym("comment"), Sym("2"), f"50 ohm microstrip w = {W50} mm; Z2 = 0R link, Z1 and Z3 not fitted"]],
            layer_nodes,
            [Sym("setup"), stackup(),
             [Sym("pad_to_mask_clearance"), Sym("0")],
@@ -574,7 +650,18 @@ def build_board() -> list:
     launch_y = BOARD_Y1 - PAD_LEN_IN / 2          # SMA signal pad centre
     taper_top = ANT_ORIGIN[1] + 0.5               # where the 0.5 mm neck starts
     taper_bot = taper_top + TAPER_LEN
-    tracks = [((FEED_X, launch_y), (FEED_X, taper_bot), W50, "ANT_FEED")]
+    # the 50 ohm run, interrupted by the series pad of the pi network
+    tracks = [((FEED_X, launch_y), (FEED_X, Z2_AT[1] + Z2_STANDOFF), W50, "RF_IN"),
+              ((FEED_X, Z2_AT[1] - Z2_STANDOFF), (FEED_X, taper_bot), W50, "ANT_FEED")]
+    # the two shunt positions: a stub from the line out to the signal pad, and
+    # the ground pad on to a via.  The pour is cut away here, so that via is
+    # the only route to the plane - which is what makes it the short one.
+    for at, net in ((Z1_AT, "RF_IN"), (Z3_AT, "ANT_FEED")):
+        # the stub starts on the line's centre line, not on its edge, so it
+        # lands on the track rather than merely inside its copper
+        tracks.append(((FEED_X, at[1]), (at[0] - PAD_DX, at[1]), 0.6, net))
+        tracks.append(((at[0] + PAD_DX, at[1]),
+                       (FEED_X + PI_VIA_DX, at[1]), 0.6, "GND"))
     for i in range(TAPER_STEPS):
         y0 = taper_bot - i * TAPER_LEN / TAPER_STEPS
         y1 = taper_bot - (i + 1) * TAPER_LEN / TAPER_STEPS
@@ -598,6 +685,7 @@ def build_board() -> list:
     #    5.0 mm the patches resonate above 14 GHz.
     stitch = [(FEED_X + sign * (LAUNCH_OFFSET + dx), launch_y + dy)
               for sign in (-1, 1) for dx in (-1.0, 1.0) for dy in (-0.8, 0.8)]
+    stitch += [(FEED_X + PI_VIA_DX, at[1]) for at in (Z1_AT, Z3_AT)]
     stitch += [(x, GND_EDGE_Y + 1.0) for x in
                (103, 106, 109, 112, 115, 118, 121, 127.5, 130.5, 133.5, 136.5)]
     stitch += stitch_grid(stitch, launch_y)
@@ -622,6 +710,13 @@ def build_board() -> list:
     pcb.append(keepout_zone("RF_POUR_KEEPAWAY",
                             [(FEED_X - half, corridor_top), (FEED_X + half, corridor_top),
                              (FEED_X + half, BOARD_Y1 + 0.5), (FEED_X - half, BOARD_Y1 + 0.5)],
+                            layers=("F.Cu",), tracks="allowed", vias="allowed"))
+    # The pi network needs more room than the line does: the shunt parts reach
+    # sideways past the corridor, and their ground pads must not land on the
+    # top pour, or they would be grounded before the via rather than through it.
+    pcb.append(keepout_zone("PI_NETWORK_CLEARANCE",
+                            [(PI_BOX[0], PI_BOX[1]), (PI_BOX[2], PI_BOX[1]),
+                             (PI_BOX[2], PI_BOX[3]), (PI_BOX[0], PI_BOX[3])],
                             layers=("F.Cu",), tracks="allowed", vias="allowed"))
     pcb.append([Sym("embedded_fonts"), Sym("no")])
     return pcb
@@ -685,7 +780,8 @@ def build_project() -> dict:
             "meta": {"version": 4},
             "net_colors": None,
             "netclass_assignments": None,
-            "netclass_patterns": [{"netclass": "RF_50R", "pattern": "ANT_FEED"}],
+            "netclass_patterns": [{"netclass": "RF_50R", "pattern": "ANT_FEED"},
+                                  {"netclass": "RF_50R", "pattern": "RF_IN"}],
         },
         "pcbnew": {"last_paths": {"gencad": "", "idf": "", "netlist": "",
                                   "plot": "", "pos_files": "", "specctra_dsn": "",

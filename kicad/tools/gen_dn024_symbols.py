@@ -23,7 +23,7 @@ from sexpr import Sym, dumps, find_all, num, parse  # noqa: E402
 LIB_DIR = pathlib.Path(__file__).resolve().parent.parent / "library"
 SOURCE = LIB_DIR / "SWRA117D_RF.kicad_sym"
 DEST = LIB_DIR / "TI_DN024.kicad_sym"
-SHARED = ("C", "L", "Conn_Coaxial_SMA", "GND", "PWR_FLAG", "RF_PORT")
+SHARED = ("C", "L", "R", "Conn_Coaxial_SMA", "GND", "PWR_FLAG", "RF_PORT")
 
 DATASHEET = "https://www.ti.com/lit/an/swra227e/swra227e.pdf"
 

@@ -9,7 +9,8 @@
 		)
 		(date "2026-09-12")
 		(rev "A")
-		(comment 1 "Radiator fed straight from the SMA port, no matching network")
+		(comment 1 "Pi network laid out, fitted as a 0 ohm link: no matching values are published for this antenna"
+		)
 		(comment 2 "Antenna keep-out: no copper on any layer")
 	)
 	(lib_symbols

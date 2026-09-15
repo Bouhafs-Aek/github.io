@@ -122,7 +122,14 @@ Every one of these has produced a confidently wrong answer in practice.
       inverted-F is a 50 Ω design and wants nothing in the path, while DN024
       says the monopole needs a pi network at the feed and publishes its
       values. "No matching network" is a finding about one antenna, not a
-      principle.
+      principle - and even there it means no matching *values*: AN058 asks for
+      the pi footprints on every antenna, linked with a 0 ohm when none is
+      needed, so that an enclosure can be compensated without a respin.
+- [ ] **A wide 50 ohm line will not butt onto an 0402 land.** On 1.6 mm FR4 a
+      50 ohm microstrip is 2.95 mm and the land is 0.56 mm; a round-capped
+      track ending on one pad reaches across the other. Widen the land to the
+      line rather than necking the line to the land - a few millimetres of
+      100 ohm track is several nH in series with the antenna.
 - [ ] **Check whether the radiator is one layer or two.** DN024 puts its
       copper on both, "for lower resistive loss and slightly wider bandwidth".
       A model or a fabrication drawing that carries only the top layer is a

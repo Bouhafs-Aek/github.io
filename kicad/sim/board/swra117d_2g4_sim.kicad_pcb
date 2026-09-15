@@ -10,7 +10,7 @@
 		(date "2026-09-12")
 		(rev "A")
 		(comment 1 "2 layer, 1.6 mm FR4, 35 um Cu")
-		(comment 2 "50 ohm microstrip w = 2.95 mm, no matching network")
+		(comment 2 "50 ohm microstrip w = 2.95 mm; Z2 = 0R link, Z1 and Z3 not fitted")
 	)
 	(layers
 		(0 "F.Cu" signal)
@@ -60,6 +60,7 @@
 	(net 0 "")
 	(net 1 "GND")
 	(net 2 "ANT_FEED")
+	(net 3 "RF_IN")
 	(footprint "SWRA117D_RF:RF_Port_Land"
 		(layer "F.Cu")
 		(uuid "49ef3d22-1ab6-54d9-bea9-50842cc75ecf")
@@ -463,6 +464,26 @@
 		)
 		(fill (thermal_gap 0.4) (thermal_bridge_width 0.4))
 		(polygon (pts (xy 99.5 59.5) (xy 140.5 59.5) (xy 140.5 66.25) (xy 99.5 66.25)))
+	)
+	(zone
+		(net 0)
+		(net_name "")
+		(layers "F.Cu")
+		(uuid "459ea7e8-1ba0-51d4-90b7-b8a612f44a92")
+		(name "PI_NETWORK_CLEARANCE")
+		(hatch full 0.508)
+		(connect_pads (clearance 0))
+		(min_thickness 0.25)
+		(filled_areas_thickness no)
+		(keepout
+			(tracks allowed)
+			(vias allowed)
+			(pads allowed)
+			(copperpour not_allowed)
+			(footprints allowed)
+		)
+		(fill (thermal_gap 0.4) (thermal_bridge_width 0.4))
+		(polygon (pts (xy 120 70.5) (xy 129.5 70.5) (xy 129.5 81.5) (xy 120 81.5)))
 	)
 	(segment
 		(start 124 88.25)

@@ -243,8 +243,11 @@ def check_board(expected_nets):
     # every track end must land on a pad or on another track of the same net
     for a, b, _w, net, layer in segments:
         for end in (a, b):
-            on_pad = any(p.contains(end) and p.net == net and layer in p.copper_layers()
-                         for p in pads)
+            # copper overlap, not centre-line containment: a wide track ends
+            # in a round cap, and a cap reaching into a pad is a connection -
+            # which is also how KiCad computes it
+            on_pad = any(p.distance(end) <= _w / 2 + EPS and p.net == net
+                         and layer in p.copper_layers() for p in pads)
             on_track = any(other_net == net and on_segment(end, oa, ob)
                            for oa, ob, _ow, other_net, _ol in segments
                            if (oa, ob) != (a, b))
@@ -413,6 +416,12 @@ def check_feed_width():
     for fp in find_all(pcb, "footprint"):
         if find(fp, "fp_poly") is not None:
             continue                      # the antenna: its feed pad is the neck, not the port
+        # the launch is the footprint that brings its own reference copper on
+        # B.Cu; a matching part sitting in the line does not, and must not be
+        # mistaken for the port
+        if not any("B.Cu" in [str(x) for x in find(pad, "layers")[1:]]
+                   for pad in find_all(fp, "pad")):
+            continue
         for pad in find_all(fp, "pad"):
             net = find(pad, "net")
             layers = [str(x) for x in find(pad, "layers")[1:]]
@@ -607,7 +616,10 @@ def check_embedded_symbols():
 
 def main() -> int:
     expected = {
-        ("J1", "1"): "ANT_FEED", ("J1", "2"): "GND",
+        ("J1", "1"): "RF_IN", ("J1", "2"): "GND",
+        ("Z1", "1"): "RF_IN", ("Z1", "2"): "GND",
+        ("Z2", "1"): "RF_IN", ("Z2", "2"): "ANT_FEED",
+        ("Z3", "1"): "ANT_FEED", ("Z3", "2"): "GND",
         ("AE1", "1"): "ANT_FEED", ("AE1", "2"): "GND",
     }
     check_libraries()

@@ -107,6 +107,10 @@
       {
         "netclass": "RF_50R",
         "pattern": "ANT_FEED"
+      },
+      {
+        "netclass": "RF_50R",
+        "pattern": "RF_IN"
       }
     ]
   },

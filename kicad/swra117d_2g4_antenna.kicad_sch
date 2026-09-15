@@ -5,10 +5,12 @@
 	(uuid "0c52b35a-5623-5f55-988d-762afc65fb88")
 	(paper "A4")
 	(title_block
-		(title "2.45 GHz PCB antenna (TI SWRA117D) - radiator on a 50 ohm SMA port")
+		(title "2.45 GHz PCB antenna (TI SWRA117D/AN043) - radiator on a 50 ohm SMA port, pi network fitted as a 0 ohm link"
+		)
 		(date "2026-09-12")
 		(rev "A")
-		(comment 1 "Radiator fed straight from the SMA port, no matching network")
+		(comment 1 "Pi network laid out, fitted as a 0 ohm link: no matching values are published for this antenna"
+		)
 		(comment 2 "Antenna keep-out: no copper on any layer")
 	)
 	(lib_symbols
@@ -73,6 +75,100 @@
 					(at 2.54 -5.08 90)
 					(length 2.54)
 					(name "GND" (effects (font (size 1.27 1.27))))
+					(number "2" (effects (font (size 1.27 1.27))))
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "SWRA117D_RF:C"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0.254))
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "C" (at 0.635 2.54 0) (effects (font (size 1.27 1.27)) (justify left)))
+			(property "Value" "C" (at 0.635 -2.54 0) (effects (font (size 1.27 1.27)) (justify left)))
+			(property "Footprint" "SWRA117D_RF:Chip_0402_1005Metric_RF"
+				(at 0.9652 -3.81 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "Datasheet" "~" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
+			(property "Description" "Unpolarized capacitor, 0402 RF matching part"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "ki_keywords" "cap capacitor RF matching"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(symbol "C_0_1"
+				(polyline
+					(pts (xy -2.032 -0.762) (xy 2.032 -0.762))
+					(stroke (width 0.508) (type default))
+					(fill (type none))
+				)
+				(polyline
+					(pts (xy -2.032 0.762) (xy 2.032 0.762))
+					(stroke (width 0.508) (type default))
+					(fill (type none))
+				)
+			)
+			(symbol "C_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 2.794)
+					(name "~" (effects (font (size 1.27 1.27))))
+					(number "1" (effects (font (size 1.27 1.27))))
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 2.794)
+					(name "~" (effects (font (size 1.27 1.27))))
+					(number "2" (effects (font (size 1.27 1.27))))
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "SWRA117D_RF:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0))
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "R" (at 2.032 0 90) (effects (font (size 1.27 1.27))))
+			(property "Value" "R" (at 0 0 90) (effects (font (size 1.27 1.27))))
+			(property "Footprint" "SWRA117D_RF:Chip_0402_1005Metric_RF"
+				(at -1.778 0 90)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "Datasheet" "~" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
+			(property "Description" "Resistor, 0402. A 0 ohm here is the link AN058 asks for in the series position of a pi network when the antenna needs no matching"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "ki_keywords" "R resistor link 0R pi matching"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(symbol "R_0_1"
+				(rectangle
+					(start -1.016 -2.54)
+					(end 1.016 2.54)
+					(stroke (width 0.254) (type default))
+					(fill (type none))
+				)
+			)
+			(symbol "R_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "~" (effects (font (size 1.27 1.27))))
+					(number "1" (effects (font (size 1.27 1.27))))
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "~" (effects (font (size 1.27 1.27))))
 					(number "2" (effects (font (size 1.27 1.27))))
 				)
 			)
@@ -205,9 +301,14 @@
 		)
 	)
 	(wire
-		(pts (xy 81.28 88.9) (xy 127 88.9))
+		(pts (xy 81.28 88.9) (xy 97.79 88.9))
 		(stroke (width 0) (type default))
-		(uuid "89d32f58-3325-5df0-b042-6c95303ae502")
+		(uuid "89bfb7ce-fe65-5fde-a3b9-f0310962c9f6")
+	)
+	(wire
+		(pts (xy 105.41 88.9) (xy 127 88.9))
+		(stroke (width 0) (type default))
+		(uuid "b6ff1b5d-ffb5-5f4a-979e-6186b11692c5")
 	)
 	(wire
 		(pts (xy 127 88.9) (xy 127 86.36))
@@ -225,6 +326,16 @@
 		(uuid "2c8aee4f-ff6b-5133-b020-acfbe5561a95")
 	)
 	(wire
+		(pts (xy 88.9 96.52) (xy 88.9 99.06))
+		(stroke (width 0) (type default))
+		(uuid "41a00ebe-4b87-5c4d-80ff-070a590ccc45")
+	)
+	(wire
+		(pts (xy 114.3 96.52) (xy 114.3 99.06))
+		(stroke (width 0) (type default))
+		(uuid "5173df50-3340-589c-acee-98176d1d1233")
+	)
+	(wire
 		(pts (xy 129.54 86.36) (xy 129.54 96.52))
 		(stroke (width 0) (type default))
 		(uuid "4afe2606-26ca-5799-ad36-ba5946ca33d6")
@@ -235,12 +346,17 @@
 		(color 0 0 0 0)
 		(uuid "8b803aed-5f68-56a5-a251-7a66e6eef7a7")
 	)
+	(label "RF_IN"
+		(at 85.09 88.9 0)
+		(effects (font (size 1.27 1.27)) (justify left bottom))
+		(uuid "54b51706-78ba-5141-93aa-6a5b7f82b906")
+	)
 	(label "ANT_FEED"
-		(at 95.25 88.9 0)
+		(at 110.49 88.9 0)
 		(effects (font (size 1.27 1.27)) (justify left bottom))
 		(uuid "629d9a6f-80c8-58ba-975b-a2ae9d678d9d")
 	)
-	(text "Radiator on a 50 ohm port: the TI SWRA117D 2.45 GHz printed inverted-F\nantenna fed straight from J1, with no matching network in the path.\n\nJ1 -> 2.95 mm wide 50 ohm microstrip on 1.6 mm FR4 (er 4.5, tan d 0.02)\n-> AE1 pin 1.  AE1 pin 2 is the inverted-F ground pin and sits on the\nedge of the ground plane; see the keep-out on the PCB.\n\nSimulation: sim/s11_antenna.cir (ngspice, lumped antenna model) and\nsim/openems/swra117d_openems.py (full wave S11, impedance, far field)."
+	(text "TI SWRA117D (AN043) 2.45 GHz printed inverted-F antenna on a 50 ohm port.\n\nJ1 -> 2.95 mm wide 50 ohm microstrip on 1.6 mm FR4 (er 4.5, tan d 0.02)\n-> pi network -> AE1 pin 1.  AE1 pin 2 is the inverted-F ground pin and\nsits on the edge of the ground plane; see the keep-out on the PCB.\n\nThe pi network carries NO matching values, and that is deliberate.\nSWRA117D says this antenna is already a 50 ohm design and publishes no\nmatching BOM, so there is no value to fit and inventing one would be\nfitting copper to a guess.  AN058 section 3.4 asks for the network to\nexist anyway: 'If the antenna design is adequately matched then it just\ntakes one zero ohm resistor or DC block cap to be inserted into the\npi-matching network.'  So:\n\n  Z2  0R     series, the link.  100 pF is the drop-in alternative where\n             the radio needs DC isolation - worth checking here, because\n             this antenna is a DC short to ground through its own arm.\n  Z1  DNP    shunt, connector side\n  Z3  DNP    shunt, antenna side\n\nZ1 and Z3 are there because AN058's measurements show an enclosure only\never pulls resonance downwards, and a board with nowhere to compensate\nthat is a board that has to be respun.\n\nSimulation: sim/s11_antenna.cir (ngspice, lumped antenna model) and\nsim/openems/swra117d_openems.py (full wave S11, impedance, far field)."
 		(exclude_from_sim no)
 		(at 76.2 112 0)
 		(effects (font (size 1.27 1.27)) (justify left top))
@@ -274,6 +390,99 @@
 		(instances
 			(project "swra117d_2g4_antenna"
 				(path "/0c52b35a-5623-5f55-988d-762afc65fb88" (reference "J1") (unit 1))
+			)
+		)
+	)
+	(symbol
+		(lib_id "SWRA117D_RF:C")
+		(at 88.9 92.71 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp yes)
+		(uuid "10ffeeb7-de51-55fb-885b-5e71082c2d00")
+		(property "Reference" "Z1"
+			(at 91.44 91.44 0)
+			(effects (font (size 1.27 1.27)) (justify left))
+		)
+		(property "Value" "DNP" (at 91.44 93.98 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Footprint" "SWRA117D_RF:Chip_0402_1005Metric_RF"
+			(at 88.9 92.71 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" "~" (at 88.9 92.71 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "Pi network, shunt on the connector side. Not fitted: SWRA117D publishes no matching values for this antenna. Laid out because AN058 asks for somewhere to compensate an enclosure"
+			(at 88.9 92.71 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "4bfa7344-0ebf-56fd-987d-f52d3f0e0d07"))
+		(pin "2" (uuid "4e11f596-1fb3-55ab-9baf-c7e9556d5f08"))
+		(instances
+			(project "swra117d_2g4_antenna"
+				(path "/0c52b35a-5623-5f55-988d-762afc65fb88" (reference "Z1") (unit 1))
+			)
+		)
+	)
+	(symbol
+		(lib_id "SWRA117D_RF:R")
+		(at 101.6 88.9 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "7c71b459-6d93-5d99-bfcd-2e6e4212e528")
+		(property "Reference" "Z2"
+			(at 99.06 85.09 0)
+			(effects (font (size 1.27 1.27)) (justify left))
+		)
+		(property "Value" "0R" (at 99.06 82.55 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Footprint" "SWRA117D_RF:Chip_0402_RF_WideLand"
+			(at 101.6 88.9 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" "~" (at 101.6 88.9 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "Pi network, series. 0 ohm link: AN058 section 3.4 - an already matched antenna 'just takes one zero ohm resistor or DC block cap'. A 100 pF is the drop-in alternative where the radio needs DC isolation, which this antenna's DC short to ground makes worth checking"
+			(at 101.6 88.9 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "2771d281-636c-5cd2-9c5c-99ac6095b1d5"))
+		(pin "2" (uuid "69503471-a13d-50eb-8078-30f5f64a064e"))
+		(instances
+			(project "swra117d_2g4_antenna"
+				(path "/0c52b35a-5623-5f55-988d-762afc65fb88" (reference "Z2") (unit 1))
+			)
+		)
+	)
+	(symbol
+		(lib_id "SWRA117D_RF:C")
+		(at 114.3 92.71 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp yes)
+		(uuid "eda4ae21-33c5-5004-a648-365fb198b0fe")
+		(property "Reference" "Z3"
+			(at 116.84 91.44 0)
+			(effects (font (size 1.27 1.27)) (justify left))
+		)
+		(property "Value" "DNP" (at 116.84 93.98 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Footprint" "SWRA117D_RF:Chip_0402_1005Metric_RF"
+			(at 114.3 92.71 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" "~" (at 114.3 92.71 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "Pi network, shunt on the antenna side. Not fitted, same reason as Z1"
+			(at 114.3 92.71 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "be3641b4-3ce7-5421-939c-0f80476d6f05"))
+		(pin "2" (uuid "b5ec63a0-e251-5543-a79a-cca2835dc2db"))
+		(instances
+			(project "swra117d_2g4_antenna"
+				(path "/0c52b35a-5623-5f55-988d-762afc65fb88" (reference "Z3") (unit 1))
 			)
 		)
 	)
@@ -372,6 +581,60 @@
 		(instances
 			(project "swra117d_2g4_antenna"
 				(path "/0c52b35a-5623-5f55-988d-762afc65fb88" (reference "#PWR02") (unit 1))
+			)
+		)
+	)
+	(symbol
+		(lib_id "SWRA117D_RF:GND")
+		(at 88.9 99.06 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "8bbba219-b67a-5b77-b0d9-4deac591f5c0")
+		(property "Reference" "#PWR03"
+			(at 88.9 105.41 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "GND" (at 88.9 102.87 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 88.9 99.06 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 88.9 99.06 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "Ground reference"
+			(at 88.9 99.06 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "fb8d65b2-f39c-55b4-b93c-21a3396a1977"))
+		(instances
+			(project "swra117d_2g4_antenna"
+				(path "/0c52b35a-5623-5f55-988d-762afc65fb88" (reference "#PWR03") (unit 1))
+			)
+		)
+	)
+	(symbol
+		(lib_id "SWRA117D_RF:GND")
+		(at 114.3 99.06 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "51ed4db7-4eb6-5d7b-921c-7849aae8d41b")
+		(property "Reference" "#PWR04"
+			(at 114.3 105.41 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "GND" (at 114.3 102.87 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 114.3 99.06 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 114.3 99.06 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "Ground reference"
+			(at 114.3 99.06 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "a2149932-365d-589c-895a-f98d58c4d962"))
+		(instances
+			(project "swra117d_2g4_antenna"
+				(path "/0c52b35a-5623-5f55-988d-762afc65fb88" (reference "#PWR04") (unit 1))
 			)
 		)
 	)

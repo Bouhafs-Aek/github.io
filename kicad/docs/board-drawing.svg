@@ -4,8 +4,14 @@
 <rect class="board-edge" x="100" y="60" width="40" height="30"/>
 <rect class="bcu" x="122.25" y="81.775" width="3.5" height="12.95" transform="rotate(-90 124 88.25)"/>
 <rect class="keepout" x="120.525" y="69.25" width="6.95" height="20.75" fill="url(#ko)"/>
+<rect class="keepout" x="120" y="70.5" width="9.5" height="11" fill="url(#ko)"/>
 <polygon class="fcu" points="121.55,63.99 119.55,63.99 119.55,61.35 116.85,61.35 116.85,63.99 114.85,63.99 114.85,61.35 112.15,61.35 112.15,65.79 112.65,65.79 112.65,61.85 114.35,61.85 114.35,64.49 117.35,64.49 117.35,61.85 119.05,61.85 119.05,64.49 122.05,64.49 122.05,61.85 123.75,61.85 123.75,66.75 124.25,66.75 124.25,61.85 125.65,61.85 125.65,66.75 126.55,66.75 126.55,66.507 126.248,66.507 126.238,66.554 126.214,66.597 126.176,66.63 126.168,66.634 126.125,66.646 126.077,66.645 126.031,66.632 126.013,66.622 125.979,66.587 125.958,66.541 125.952,66.492 125.96,66.444 125.977,66.411 126.012,66.379 126.058,66.359 126.107,66.352 126.155,66.36 126.188,66.377 126.223,66.414 126.243,66.458 126.248,66.507 126.55,66.507 126.55,61.35 121.55,61.35 121.55,63.99"/>
-<path class="trace" stroke-width="2.95" stroke-linecap="round" fill="none" d="M124,88.25 L124,71.5"/>
+<path class="trace" stroke-width="2.95" stroke-linecap="round" fill="none" d="M124,88.25 L124,78"/>
+<path class="trace" stroke-width="2.95" stroke-linecap="round" fill="none" d="M124,74 L124,71.5"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M124,79.5 L126.52,79.5"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M127.48,79.5 L128.9,79.5"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M124,72.5 L126.52,72.5"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M127.48,72.5 L128.9,72.5"/>
 <path class="trace" stroke-width="2.746" stroke-linecap="round" fill="none" d="M124,71.5 L124,70.75"/>
 <path class="trace" stroke-width="2.338" stroke-linecap="round" fill="none" d="M124,70.75 L124,70"/>
 <path class="trace" stroke-width="1.929" stroke-linecap="round" fill="none" d="M124,70 L124,69.25"/>
@@ -16,6 +22,12 @@
 <rect class="fcu pad" x="122.25" y="86.775" width="3.5" height="2.95" transform="rotate(-90 124 88.25)"/>
 <rect class="fcu pad" x="117.275" y="86.75" width="3.5" height="3" transform="rotate(-90 119.025 88.25)"/>
 <rect class="fcu pad" x="127.225" y="86.75" width="3.5" height="3" transform="rotate(-90 128.975 88.25)"/>
+<rect class="fcu pad" x="126.24" y="79.19" width="0.56" height="0.62" transform="rotate(-0 126.52 79.5)"/>
+<rect class="fcu pad" x="127.2" y="79.19" width="0.56" height="0.62" transform="rotate(-0 127.48 79.5)"/>
+<rect class="fcu pad" x="122.525" y="76.2" width="2.95" height="0.56" transform="rotate(-0 124 76.48)"/>
+<rect class="fcu pad" x="122.525" y="75.24" width="2.95" height="0.56" transform="rotate(-0 124 75.52)"/>
+<rect class="fcu pad" x="126.24" y="72.19" width="0.56" height="0.62" transform="rotate(-0 126.52 72.5)"/>
+<rect class="fcu pad" x="127.2" y="72.19" width="0.56" height="0.62" transform="rotate(-0 127.48 72.5)"/>
 <rect class="fcu pad" x="125.65" y="66.25" width="0.9" height="0.5" transform="rotate(-0 126.1 66.5)"/>
 <rect class="fcu pad" x="123.75" y="66.25" width="0.5" height="0.5" transform="rotate(-0 124 66.5)"/>
 <circle class="via" cx="120.025" cy="87.45" r="0.3"/>
@@ -26,6 +38,8 @@
 <circle class="via" cx="127.975" cy="89.05" r="0.3"/>
 <circle class="via" cx="129.975" cy="87.45" r="0.3"/>
 <circle class="via" cx="129.975" cy="89.05" r="0.3"/>
+<circle class="via" cx="128.9" cy="79.5" r="0.3"/>
+<circle class="via" cx="128.9" cy="72.5" r="0.3"/>
 <circle class="via" cx="103" cy="67.25" r="0.3"/>
 <circle class="via" cx="106" cy="67.25" r="0.3"/>
 <circle class="via" cx="109" cy="67.25" r="0.3"/>

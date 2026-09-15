@@ -5,8 +5,8 @@ each an exact copy of its application note's dimension table and each with a
 checker that fails the build if it stops being one:
 
 * **TI SWRA117D**, a **2.45 GHz printed inverted-F** (left-hand layout) — the
-  radiator fed straight from a 50 Ω SMA port, with no matching network,
-  because the note says it is already a 50 Ω design.
+  radiator fed from a 50 Ω SMA port through a pi network carrying a 0 Ω link,
+  because the note publishes no matching values and AN058 asks for the pads.
 * **TI DN024 / SWRA227E**, a **868 + 2440 MHz meandering monopole** — copper
   on both layers and a pi matching network at the feed, because this note says
   it needs one and gives the values.
@@ -31,6 +31,7 @@ kicad/
 │       ├── Texas_SWRA117D_2.4GHz_Left.kicad_mod  antenna, as published
 │       ├── SWRA117D_2G4_Left_retuned.kicad_mod   antenna, scaled x1.155
 │       ├── SMA_EdgeMount_Generic.kicad_mod       50 Ω connector land
+│       ├── Chip_0402_RF_WideLand.kicad_mod     0402 pitch, 50 Ω-wide pads
 │       ├── RF_Port_Land.kicad_mod                the same land, no connector
 │       └── Chip_0402_1005Metric_RF.kicad_mod     spare 0402 land
 ├── dn024/                           second antenna: TI DN024 monopole
@@ -71,10 +72,12 @@ edge-launch connector can be here: the antenna owns the top edge, its ground
 pin blocks any approach from the right, and the SMA needs 12.95 mm of board edge
 with all of it on the ground plane — which only the bottom edge offers.
 
-One net, `ANT_FEED`, on the `RF_50R` net class (2.95 mm, 0.3 mm clearance).
-Nothing sits between the connector and the radiator: the SWRA117D antenna is a
-50 Ω design, so the board does not try to correct it. See
-[No matching network](#no-matching-network) for what to do if the assembled
+Two nets on the `RF_50R` net class (2.95 mm, 0.3 mm clearance): `RF_IN` from
+the connector to the series position, `ANT_FEED` from there to the radiator.
+Nothing *corrects* the antenna — SWRA117D says it is already a 50 Ω design and
+publishes no values — but the pi network is laid out and linked with a 0 Ω, so
+there is somewhere to compensate an enclosure later. See
+[The pi network](#the-pi-network-pads-and-a-0-Ω-link) for what to do if the assembled
 product lands off band.
 
 `#FLG01` (a `PWR_FLAG`) sits on the ground net — this board is entirely
@@ -485,32 +488,60 @@ The antenna polygon overlaps the plane edge by 0.25 mm at 28 of its vertices —
 that is the part of both legs that lands on the pads, so the pads' own
 clearance covers it. Nothing else crosses the line.
 
-### No matching network — components, but AN058 says lay out the pads
+### The pi network: pads, and a 0 Ω link
 
 Two TI documents, and they are not in conflict once you separate *values* from
 *footprints*.
 
-**SWRA117D on this antenna:** it is a 50 Ω design, so nothing goes between the
-connector and the radiator. That is why this board has no L and no C in the
-path, and it is the right answer to "what value should I fit".
+**SWRA117D on this antenna:** it is a 50 Ω design, and the note publishes no
+matching BOM at all. So there is no value to fit, and inventing an L and a C
+would be fitting copper to a guess — which this project did once, with an
+0.8 nH that turned out to be fitted to its own model.
 
-**AN058 as a general rule, section 3.4:** *"Mismatching of the antenna is one
-of the largest factors that reduce the total RF link budget. To avoid
-unnecessary mismatch losses, it is recommended to add a pi-matching network so
-that the antenna can always be matched. If the antenna design is adequately
-matched then it just takes one zero ohm resistor or DC block cap to be
-inserted into the pi-matching network."*
+**AN058 section 3.4, as a general rule:** *"To avoid unnecessary mismatch
+losses, it is recommended to add a pi-matching network so that the antenna can
+always be matched. If the antenna design is adequately matched then it just
+takes one zero ohm resistor or DC block cap to be inserted into the
+pi-matching network."*
 
-That is about **pads, not parts**: lay the pi network out, and populate it
-with a 0 Ω link when the antenna needs no correction. The second antenna's
-board does exactly that — `Z61` and `Z63` are on the PCB and unfitted. This
-board has neither, so there is nowhere to put a component if an enclosure
-detunes it, and AN058's own measurements say an enclosure will.
+So the board carries the network, populated the way AN058 prescribes:
 
-Adding three unpopulated 0402 lands and a 0 Ω link in the feed would close
-that gap without putting anything in the signal path today. It is not done
-here because it was ruled out for this board explicitly; the evidence above
-is new, so the decision is worth revisiting rather than reversing quietly.
+| | value | why |
+|---|---|---|
+| **Z2** | **0 Ω** | the link. The signal path is electrically what it was |
+| **Z1** | not fitted | shunt, connector side |
+| **Z3** | not fitted | shunt, antenna side |
+
+Z1 and Z3 exist because AN058's own measurements show an enclosure only ever
+pulls resonance *down*, and a board with nowhere to compensate that is a board
+that gets respun. **A 100 pF is the drop-in alternative to the 0 Ω** where the
+radio needs DC isolation — worth checking on this antenna in particular, since
+its arm is a DC short to ground.
+
+#### Why the pads are wider than an 0402
+
+A 50 Ω microstrip on 1.6 mm FR4 is 2.95 mm wide; an 0402 land is 0.56 mm. The
+two do not meet:
+
+* **Butting the line onto an ordinary land does not work.** KiCad tracks have
+  round caps, so a 2.95 mm track ending on a pad bulges 1.475 mm past its
+  endpoint — straight across the opposite pad, which is 0.96 mm away. The
+  checker caught exactly that, and KiCad's DRC would have too.
+* **Necking the line down is worse than it looks.** 0.6 mm of track is ~100 Ω
+  here, and the 6.5 mm it takes to taper down and back is **3.8 nH — j58 Ω at
+  2.45 GHz**, in series with the antenna. That is a matching network nobody
+  asked for.
+
+So the series position uses `Chip_0402_RF_WideLand`: 0402 pitch, so the part
+solders normally, but pads as wide as the line, which runs straight into them
+with no step. The wide line still stops 2.0 mm short of the pad so its round
+cap reaches 0.5 mm into its own pad and stays 0.7 mm clear of the other.
+
+The two **shunt** positions keep the ordinary 0402 land, tapped by a 0.6 mm
+stub off the side of the line. A short narrow stub into a shunt element is not
+in the through path, so its inductance is part of what you tune with, not a
+defect. Their ground pads reach the plane through a via of their own, because
+the pour is cut away around the network — `PI_NETWORK_CLEARANCE`.
 
 The SWRA117D antenna *is* a 50 Ω design, so the board is built without one:
 connector → 50 Ω line → radiator. That is also the only honest way to
@@ -659,8 +690,21 @@ about the impedance once you know.
 
 `sim/openems/swra117d_openems.py` builds the FDTD model from a board file —
 outline, stackup, ground plane edge, the antenna polygon, the stitching vias,
-any routed feed and the pour keep-away corridors all come out of the
-`.kicad_pcb`, so the model cannot drift away from the layout. The KiCad
+any routed feed, the matching parts' pads and the pour keep-away corridors all
+come out of the `.kicad_pcb`, so the model cannot drift away from the layout.
+
+Two details the pi network forced, and both are the kind of thing that fails
+silently rather than loudly:
+
+* **The feed is collected from every non-ground net**, not just the antenna's.
+  A series part splits the path into two nets, and both halves are the same
+  piece of RF path.
+* **Track end caps are modelled.** KiCad tracks are round-capped, so copper
+  reaches half a width past each endpoint — which is how the 50 Ω line reaches
+  the series pad it deliberately stops short of. Model the tracks as bare
+  rectangles and the feed quietly becomes three disconnected pieces that still
+  produce a plausible answer. `--dry-run` now walks the modelled copper from
+  the port and refuses to run if any of it is stranded. The KiCad
 keyhole slits (the clearance ring around the ground pin) are collapsed, since
 they are far below the mesh size.
 
@@ -676,9 +720,12 @@ python3 sim/openems/swra117d_openems.py --dry-run \
 ```
 board file     : swra117d_2g4_antenna.kicad_pcb
 board          : 40.0 x 30.0 mm, 1.6 mm FR4 (er 4.5, tan d 0.02)
-ground plane   : y = 0 .. 23.75 mm (antenna region 23.75 .. 30.0 mm is clear)
-feed line      : 8 segments, 23.5 mm total, microstrip port launches along y from (24.00, 0.00) mm, feed pad at (24.00, 23.50) mm
-                 ( 24.00,  0.00) -> ( 24.00, 18.50)  w = 2.95 mm
+ground plane   : B.Cu, F.Cu, y = 0 .. 23.75 mm (antenna region 23.75 .. 30.0 mm is clear)
+feed line      : 11 segments, 24.5 mm total, microstrip port launches along y from (24.00, 0.00) mm, feed pad at (24.00, 23.50) mm
+                 ( 24.00,  0.00) -> ( 24.00, 12.00)  w = 2.95 mm
+                 ( 24.00, 16.00) -> ( 24.00, 18.50)  w = 2.95 mm
+                 ( 24.00, 10.50) -> ( 26.52, 10.50)  w = 0.6 mm
+                 ( 24.00, 17.50) -> ( 26.52, 17.50)  w = 0.6 mm
                  ( 24.00, 18.50) -> ( 24.00, 19.25)  w = 2.746 mm
                  ( 24.00, 19.25) -> ( 24.00, 20.00)  w = 2.338 mm
                  ( 24.00, 20.00) -> ( 24.00, 20.75)  w = 1.929 mm
@@ -686,8 +733,10 @@ feed line      : 8 segments, 23.5 mm total, microstrip port launches along y fro
                  ( 24.00, 21.50) -> ( 24.00, 22.25)  w = 1.113 mm
                  ( 24.00, 22.25) -> ( 24.00, 23.00)  w = 0.704 mm
                  ( 24.00, 23.00) -> ( 24.00, 23.50)  w = 0.5 mm
-stitching vias : 41, 11 of them within 2 mm of the plane edge
-top pour       : 5 boxes around 1 keep-away corridors
+matching parts : 3 pad areas in the model (a fitted series link is modelled as metal across its two pads)
+RF path        : 14 copper areas, all connected to the port
+stitching vias : 43, 11 of them within 2 mm of the plane edge
+top pour       : 15 boxes around 2 keep-away corridors
 antenna copper : 29 vertices, x 12.15..26.55 mm, y 23.25..28.65 mm
 ```
 
@@ -778,6 +827,7 @@ python3 tools/mutate_sim_board.py    # prove those checks actually fail when the
 python3 tools/verify_against_swra117d.py   # the footprint against Table 1, dimension by dimension
 python3 tools/line_impedance.py      # microstrip and CPWG impedance, read from the board
 python3 tools/stitching_span.py      # largest patch of top pour with no via in it
+python3 tools/gen_rf_lands.py --width 2.95       # the 50 Ω-wide 0402 land
 python3 tools/gen_sma_footprint.py               # the SMA land, for the stackup
 python3 tools/gen_sma_footprint.py --style port # the same land with no coplanar tabs
 python3 tools/scale_footprint.py     # retune the antenna by uniform scaling
@@ -827,12 +877,12 @@ nothing else? See
 [The RFsim project](#the-rfsim-project-swra117d-figure-3-as-the-note-draws-it).
 
 ```
-ok   library: 7 symbols, 5 footprints parse cleanly
-ok   schematic: 4 embedded symbols all match library/SWRA117D_RF.kicad_sym (no lib_symbol_mismatch)
-ok   schematic: 7 pins placed, 5 wires, netlist matches the intended one
-ok   board: 6 pads, 8 tracks, 41 vias, clearances >= 0.15 mm, keep-out above y = 66.25 clean
+ok   library: 8 symbols, 6 footprints parse cleanly
+ok   schematic: 6 embedded symbols all match library/SWRA117D_RF.kicad_sym (no lib_symbol_mismatch)
+ok   schematic: 15 pins placed, 8 wires, netlist matches the intended one
+ok   board: 12 pads, 13 tracks, 43 vias, clearances >= 0.15 mm, keep-out above y = 66.25 clean
 ok   board: 28 antenna polygon vertices overlap the plane edge, all of them inside the antenna's own pads
-ok   board: all 16 feed line ends sit over the B.Cu ground pour (reference plane present)
+ok   board: all 22 feed line ends sit over the B.Cu ground pour (reference plane present)
 ok   board: 2 copper zones carry no fill yet - press B in the PCB editor before running DRC or an RF simulation, or tools that look for the reference layer will find it empty
 ok   board: port pad 3.5 x 2.95 mm sits inside a 3.5 x 12.95 mm B.Cu ground pad, so the launch is referenced without a zone fill
 ok   board: the radiator is one piece of copper touching both antenna pads (inverted-F short: the port is a DC short to GND)
@@ -1178,7 +1228,7 @@ is then matched. Say the word and it is the same machinery as the first board.
 ## Reusing this on someone else's board
 
 [`docs/antenna-integration-checklist.md`](docs/antenna-integration-checklist.md)
-is the checklist these projects produced: 72 items across antenna placement,
+is the checklist these projects produced: 73 items across antenna placement,
 feed, stitching, simulation setup, what to leave out of a model, bench
 measurement, and tuning —
 each one there because getting it wrong here cost a wrong answer. It is written to be applied to any printed

@@ -2,8 +2,9 @@
 *
 * Mirrors the board exactly as built (swra117d_2g4_antenna.kicad_sch):
 *   J1 (50 ohm port) -- 23.5 mm of 50 ohm microstrip -- AE1
-* There is no matching network: the antenna is a 50 ohm design and nothing is
-* fitted between the connector and the radiator.
+* The board's pi network carries no matching values - the antenna is a 50 ohm
+* design and SWRA117D publishes none - so Z2 is a 0 ohm link and Z1/Z3 are
+* laid out empty.  Electrically that is the same path this deck models.
 *
 * T1 is the routed feed line, lossless: 2.95 mm wide microstrip on 1.6 mm FR4
 * gives eps_eff = 3.394, so 23.5 mm is TD = 144 ps (127 degrees at 2.45 GHz).
@@ -33,9 +34,9 @@ T1  in  0 ant 0 Z0=50 TD=144p
 *Rjmp in ant  1u
 XAE1 ant 0   ANT_SWRA117D_2G4
 
-* Optional: the pi network this board does NOT have, for working out what a
-* match would buy you before committing pads to a layout.  Insert between
-* "in" and the antenna, with T1 shorted out.
+* The pi network the board lays out but does not populate, for working out
+* what a match would buy you before fitting anything.  Z1 and Z3 are the
+* shunts, Z2 the series position (a 0 ohm link on the board today).
 *   C1 in  0   0.5p
 *   L1 in  ant 0.8n
 *   C2 ant 0   0.5p
