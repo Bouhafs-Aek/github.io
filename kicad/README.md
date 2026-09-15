@@ -3,8 +3,9 @@
 A complete, self-contained KiCad project built around the TI SWRA117D
 **2.4 GHz printed inverted-F antenna** (left-hand layout): the radiator fed
 straight from a 50 Ω SMA port, with no matching network in the path. Plus a
-second project for RFsim — the same board with the connector taken out — and
-two simulation flows: a lumped **ngspice** return-loss testbench and a
+second project for RFsim, drawn the way the application note's Figure 3 draws
+it — ground on layer 2 only, one via, no connector — and two simulation
+flows: a lumped **ngspice** return-loss testbench and a
 full-wave **openEMS** model that reads its geometry out of whichever board
 file you point it at.
 
@@ -29,7 +30,7 @@ kicad/
 ├── sim/
 │   ├── antenna_swra117d.lib         lumped antenna model (ngspice subckt)
 │   ├── s11_antenna.cir              S11 / VSWR / Zin at the connector
-│   ├── board/swra117d_2g4_sim.*     RFsim project: same board, no connector
+│   ├── board/swra117d_2g4_sim.*     RFsim project: Figure 3, ground on layer 2
 │   └── openems/swra117d_openems.py  full-wave S11, impedance, directivity
 └── tools/                           generators, checkers, line + scaling calculators
 ```
@@ -586,9 +587,26 @@ top pour       : 5 boxes around 1 keep-away corridors
 antenna copper : 29 vertices, x 12.15..26.55 mm, y 23.25..28.65 mm
 ```
 
-Point `--board` at the RFsim project and the output is the same apart from
-the file name: it is the same board, so the model is the same geometry
-minus the connector pads, which the script never modelled anyway.
+and on the RFsim project, where the ground is on one layer and there is
+nothing to stitch:
+
+```
+board file     : swra117d_2g4_sim.kicad_pcb
+board          : 40.0 x 30.0 mm, 1.6 mm FR4 (er 4.5, tan d 0.02)
+ground plane   : B.Cu, y = 0 .. 23.75 mm (antenna region 23.75 .. 30.0 mm is clear)
+feed line      : 8 segments, 23.5 mm total, microstrip port launches along y from (24.00, 0.00) mm, feed pad at (24.00, 23.50) mm
+                 ( 24.00,  0.00) -> ( 24.00, 18.50)  w = 2.95 mm
+                 ( 24.00, 18.50) -> ( 24.00, 19.25)  w = 2.746 mm
+                 ( 24.00, 19.25) -> ( 24.00, 20.00)  w = 2.338 mm
+                 ( 24.00, 20.00) -> ( 24.00, 20.75)  w = 1.929 mm
+                 ( 24.00, 20.75) -> ( 24.00, 21.50)  w = 1.521 mm
+                 ( 24.00, 21.50) -> ( 24.00, 22.25)  w = 1.113 mm
+                 ( 24.00, 22.25) -> ( 24.00, 23.00)  w = 0.704 mm
+                 ( 24.00, 23.00) -> ( 24.00, 23.50)  w = 0.5 mm
+stitching vias : none - with no top pour there is nothing to stitch; the antenna's own ground pad carries the short
+top pour       : none - ground is on B.Cu only, as SWRA117D Figure 3 draws it
+antenna copper : 29 vertices, x 12.15..26.55 mm, y 23.25..28.65 mm
+```
 
 A real run needs openEMS with its Python bindings
 (<https://docs.openems.de/python/install.html>) and prints S11, the −10 dB
@@ -609,7 +627,7 @@ coplanar waveguide, not a microstrip. A Lumped or Microstrip port looks for
 its return directly beneath the signal only, so it mis-models the launch.
 (The RFsim project below has no connector footprint and so no coplanar
 ground beside the line: there, **Microstrip (MSL)** is the matching port —
-see [The RFsim project](#the-rfsim-project-the-same-board-without-the-connector).)
+see [The RFsim project](#the-rfsim-project-swra117d-figure-3-as-the-note-draws-it).)
 
 **The launch no longer needs a zone fill to have a reference.** The warning
 *"no copper on reference layer B.Cu"* was true of the first version of this
@@ -655,7 +673,7 @@ python3 tools/check_sim_board.py     # check it: no connector, feed reaches the 
 python3 tools/mutate_sim_board.py    # prove those checks actually fail when they should
 python3 tools/verify_against_swra117d.py   # the footprint against Table 1, dimension by dimension
 python3 tools/line_impedance.py      # microstrip and CPWG impedance, read from the board
-python3 tools/stitching_span.py      # largest patch of pour with no via in it
+python3 tools/stitching_span.py      # largest patch of top pour with no via in it
 python3 tools/gen_sma_footprint.py               # the SMA land, for the stackup
 python3 tools/gen_sma_footprint.py --style port # the same land with no coplanar tabs
 python3 tools/scale_footprint.py     # retune the antenna by uniform scaling
@@ -697,7 +715,7 @@ positions (rotations included) and verifies that
 `check_sim_board.py` does the same job for the RFsim project, asking a
 different question: is what the solver sees the antenna and its feed, and
 nothing else? See
-[The RFsim project](#the-rfsim-project-the-same-board-without-the-connector).
+[The RFsim project](#the-rfsim-project-swra117d-figure-3-as-the-note-draws-it).
 
 ```
 ok   library: 7 symbols, 5 footprints parse cleanly
@@ -715,7 +733,6 @@ ok   board: Texas_SWRA117D_2.4GHz_Left matches all 14 dimensions of SWRA117D Tab
 
 0 problem(s)
 ```
-
 
 That is a structural check, not a substitute for KiCad, so **run ERC and DRC,
 and fill the zones, after opening the project.**
@@ -737,20 +754,34 @@ matching network was removed after that run, so the sheet is now J1, AE1, two
 ground symbols and the flag; `PWR_FLAG` itself has not been through ERC yet.
 DRC on the board has not been run at all.
 
-## The RFsim project: the same board, without the connector
+## The RFsim project: SWRA117D Figure 3, as the note draws it
 
 `sim/board/swra117d_2g4_sim.*` is a second complete KiCad project —
 schematic, board and project file. Open it and run RFsim on it.
 
-It is the fabrication project with the connector replaced by a **bare port
-land**. J1, the SMA, is real hardware and belongs on the board that gets
-built, but inside a simulation its coplanar ground tabs are copper that is not
-the antenna, they carry the port's return current, and the bright near field
-around them reads as an antenna problem when it is a launch.
+Look at Figure 3 again. It is a two-layer board where layer 1 carries the
+antenna and the feed, and the ground is the grey area captioned **"Ground
+Layer 2"** — layer 2 and nowhere else. There is no ground copper on the top
+layer at all, and exactly one via in the whole picture: **"Via to ground"**,
+the W1 = 0.90 mm pad that shorts the inverted-F. This project is that
+arrangement, on the fabricated 1.6 mm stackup.
 
-What replaces it is the minimum a solver needs and nothing more:
-`RF_Port_Land` — the signal pad, the width of the 50 Ω line, with a solid
-B.Cu ground pad directly underneath it and no coplanar ground beside it.
+That single change removes three arguments at once:
+
+* **No coplanar ground anywhere near the line**, so the feed is unambiguously
+  a microstrip over layer 2 and **MSL** is the port model with nothing left to
+  debate.
+* **No top pour**, so no pour islands to resonate and nothing to stitch — the
+  only via on the board is the antenna's own.
+* **The port's reference is the ground plane itself**, directly under the
+  signal pad, rather than a second sheet of copper that has to be tied to it.
+
+The connector goes with it. J1 is real hardware and belongs on the board that
+gets built, but inside a simulation its coplanar ground tabs are copper that
+is not the antenna, they carry the port's return current, and the bright near
+field around them reads as an antenna problem when it is a launch. What
+replaces it is the minimum a solver needs: `RF_Port_Land` — the signal pad,
+the width of the 50 Ω line, with a solid B.Cu ground pad directly underneath.
 
 **Why a land and not a bare track end.** RFsim attaches its port to a *pad*,
 and it needs reference copper under the pad it drives. Leave the board without
@@ -771,9 +802,10 @@ reference that is missing the first time anyone opens the project.
 | substrate | 1.6 mm FR4, εr 4.5, 35 µm | the same |
 | outline, plane edge, keep-out | 40 × 30 mm, plane from y = 66.25 | the same |
 | feed | 2.95 mm 50 Ω microstrip, 23.5 mm, 6-step taper | **the same line**, ending on the board edge |
-| ground | F.Cu + B.Cu pours, 41 vias | the same, launch vias moved into the land's ground pad |
+| ground | F.Cu **and** B.Cu pours, 41 stitching vias | **B.Cu only** — Figure 3's "Ground Layer 2" |
+| vias | 41 | **one**: the antenna's own ground pad, Figure 3's "Via to ground" |
 | launch | `SMA_EdgeMount_Generic`: signal pad, **two coplanar ground tabs**, B.Cu ground pad | `RF_Port_Land`: signal pad and B.Cu ground pad, **no coplanar tabs** |
-| port model | Coplanar (CPW) — the tabs make it one | **Microstrip (MSL)** — without them the line is a plain microstrip |
+| port model | Coplanar (CPW) — the tabs and the top pour make it one | **Microstrip (MSL)** |
 | schematic port | J1, `Conn_Coaxial_SMA` | `P1`, `RF_PORT` |
 
 `tools/gen_sim_board.py` imports `tools/gen_project.py` and reuses its
@@ -782,18 +814,17 @@ projects cannot drift apart. The differences are the ones in that table.
 
 Both lands come out of `tools/gen_sma_footprint.py`, from the same code and
 the same stackup — `--style sma` keeps the coplanar tabs, `--style port` drops
-them. That is deliberate: the *only* electrical difference between the two
-boards is the one thing you are trying to measure.
+them.
 
 Two details worth knowing:
 
-* **Removing the tabs changes which port model is correct.** With them the
-  launch is a grounded coplanar waveguide and CPW fits it; without them there
-  is no coplanar ground at all and the line is a plain microstrip over the
-  B.Cu pour, so **MSL** is the match. Leaving the port on CPW here produces a
-  plausible, wrong S11 and no warning. `check_sim_board.py` fails if anyone
-  adds an F.Cu ground pad back to the land, because that silently invalidates
-  the port model the rest of the documentation tells you to use.
+* **The absent top pour is the design, not an omission.** With it, the launch
+  is a grounded coplanar waveguide and CPW fits; without it the line is a plain
+  microstrip over layer 2 and **MSL** is the match. Leaving the port on CPW
+  here produces a plausible, wrong S11 and no warning. `check_sim_board.py`
+  fails if anyone adds an F.Cu pour, or an F.Cu ground pad to the land,
+  because either silently invalidates the port model the documentation tells
+  you to use.
 * **Copper touches the board edge on purpose.** A port launch belongs at the
   edge, so this project's `min_copper_edge_clearance` is 0. That rule exists to
   protect a *fabricated* board; this one is not meant to be fabricated.
@@ -807,7 +838,7 @@ python3 tools/mutate_sim_board.py    # prove those checks can fail
 ```
 
 In KiCad: open `sim/board/swra117d_2g4_sim.kicad_pro`, press **B** in the PCB
-editor to fill the zones, then set **port 1 to P1 pad 1** and its model to
+editor to fill the zone, then set **port 1 to P1 pad 1** and its model to
 **Microstrip (MSL)**. The coplanar/CPW advice from
 [section 3](#3-in-kicad-rfsim-plugin--port-setup) does **not** apply here.
 
@@ -826,6 +857,20 @@ models the same file, if you want a second opinion from a different solver.
 ### What the checker checks
 
 ```
+ok   board: the radiator plus a bare port land - no connector, and no coplanar ground beside the line, so the launch is microstrip (use an MSL port, not CPW)
+ok   board: Texas_SWRA117D_2.4GHz_Left matches all 14 dimensions of SWRA117D Table 1 within 11 um (exact copy) - the same footprint file the fabrication board uses
+ok   board: ground plane 39.6 x 23.5 mm on B.Cu only, as Figure 3 draws it - no ground copper on F.Cu
+ok   board: antenna keep-out runs down to the plane edge at y = 66.25, on F.Cu and B.Cu
+ok   port: pad 1 is 2.95 x 3.50 mm over a 12.95 x 3.50 mm B.Cu ground pad, so the reference is real copper and does not wait on a zone fill
+ok   feed: 8 segments, 21.8 mm, from the port pad at (124.0, 88.25) (2.95 mm wide) down to the 0.5 mm antenna pad
+ok   board: one via on the board - the antenna's own ground pad, 0.90 mm wide with a 0.3 mm drill, which is Figure 3's 'Via to ground' (W1 = 0.90 mm)
+ok   board: the feed is the only copper crossing the plane edge at y = 66.25, and its neck stops exactly on it
+ok   board: 1 copper zone(s) carry no fill yet - open the board and press B before simulating, or the model has no ground plane
+ok   schematic: 4 embedded symbols match the library, 7 pins all land on wires, ['#FLG01', '#PWR01', '#PWR02', 'AE1', 'P1'] placed
+
+0 problem(s)
+```
+
 ok   board: the radiator plus a bare port land - no connector, and no coplanar ground beside the line, so the launch is microstrip (use an MSL port, not CPW)
 ok   board: Texas_SWRA117D_2.4GHz_Left matches all 14 dimensions of SWRA117D Table 1 within 11 um (exact copy) - the same footprint file the fabrication board uses
 ok   board: ground plane 39.6 x 23.5 mm on F.Cu and B.Cu, same outline, both on GND
@@ -858,25 +903,26 @@ ok   schematic: 4 embedded symbols match the library, 5 pins all land on wires, 
 ```
 
 Those checks are mutation-tested, and the test is in the repo:
-`tools/mutate_sim_board.py` breaks a scratch copy of the project 21 different
+`tools/mutate_sim_board.py` breaks a scratch copy of the project 18 different
 ways and asserts the checker catches each one — a connector put back, the port
 land deleted, its B.Cu reference pad deleted or made narrower than the port
-pad, coplanar ground tabs added back at the port, the feed line deleted,
-stopped short of the port pad or not landing on the antenna pad, a stub
-branching off it, the bottom ground deleted or shrunk, the pour keep-away
-corridor deleted, the launch vias removed, a via on the line, in the keep-out,
-off GND, or not reaching B.Cu, the keep-out stopping short of the plane edge,
-`P1` left off the board, an embedded symbol edited away from the library, and a
-pin lifted off its wire.
+pad, coplanar ground tabs added back at the port, **a ground pour added on the
+top layer**, **a stitching via added that Figure 3 does not have**, **the
+antenna's ground pad turned from a plated hole into an SMD pad**, the layer 2
+ground deleted, the feed line deleted, stopped short of the port pad, not
+landing on the antenna pad, branching, or widened until it spills into the
+keep-out, the keep-out stopping short of the plane edge, `P1` left off the
+board, an embedded symbol edited away from the library, and a pin lifted off
+its wire.
 
 ```
 $ python3 tools/mutate_sim_board.py
-caught      the port land deleted
-              board: no RF_Port_Land - RFsim attaches its port to a pad, so without one it falls back to...
-caught      the port's B.Cu reference pad deleted
-              board: RF_Port_Land has no B.Cu pad - the port would have no reference copper until...
+caught      a ground pour added on the top layer too
+              board: ground pour on F.Cu as well as B.Cu - Figure 3 puts the ground on layer 2 only...
+caught      a stitching via added that Figure 3 does not have
+              board: 1 stitching via(s) at [(110.0, 75.0)] - with ground on layer 2 only there is...
 ...
-21/21 mutations caught
+18/18 mutations caught
 ```
 
 A mutation that exits non-zero without printing a finding is reported as
@@ -888,7 +934,7 @@ generated from this board by the same renderer as the other one.
 ## Reusing this on someone else's board
 
 [`docs/antenna-integration-checklist.md`](docs/antenna-integration-checklist.md)
-is the checklist this project produced: 53 items across antenna placement,
+is the checklist this project produced: 55 items across antenna placement,
 feed, stitching, simulation setup, what to leave out of a model, and tuning —
 each one there because getting it wrong here cost a wrong answer. It is written to be applied to any printed
 antenna, not just this one, and the "before you trust a simulation" section is

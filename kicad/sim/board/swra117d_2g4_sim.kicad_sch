@@ -5,7 +5,8 @@
 	(uuid "f0820ba2-7329-58cb-a18e-f65c6c3dd98c")
 	(paper "A4")
 	(title_block
-		(title "SWRA117D 2.45 GHz IFA - RFsim model: antenna + 50 ohm feed, no connector")
+		(title "SWRA117D 2.45 GHz IFA - RFsim model per Figure 3: ground on layer 2, direct feed, no connector"
+		)
 		(date "2026-09-12")
 		(rev "A")
 		(comment 1 "Radiator fed straight from the SMA port, no matching network")
@@ -240,7 +241,7 @@
 		(effects (font (size 1.27 1.27)) (justify left bottom))
 		(uuid "ca9a78ba-90dc-559e-9376-67133c59f5bf")
 	)
-	(text "RFsim model of the SWRA117D 2.45 GHz inverted-F antenna.\n\nSame antenna and same feed as the fabrication project, with the SMA\nremoved: the 50 ohm line runs to the board edge and stops there, and\nP1 marks where port 1 attaches.  P1 has no footprint and is not placed\non the board - it is the solver's source, not a part.\n\n2.95 mm wide 50 ohm microstrip on 1.6 mm FR4 (er 4.5, tan d 0.02),\ntapering to 0.5 mm over the last 4.5 mm to meet AE1 pin 1.\nAE1 pin 2 is the inverted-F ground pin and sits on the ground plane edge.\n\nBefore simulating: fill the zones (B in the PCB editor).  An unfilled\npour is not a ground plane, and an inverted-F radiates against its plane."
+	(text "RFsim model of the SWRA117D 2.45 GHz inverted-F antenna, drawn the way\nSWRA117D Figure 3 draws it.\n\nGround is layer 2 only: B.Cu carries the plane, F.Cu carries the antenna\nand the feed and no ground copper at all.  The only via on the board is\nthe antenna's own - AE1 pin 2, W1 = 0.90 mm, Figure 3's 'Via to ground'.\n\nP1 is the port land: pad 1 is the signal pad the solver drives, pad 2 is\nthe B.Cu ground directly under it.  No connector, and no coplanar ground\nbeside the line, so the feed is a microstrip - use an MSL port, not CPW.\n\n2.95 mm wide 50 ohm microstrip on 1.6 mm FR4 (er 4.5, tan d 0.02),\ntapering to 0.5 mm over the last 4.5 mm to meet AE1 pin 1.\n\nBefore simulating: fill the zone (B in the PCB editor).  An unfilled\npour is not a ground plane, and an inverted-F radiates against its plane."
 		(exclude_from_sim no)
 		(at 76.2 112 0)
 		(effects (font (size 1.27 1.27)) (justify left top))

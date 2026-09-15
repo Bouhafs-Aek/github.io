@@ -2,7 +2,9 @@
 """Mutation test for check_sim_board.py.
 
 Break the RFsim project one way at a time, in a scratch copy, and check that
-the checker reports it.  A checker that has never failed is a checker nobody
+the checker reports it.  The project is SWRA117D Figure 3 - antenna and feed
+on layer 1, ground on layer 2 only, one via, no connector - so most of these
+are ways of quietly ceasing to be that.  A checker that has never failed is a checker nobody
 has tested - and every rule below exists because the corresponding mistake is
 easy to make and invisible in a plot.
 
@@ -121,40 +123,40 @@ def feed_branches(pcb, _sch):
                     [Sym("uuid"), "stub"]])
 
 
-def drop_bottom_ground(pcb, _sch):
+def drop_ground(pcb, _sch):
     pcb.remove(pour(pcb, "B.Cu"))
 
 
-def shrink_bottom_ground(pcb, _sch):
-    for xy in find(find(pour(pcb, "B.Cu"), "polygon"), "pts")[1:]:
-        xy[1] = num(float(xy[1]) - 3.0)
+def top_side_ground(pcb, _sch):
+    """A top pour added back: the launch becomes coplanar and MSL stops fitting."""
+    top = copy.deepcopy(pour(pcb, "B.Cu"))
+    find(top, "layer")[1] = "F.Cu"
+    find(top, "uuid")[1] = "toppour"
+    pcb.insert(-1, top)
 
 
-def drop_pour_keepaway(pcb, _sch):
-    pcb.remove(zone(pcb, "RF_POUR_KEEPAWAY"))
+def stitching_via_added(pcb, _sch):
+    """A via that Figure 3 does not have, tying a top pour that is not there."""
+    pcb.insert(-1, [Sym("via"), [Sym("at"), num(110.0), num(75.0)],
+                    [Sym("size"), num(0.6)], [Sym("drill"), num(0.3)],
+                    [Sym("layers"), "F.Cu", "B.Cu"], [Sym("net"), Sym("1")],
+                    [Sym("uuid"), "stray"]])
 
 
-def strip_launch_vias(pcb, _sch):
-    for v in list(find_all(pcb, "via")):
-        if float(find(v, "at")[2]) > 84.0:
-            pcb.remove(v)
+def short_pad_not_plated(pcb, _sch):
+    """The antenna's ground pad made SMD: nothing carries the short to layer 2."""
+    fp = next(f for f in find_all(pcb, "footprint") if find(f, "fp_poly"))
+    pad = next(p for p in find_all(fp, "pad") if str(p[1]) == "2")
+    pad[2] = Sym("smd")
+    for i, child in enumerate(list(pad)):
+        if isinstance(child, list) and child[0] == "drill":
+            pad.remove(child)
 
 
-def via_on_the_antenna_pad(pcb, _sch):
-    """A via in the keep-out, where no copper of any layer is allowed."""
-    find(next(iter(find_all(pcb, "via"))), "at")[2] = num(66.0)
-
-
-def via_on_the_line(pcb, _sch):
-    find(next(iter(find_all(pcb, "via"))), "at")[1] = num(124.0)
-
-
-def via_not_grounded(pcb, _sch):
-    find(next(iter(find_all(pcb, "via"))), "net")[1] = Sym("0")
-
-
-def via_top_layer_only(pcb, _sch):
-    find(next(iter(find_all(pcb, "via"))), "layers")[2] = "F.Cu"
+def feed_into_the_keepout(pcb, _sch):
+    """The neck widened, so its copper spills past the plane edge."""
+    narrow = min(find_all(pcb, "segment"), key=lambda s: float(find(s, "width")[1]))
+    find(narrow, "width")[1] = num(2.0)
 
 
 def keepout_short(pcb, _sch):
@@ -194,15 +196,12 @@ MUTATIONS = [
     ("the feed line stopping short of the port pad", feed_off_the_port_pad),
     ("the feed line not landing on the antenna pad", feed_misses_the_pad),
     ("a stub branching off the feed line", feed_branches),
-    ("the bottom ground plane deleted", drop_bottom_ground),
-    ("the bottom ground plane smaller than the top pour", shrink_bottom_ground),
-    ("the pour keep-away corridor deleted", drop_pour_keepaway),
-    ("the vias at the launch removed", strip_launch_vias),
-    ("a via moved onto the feed line", via_on_the_line),
-    ("a via left off the GND net", via_not_grounded),
-    ("a via that does not reach B.Cu", via_top_layer_only),
+    ("the layer 2 ground plane deleted", drop_ground),
+    ("a ground pour added on the top layer too", top_side_ground),
+    ("a stitching via added that Figure 3 does not have", stitching_via_added),
+    ("the antenna's ground pad no longer a plated hole", short_pad_not_plated),
+    ("the feed line pushed into the antenna keep-out", feed_into_the_keepout),
     ("the antenna keep-out stopping short of the plane edge", keepout_short),
-    ("a via pushed up into the antenna keep-out", via_on_the_antenna_pad),
     ("P1 marked as sheet-only, so its land never reaches the PCB",
      port_left_off_the_board),
     ("an embedded symbol edited away from the library",

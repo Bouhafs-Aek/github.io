@@ -2,10 +2,10 @@
 """Static checks for the RFsim project (schematic + board).
 
 The fabrication project has its own checker.  This one asks a different
-question: is what the solver sees the antenna and its feed, and nothing else?
-A model quietly containing a connector, or missing a ground plane, is the
-commonest reason a published antenna "does not resonate where the datasheet
-says".
+question: is the board still the arrangement SWRA117D Figure 3 draws - the
+antenna and its feed on layer 1, ground on layer 2 and nowhere else, one via,
+no connector?  A model that quietly stops being that is the commonest reason a
+published antenna "does not resonate where the datasheet says".
 
     python3 kicad/tools/check_sim_board.py [board.kicad_pcb]
 """
@@ -27,8 +27,7 @@ LIB_PATH = PRJ_DIR / "library" / "SWRA117D_RF.kicad_sym"
 
 MIN_CLEARANCE = 0.15
 PORT_LAND = "RF_Port_Land"
-LAUNCH_VIA_RADIUS = 7.0     # "at the launch" means this close to the port pad
-LAUNCH_VIA_MIN = 6         # how many have to be that close
+GROUND_LAYER = "B.Cu"       # Figure 3: "Ground Layer 2", and only that
 EPS = 1e-6
 
 errors: list[str] = []
@@ -58,10 +57,16 @@ def on_segment(pt, a, b) -> bool:
     return -1e-6 <= dot <= length2 + 1e-6
 
 
-def plane_edge(pcb) -> float:
-    return min(float(xy[2])
-               for zone in find_all(pcb, "zone") if not find(zone, "keepout")
-               for xy in find(find(zone, "polygon"), "pts")[1:])
+def plane_edge(pcb):
+    """Top edge of the ground plane, read from the board's own pour.
+
+    None when the board has no pour at all: check_ground reports that, and the
+    checks that need an edge stand down instead of throwing.
+    """
+    ys = [float(xy[2])
+          for zone in find_all(pcb, "zone") if not find(zone, "keepout")
+          for xy in find(find(zone, "polygon"), "pts")[1:]]
+    return min(ys) if ys else None
 
 
 def outline(pcb):
@@ -104,9 +109,12 @@ def antenna(pcb):
             cx, cy = origin[0] + float(pat[1]), origin[1] + float(pat[2])
             w, h = float(size[1]), float(size[2])
             net = find(pad, "net")
+            drill = find(pad, "drill")
             pads[str(pad[1])] = dict(
                 centre=(cx, cy),
                 rect=(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2),
+                type=str(pad[2]),
+                drill=float(drill[1]) if drill is not None else None,
                 net=str(net[2]) if net is not None else "")
         poly = [(origin[0] + float(xy[1]), origin[1] + float(xy[2]))
                 for xy in find(find(fp, "fp_poly"), "pts")[1:]]
@@ -198,27 +206,36 @@ def check_exact_copy(pcb):
 
 
 def check_ground(pcb):
-    """A ground plane on both layers, congruent, on GND."""
+    """Ground on layer 2 and nowhere else, which is what Figure 3 draws.
+
+    The absence of a top pour is not an omission here, it is the arrangement:
+    it is what makes the feed unambiguously a microstrip (so MSL is the right
+    port model), and it is why there is nothing to stitch.
+    """
     zones = {str(find(z, "layer")[1]): z for z in find_all(pcb, "zone")
              if not find(z, "keepout") and find(z, "layer") is not None}
-    for layer in ("F.Cu", "B.Cu"):
-        if layer not in zones:
-            fail(f"board: no {layer} ground pour - an inverted-F radiates against "
-                 "its ground plane, so a model without one answers a different "
-                 "question")
-    if len(zones) < 2:
+    if GROUND_LAYER not in zones:
+        fail(f"board: no {GROUND_LAYER} ground pour - an inverted-F radiates "
+             "against its ground plane, so a model without one answers a "
+             "different question")
         return
-    if zone_bbox(zones["F.Cu"]) != zone_bbox(zones["B.Cu"]):
-        fail("board: the top and bottom pours do not cover the same area")
-    for layer, zone in zones.items():
-        if str(find(zone, "net_name")[1]) != "GND":
-            fail(f"board: the {layer} pour is not on GND")
-    x0, y0, x1, y1 = zone_bbox(zones["B.Cu"])
-    notes.append(f"board: ground plane {x1 - x0:.1f} x {y1 - y0:.1f} mm on F.Cu "
-                 "and B.Cu, same outline, both on GND")
+    strays = [l for l in zones if l != GROUND_LAYER]
+    if strays:
+        fail(f"board: ground pour on {', '.join(strays)} as well as "
+             f"{GROUND_LAYER} - Figure 3 puts the ground on layer 2 only, and "
+             "top-side ground beside the feed makes the launch coplanar, so an "
+             "MSL port would no longer describe it")
+    if str(find(zones[GROUND_LAYER], "net_name")[1]) != "GND":
+        fail(f"board: the {GROUND_LAYER} pour is not on GND")
+    x0, y0, x1, y1 = zone_bbox(zones[GROUND_LAYER])
+    notes.append(f"board: ground plane {x1 - x0:.1f} x {y1 - y0:.1f} mm on "
+                 f"{GROUND_LAYER} only, as Figure 3 draws it - no ground copper "
+                 "on F.Cu")
 
     keepout = zone_by_name(pcb, "ANTENNA_KEEPOUT")
     edge = plane_edge(pcb)
+    if edge is None:
+        return
     if keepout is None:
         fail("board: no ANTENNA_KEEPOUT zone")
     elif abs(zone_bbox(keepout)[3] - edge) > EPS:
@@ -323,71 +340,65 @@ def check_feed(pcb, port_pad):
     return launch
 
 
-def check_launch_vias(pcb, launch):
-    """Ground vias at the launch, not just somewhere on the board."""
-    if launch is None:
+def check_the_only_via(pcb):
+    """One via on the board, and it is the antenna's own.
+
+    Figure 3 has exactly one: "Via to ground", the W1 = 0.90 mm pad that shorts
+    the inverted-F.  With no top pour there is nothing else to stitch, so a
+    stray via here means something has been added that the figure does not have.
+    """
+    _fp, _poly, pads = antenna(pcb)
+    if pads is None:
         return
-    vias = []
-    for v in find_all(pcb, "via"):
-        at = find(v, "at")
-        pos = (float(at[1]), float(at[2]))
-        vias.append(pos)
-        if str(find(v, "net")[1]) != "1":
-            fail(f"board: via at {pos} is not on GND")
-        if [str(l) for l in find(v, "layers")[1:]] != ["F.Cu", "B.Cu"]:
-            fail(f"board: via at {pos} does not go F.Cu -> B.Cu - it ties the "
-                 "top pour to nothing")
-    if not vias:
-        fail("board: no ground vias at all - the top pour is not a ground plane, "
-             "it is a floating sheet")
+    extra = [(float(find(v, "at")[1]), float(find(v, "at")[2]))
+             for v in find_all(pcb, "via")]
+    if extra:
+        fail(f"board: {len(extra)} stitching via(s) at {extra[:3]} - with ground "
+             "on layer 2 only there is no top pour to tie down, and Figure 3 has "
+             "one via in it: the antenna's")
+
+    short = pads.get("2")
+    if short is None:
+        fail("board: the antenna has no pad 2 - an inverted-F has to be shorted "
+             "to ground")
         return
-    near = [v for v in vias if math.dist(v, launch) <= LAUNCH_VIA_RADIUS]
-    if len(near) < LAUNCH_VIA_MIN:
-        fail(f"board: only {len(near)} ground via(s) within {LAUNCH_VIA_RADIUS} mm "
-             "of the launch - the port's return current has to detour across the "
-             "top pour before it reaches the bottom plane, and that detour is in "
-             "series with everything downstream")
+    if short["type"] != "thru_hole" or short["drill"] is None:
+        fail("board: the antenna's ground pad is not a plated through hole, so "
+             "nothing carries the short down to layer 2 - Figure 3 calls it "
+             "'Via to ground'")
+    elif short["net"] != "GND":
+        fail("board: the antenna's ground pad is not on GND")
     else:
-        notes.append(f"port: {len(near)} ground vias within {LAUNCH_VIA_RADIUS} mm "
-                     f"of the launch, nearest at "
-                     f"{min(math.dist(v, launch) for v in near):.2f} mm")
-    notes.append(f"board: {len(vias)} ground vias total, all F.Cu -> B.Cu")
+        w = short["rect"][2] - short["rect"][0]
+        notes.append(f"board: one via on the board - the antenna's own ground pad, "
+                     f"{w:.2f} mm wide with a {short['drill']} mm drill, which is "
+                     "Figure 3's 'Via to ground' (W1 = 0.90 mm)")
 
 
-def check_clearances(pcb):
-    """Ground copper keeps away from the feed line and out of the keep-out."""
+def check_keepout(pcb):
+    """Nothing reaches above the ground plane edge except the antenna itself.
+
+    The feed's neck stops exactly on the edge: its centre line ends on the
+    antenna's feed pad 0.25 mm below it and it is 0.50 mm wide, so the neck's
+    upper edge and the plane edge are the same line.  Widen that neck and its
+    copper is inside the antenna's clear area.
+    """
     edge = plane_edge(pcb)
-    segs = feed_segments(pcb)
-    if not segs:
-        return                    # check_feed has already said so
-    worst = None
+    if edge is None:
+        return
+    for a, b, w in feed_segments(pcb):
+        top = min(a[1], b[1]) - w / 2
+        if top < edge - EPS:
+            fail(f"board: feed copper reaches y = {top:.2f}, above the plane edge "
+                 f"at {edge} - that is inside the antenna keep-out")
     for v in find_all(pcb, "via"):
         at = find(v, "at")
-        pos = (float(at[1]), float(at[2]))
         radius = float(find(v, "size")[1]) / 2
-        for a, b, w in segs:
-            gap = point_to_segment(pos, a, b) - radius - w / 2
-            if gap < MIN_CLEARANCE:
-                fail(f"board: via at {pos} is {gap:.3f} mm from the feed line")
-            worst = gap if worst is None else min(worst, gap)
-        if pos[1] - radius < edge:
-            fail(f"board: via at {pos} reaches into the antenna keep-out above "
-                 f"y = {edge}")
-    if worst is not None:
-        notes.append(f"board: every via clears the feed line by at least "
-                     f"{worst:.2f} mm (minimum {MIN_CLEARANCE} mm)")
-
-    corridor = zone_by_name(pcb, "RF_POUR_KEEPAWAY")
-    if corridor is None:
-        fail("board: no RF_POUR_KEEPAWAY rule area - the top pour would come up "
-             "to the feed line and turn the microstrip into a narrow-gap "
-             "coplanar waveguide of a different impedance")
-    else:
-        cx0, _cy0, cx1, _cy1 = zone_bbox(corridor)
-        line_w = max(w for _a, _b, w in segs)
-        gap = (cx1 - cx0 - line_w) / 2
-        notes.append(f"board: the top pour is held {gap:.2f} mm off the "
-                     f"{line_w} mm line, so it stays a microstrip")
+        if float(at[2]) - radius < edge:
+            fail(f"board: via at ({at[1]}, {at[2]}) reaches into the antenna "
+                 f"keep-out above y = {edge}")
+    notes.append(f"board: the feed is the only copper crossing the plane edge at "
+                 f"y = {edge}, and its neck stops exactly on it")
 
 
 def point_to_segment(p, a, b) -> float:
@@ -482,9 +493,9 @@ def main() -> int:
     check_exact_copy(pcb)
     check_ground(pcb)
     port_pad = check_port_reference(pcb)
-    launch = check_feed(pcb, port_pad)
-    check_launch_vias(pcb, launch)
-    check_clearances(pcb)
+    check_feed(pcb, port_pad)
+    check_the_only_via(pcb)
+    check_keepout(pcb)
     check_zones_unfilled(pcb)
     check_schematic()
     for note in notes:

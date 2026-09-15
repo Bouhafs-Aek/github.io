@@ -1,14 +1,30 @@
 #!/usr/bin/env python3
-"""Generate the RFsim project: the antenna and its feed line, with no connector.
+"""Generate the RFsim project: SWRA117D Figure 3, as the note draws it.
 
-This is a complete KiCad project - schematic, board and project file - not a
-stripped board.  Open it and run RFsim on it.
+A complete KiCad project - schematic, board and project file.  Open it and run
+RFsim on it.
 
-It is the fabrication project with the connector replaced by a bare port
-land.  J1, the SMA, is real hardware and belongs on the board that gets built,
-but inside a simulation its coplanar ground tabs are copper that is not the
-antenna, they carry the port's return current, and the bright field around
-them gets read as an antenna problem.
+Figure 3 shows a two layer board where layer 1 carries the antenna and the
+feed, and the ground is *layer 2 only* - the grey area captioned "Ground Layer
+2".  There is no ground copper on the top layer at all, and exactly one via in
+the whole picture: "Via to ground", the W1 = 0.90 mm pad that shorts the
+inverted-F.  This project is that arrangement.
+
+It follows from the figure, and it also removes three things that had been
+causing trouble:
+
+  * no top pour means no coplanar ground anywhere near the line, so the feed
+    is unambiguously a microstrip over layer 2 and an MSL port is right with
+    nothing to argue about;
+  * no top pour means no pour islands to resonate and nothing to stitch, so
+    the only via is the antenna's own;
+  * the port's reference is the ground plane itself, directly under the
+    signal pad, rather than something that has to be tied to it.
+
+The connector is gone too.  J1, the SMA, is real hardware and belongs on the
+board that gets built, but inside a simulation its coplanar ground tabs are
+copper that is not the antenna, they carry the port's return current, and the
+bright field around them gets read as an antenna problem.
 
 What is left in its place is the minimum a solver needs and nothing more:
 
@@ -20,8 +36,8 @@ What is left in its place is the minimum a solver needs and nothing more:
     with "no copper on reference layer B.Cu under the pad".
   * The B.Cu pad is real copper in the file, so the reference exists whether
     or not the zones have been filled.
-  * No coplanar ground beside the line, which is the difference that matters
-    against the SMA: the line stays a plain microstrip, so a microstrip (MSL)
+  * No coplanar ground beside the line - here because there is no top ground
+    copper at all - so the line is a plain microstrip and a microstrip (MSL)
     port is the model that fits it, not CPW.
 
 Everything else is shared with the fabrication project by construction: same
@@ -29,9 +45,6 @@ antenna footprint, same 1.6 mm FR4 stackup, same 2.95 mm line and taper, same
 board outline and ground plane edge.  ``tools/gen_project.py`` is imported
 rather than copied, so the two cannot drift apart.
 
-  * Ground vias sit either side of the land, inside its B.Cu ground pad, so
-    the port's return current reaches the bottom plane at the port rather than
-    somewhere downstream.
   * Copper is allowed to touch the board edge here (the project's edge
     clearance rule is 0), because a port launch is supposed to be at the edge.
 
@@ -47,7 +60,7 @@ import uuid
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import gen_project as gp  # noqa: E402
-from sexpr import Sym, dumps, num  # noqa: E402
+from sexpr import Sym, dumps, find, num  # noqa: E402
 
 # Its own uuid namespace, so nothing here shares an identity with the
 # fabrication project even though the two are generated from the same sources.
@@ -71,27 +84,27 @@ NETS = gp.NETS
 
 PAD_LEN_IN = gp.PAD_LEN_IN
 LAUNCH_Y = BOARD_Y1 - PAD_LEN_IN / 2    # centre of the port land's signal pad
-VIA_SIZE, VIA_DRILL = 0.6, 0.3
-# clear of the pour keep-away corridor, inside the land's B.Cu ground pad
-LAUNCH_VIA_X = (W50 / 2 + POUR_GAP + VIA_SIZE / 2 + 0.2, gp.LAUNCH_OFFSET + 1.0)
-LAUNCH_VIA_Y = (LAUNCH_Y - 0.8, LAUNCH_Y + 0.8)
-FENCE_PITCH, GRID_PITCH = 3.0, 5.0
+GROUND_LAYER = "B.Cu"                   # Figure 3: "Ground Layer 2", and only that
 
-TITLE = "SWRA117D 2.45 GHz IFA - RFsim model: antenna + 50 ohm feed, no connector"
+TITLE = ("SWRA117D 2.45 GHz IFA - RFsim model per Figure 3: ground on layer 2, "
+         "direct feed, no connector")
 
 SCH_NOTE = (
-    "RFsim model of the SWRA117D 2.45 GHz inverted-F antenna.\n"
+    "RFsim model of the SWRA117D 2.45 GHz inverted-F antenna, drawn the way\n"
+    "SWRA117D Figure 3 draws it.\n"
     "\n"
-    "Same antenna and same feed as the fabrication project, with the SMA\n"
-    "removed: the 50 ohm line runs to the board edge and stops there, and\n"
-    "P1 marks where port 1 attaches.  P1 has no footprint and is not placed\n"
-    "on the board - it is the solver's source, not a part.\n"
+    "Ground is layer 2 only: B.Cu carries the plane, F.Cu carries the antenna\n"
+    "and the feed and no ground copper at all.  The only via on the board is\n"
+    "the antenna's own - AE1 pin 2, W1 = 0.90 mm, Figure 3's 'Via to ground'.\n"
+    "\n"
+    "P1 is the port land: pad 1 is the signal pad the solver drives, pad 2 is\n"
+    "the B.Cu ground directly under it.  No connector, and no coplanar ground\n"
+    "beside the line, so the feed is a microstrip - use an MSL port, not CPW.\n"
     "\n"
     f"{W50} mm wide 50 ohm microstrip on {SUB_H} mm FR4 (er {SUB_ER}, tan d 0.02),\n"
     f"tapering to {W_NECK} mm over the last {TAPER_LEN} mm to meet AE1 pin 1.\n"
-    "AE1 pin 2 is the inverted-F ground pin and sits on the ground plane edge.\n"
     "\n"
-    "Before simulating: fill the zones (B in the PCB editor).  An unfilled\n"
+    "Before simulating: fill the zone (B in the PCB editor).  An unfilled\n"
     "pour is not a ground plane, and an inverted-F radiates against its plane."
 )
 
@@ -144,20 +157,6 @@ def feed_tracks() -> list:
     return tracks
 
 
-def stitching() -> list[tuple[float, float]]:
-    """Vias at the launch, along the plane edge, then over the rest of the pour."""
-    out = [(FEED_X + sign * dx, y)
-           for sign in (-1, 1) for dx in LAUNCH_VIA_X for y in LAUNCH_VIA_Y]
-
-    x = BOARD_X0 + 1.5
-    while x <= BOARD_X1 - 1.5:
-        if abs(x - FEED_X) > W50 / 2 + POUR_GAP + 0.5:
-            out.append((x, GND_EDGE_Y + 1.0))
-        x += FENCE_PITCH
-    out += gp.stitch_grid(out, LAUNCH_Y - 2.0, pitch=GRID_PITCH)
-    return out
-
-
 def build_board() -> list:
     gp.PROJECT = PROJECT
     gp.TITLE = TITLE
@@ -165,29 +164,39 @@ def build_board() -> list:
 
     pcb = gp.build_board()
 
-    # gp.build_board() drew the fabrication board's feed, stitching and notes;
-    # replace exactly those, and leave outline, pours and keep-outs alone.
-    keep = []
-    for node in pcb:
+    # Take out everything the fabrication board has that Figure 3 does not:
+    # its feed and stitching (replaced below), its top ground pour and the
+    # corridor that exists only to keep that pour off the line, and the two
+    # silkscreen lines that name it.
+    def drop(node) -> bool:
         if node[0] in ("segment", "via"):
-            continue
-        if node[0] == "gr_text" and str(node[1]).startswith(("SWRA117D 2.45 GHz IFA - RF",
-                                                            "50R microstrip")):
-            continue
-        keep.append(node)
-    pcb = keep
+            return True
+        if node[0] == "gr_text" and str(node[1]).startswith(
+                ("SWRA117D 2.45 GHz IFA - RF", "50R microstrip")):
+            return True
+        if node[0] == "zone":
+            layer = find(node, "layer")
+            name = find(node, "name")
+            if layer is not None and str(layer[1]) == "F.Cu" and not find(node, "keepout"):
+                return True                       # the top ground pour
+            if name is not None and str(name[1]) == "RF_POUR_KEEPAWAY":
+                return True
+        return False
+
+    pcb = [node for node in pcb if not drop(node)]
 
     tail = pcb.pop()                      # (embedded_fonts no) stays last
     for a, b, width, net in feed_tracks():
         pcb.append(gp.segment(a, b, width, net))
-    for pos in stitching():
-        pcb.append(gp.via(pos, size=VIA_SIZE, drill=VIA_DRILL))
-    pcb.append(gp.gr_text("SWRA117D 2.45 GHz IFA - RFsim model, no connector",
+    pcb.append(gp.gr_text("SWRA117D 2.45 GHz IFA - RFsim model per Figure 3",
                           (BOARD_X0 + 1.0, BOARD_Y1 - 7.0), "F.SilkS", size=1.2))
     pcb.append(gp.gr_text(f"50R microstrip w={W50}mm / {SUB_H}mm FR4 er={SUB_ER}",
                           (BOARD_X0 + 1.0, BOARD_Y1 - 5.6), "F.SilkS", size=0.9))
-    pcb.append(gp.gr_text("PORT 1: P1 pad 1, referenced to its B.Cu ground pad - "
-                          "microstrip (MSL), not CPW: no coplanar ground here",
+    pcb.append(gp.gr_text("GROUND IS LAYER 2 (B.Cu) ONLY - no ground copper on F.Cu, "
+                          "and the only via is the antenna's own",
+                          (BOARD_X0 + 0.8, GND_EDGE_Y + 2.2), "Cmts.User", size=0.8))
+    pcb.append(gp.gr_text("PORT 1: P1 pad 1 over its B.Cu ground pad - microstrip "
+                          "(MSL), not CPW",
                           (BOARD_X0 + 0.8, BOARD_Y1 - 1.0), "Cmts.User", size=0.8))
     pcb.append(tail)
     return pcb

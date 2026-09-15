@@ -124,9 +124,14 @@ def load_board(path: pathlib.Path) -> dict:
                      er=float(find(core, "epsilon_r")[1]),
                      tand=float(find(core, "loss_tangent")[1]))
 
-    gnd_top = min(float(xy[2])
-                  for zone in find_all(pcb, "zone") if not find(zone, "keepout")
+    pours = [z for z in find_all(pcb, "zone") if not find(z, "keepout")]
+    gnd_top = min(float(xy[2]) for zone in pours
                   for xy in find(find(zone, "polygon"), "pts")[1:])
+    # Which layers actually carry ground.  SWRA117D Figure 3 puts it on layer 2
+    # only, and a model that adds a top pour the board does not have turns the
+    # feed into a coplanar line and answers a different question.
+    ground_layers = sorted({str(find(z, "layer")[1]) for z in pours
+                            if find(z, "layer") is not None})
 
     # rule areas that keep the top pour off the feed line
     corridors = []
@@ -178,7 +183,8 @@ def load_board(path: pathlib.Path) -> dict:
             and str(find(s, "layer")[1]) == "F.Cu"]
 
     board = dict(outline=outline, substrate=substrate, gnd_top=gnd_top,
-                 corridors=corridors, antenna=antenna, vias=vias)
+                 corridors=corridors, antenna=antenna, vias=vias,
+                 ground_layers=ground_layers)
     if feed:
         launch = min((p for seg in feed for p in seg[:2]), key=lambda p: p[0])
         board.update(feed=order_path(feed, launch), launch=launch, port_gap=None)
@@ -227,6 +233,7 @@ def to_sim(board: dict) -> dict:
             feed[0] = ((ax, 0.0 if ay < span_y / 2 else span_y), (bx, by), w)
     return dict(width=x1 - x0, height=y1 - y0,
                 substrate=board["substrate"],
+                ground_layers=board["ground_layers"],
                 gnd_height=y1 - board["gnd_top"],
                 corridors=[conv_rect(r) for r in board["corridors"]],
                 antenna=[conv(p) for p in board["antenna"]["points"]],
@@ -282,11 +289,15 @@ def build(geo: dict, resolution: float, air: float):
     sub.AddBox([0, 0, 0], [w, d, h], priority=0)
 
     # bottom side: the reference plane, stopping at the antenna keep-out
-    metal.AddBox([0, 0, 0], [w, geo["gnd_height"], 0], priority=10)
+    if "B.Cu" in geo["ground_layers"]:
+        metal.AddBox([0, 0, 0], [w, geo["gnd_height"], 0], priority=10)
 
-    # top side: the same pour, minus the keep-away corridors round the feed
-    for x0, y0, x1, y1 in pour_boxes((0, 0, w, geo["gnd_height"]), geo["corridors"]):
-        metal.AddBox([x0, y0, h], [x1, y1, h], priority=10)
+    # top side: the same pour, minus the keep-away corridors round the feed.
+    # Only when the board actually has one - Figure 3 does not.
+    if "F.Cu" in geo["ground_layers"]:
+        for x0, y0, x1, y1 in pour_boxes((0, 0, w, geo["gnd_height"]),
+                                         geo["corridors"]):
+            metal.AddBox([x0, y0, h], [x1, y1, h], priority=10)
 
     # stitching vias: square barrels of the drill diameter, top pour to plane.
     # Without them the two sheets of copper are not connected to each other and
@@ -429,7 +440,8 @@ def main() -> None:
     sub = geo["substrate"]
     print(f"board          : {geo['width']:.1f} x {geo['height']:.1f} mm, "
           f"{sub['h']} mm FR4 (er {sub['er']}, tan d {sub['tand']})")
-    print(f"ground plane   : y = 0 .. {geo['gnd_height']:.2f} mm "
+    print(f"ground plane   : {', '.join(geo['ground_layers'])}, "
+          f"y = 0 .. {geo['gnd_height']:.2f} mm "
           f"(antenna region {geo['gnd_height']:.2f} .. {geo['height']:.1f} mm is clear)")
     if geo["feed"]:
         length = sum(math.dist(a, b) for a, b, _w in geo["feed"])
@@ -446,12 +458,21 @@ def main() -> None:
         print(f"feed           : direct - no line.  Lumped port, 50 ohm, "
               f"{px1 - px0:.2f} mm wide x {py1 - py0:.2f} mm gap at "
               f"({(px0 + px1) / 2:.2f}, {(py0 + py1) / 2:.2f}) mm")
-    print(f"stitching vias : {len(geo['vias'])}, "
-          f"{sum(1 for (_x, vy), _d in geo['vias'] if vy > geo['gnd_height'] - 2.0)} "
-          "of them within 2 mm of the plane edge")
-    boxes = pour_boxes((0, 0, geo["width"], geo["gnd_height"]), geo["corridors"])
-    print(f"top pour       : {len(boxes)} boxes around "
-          f"{len(geo['corridors'])} keep-away corridors")
+    if geo["vias"]:
+        near = sum(1 for (_x, vy), _d in geo["vias"] if vy > geo["gnd_height"] - 2.0)
+        print(f"stitching vias : {len(geo['vias'])}, {near} of them within 2 mm "
+              "of the plane edge")
+    else:
+        print("stitching vias : none - with no top pour there is nothing to "
+              "stitch; the antenna's own ground pad carries the short")
+    if "F.Cu" in geo["ground_layers"]:
+        boxes = pour_boxes((0, 0, geo["width"], geo["gnd_height"]), geo["corridors"])
+        print(f"top pour       : {len(boxes)} boxes around "
+              f"{len(geo['corridors'])} keep-away corridors")
+    else:
+        print("top pour       : none - ground is on "
+              f"{', '.join(geo['ground_layers'])} only, as SWRA117D Figure 3 "
+              "draws it")
     ax = [p[0] for p in geo["antenna"]]
     ay = [p[1] for p in geo["antenna"]]
     print(f"antenna copper : {len(geo['antenna'])} vertices, "

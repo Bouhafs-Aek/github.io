@@ -32,10 +32,14 @@ def measure(path: pathlib.Path) -> dict:
     pcb = parse(path.read_text())
     vias = [(float(find(v, "at")[1]), float(find(v, "at")[2]))
             for v in find_all(pcb, "via")]
-    if not vias:
-        raise SystemExit(f"{path.name}: no vias")
-
     pours = [z for z in find_all(pcb, "zone") if not find(z, "keepout")]
+    top = [z for z in pours if str(find(z, "layer")[1]) == "F.Cu"]
+    if not top:
+        # nothing to stitch: the ground is on one layer, so there is no second
+        # sheet of copper that has to be tied to it
+        return None
+    if not vias:
+        raise SystemExit(f"{path.name}: has a top pour but no vias to stitch it")
     pts = [(float(xy[1]), float(xy[2])) for z in pours
            for xy in find(find(z, "polygon"), "pts")[1:]]
     x0, x1 = min(p[0] for p in pts), max(p[0] for p in pts)
@@ -77,6 +81,10 @@ def main() -> int:
     paths = [pathlib.Path(a) for a in sys.argv[1:]] or list(DEFAULTS)
     for path in paths:
         m = measure(path)
+        if m is None:
+            print(f"{path.name}: ground on one layer only - no top pour to "
+                  "stitch, so there is no unstitched span to measure")
+            continue
         print(f"{path.name}: {m['vias']} vias; the worst-stitched point on the "
               f"pour is {m['radius']:.2f} mm from one, at {m['at']}\n"
               f"{' ' * len(path.name)}  -> unstitched span {m['span']:.2f} mm, "

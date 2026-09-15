@@ -233,6 +233,15 @@ than a gap port.
       footprint makes the line coplanar, so a CPW port fits it. With the
       footprint gone there is no coplanar ground beside the line and it is a
       plain microstrip — an MSL port is then the one that matches.
+- [ ] **Check which layers the ground is actually on, and model only those.**
+      A reference design that puts the ground on one layer is making a choice:
+      a top pour beside the feed turns a microstrip into a coplanar line, and
+      adding one to the model answers a different question than the figure
+      asks. Read the layer off the drawing, not off habit.
+- [ ] **Count the vias in the reference drawing.** If it has one, a model with
+      forty has copper the design does not. With the ground on a single layer
+      there is nothing to stitch, and stitching vias are then a source of
+      geometry rather than a fix for it.
 - [ ] **A gap port needs a gap you control.** If you do feed with no line at
       all, the port is a lumped port across the gap between the radiator and
       the ground pour. Cut that gap as a *keep-out*, not as the zone's pour
