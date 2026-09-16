@@ -1143,7 +1143,7 @@ invalidates the BOM.
 | Z62 | **3.9 pF series** | Table 3, dual band |
 | Z61, Z63 | **not fitted** | Table 3 — laid out anyway, which is the note's own reason for the network: somewhere to compensate detuning from an enclosure |
 | measured | SWR 1.2 @ 868, 1.6 @ 2.44 GHz | section 4.3 |
-| bandwidth | 73 MHz @ 868, 354 MHz @ 2.4 GHz | section 4.3.2 |
+| bandwidth | 73 MHz @ 868 (**820 – 893 MHz**), 354 MHz @ 2.4 GHz (**2386 – 2740 MHz**), both at SWR 2.0 | section 4.3.2 |
 | efficiency | 94–95 %, gain 3.4–4.9 dBi | OTA summary, Table 4 |
 
 One thing is inferred rather than stated: **which of Z61/Z63 sits on which
@@ -1151,6 +1151,45 @@ side of Z62.** Figure 2 draws Z63 above Z61 with the connector below both, and
 the single band BOM — series 1.8 nH with a shunt 2.7 pF — is an L match that
 only works with the shunt on the source side. Both readings put Z61 nearest
 the connector, which is how it is laid out.
+
+### Which radios this actually covers
+
+The bands above are TI's measured −10 dB edges on the 43 × 63 mm plane, so the
+question "does it do LoRa?" has an arithmetic answer rather than a marketing
+one. **Dual band mode covers 820 – 893 MHz and 2386 – 2740 MHz.**
+
+| radio / plan | band | dual band (`dn024/`, `dn024_ti_form/`) |
+|---|---|---|
+| **LoRaWAN EU868** | 863 – 870 MHz | **yes** — 43 MHz of margin below, 23 MHz above |
+| LoRaWAN IN865 | 865 – 867 MHz | **yes** |
+| LoRaWAN RU864 | 864 – 870 MHz | **yes** |
+| Sigfox RC1, wM-Bus, generic 868 ISM | 868 MHz | **yes** |
+| **LoRa 2.4 GHz** (SX128x) | 2400 – 2500 MHz | **yes** — the 2.4 GHz band is 354 MHz wide |
+| BLE / 802.15.4 / Wi-Fi 2.4 | 2400 – 2483.5 MHz | **yes** |
+| **LoRaWAN US915 / AU915** | 902 – 928 MHz | **no** — the band stops at 893 MHz |
+| LoRaWAN AS923, KR920 | 920 – 923 MHz | **no** |
+| LoRaWAN CN470 | 470 – 510 MHz | **no** — wrong antenna entirely |
+
+For **915 or 920 MHz** the note says to use *single band* mode, with `L4`
+*"shortened to the silkscreen marking"* — and dimensions that marking nowhere,
+which is exactly the number this repo refuses to invent (see above). Single
+band as built, with `L4` at its published 38.0 mm, measures 825 – 913 MHz:
+that reaches the bottom 11 MHz of US915 and no further. So US915 is a real
+re-tune, not a BOM change, and the honest answer is that the Gerber from the
+CC-Antenna-DK is what settles it.
+
+One thing to carry into the radio design if you use both bands at once, in
+TI's own words: *"it is important to keep the 3rd harmonic of the 868 MHz
+(2.604 GHz) underneath the regulatory limits since the 2.4 GHz antenna
+(2.74 GHz to 2.38 GHz) will also radiate the 3rd harmonic as well."* The
+antenna is efficient at 2.604 GHz by design, so it will happily radiate
+whatever the sub-GHz PA leaves there. That is a filter problem at the radio,
+not an antenna problem — but it is created by sharing one antenna across both
+bands.
+
+Measured efficiency, for the same reason of having numbers rather than
+adjectives: **94.5 % at 868 MHz and 95.4 % at 2440 MHz**, gain 4.85 and
+3.35 dBi (Table 4, full CTIA report in DN616).
 
 ### Two layers only count as one conductor if you stitch them
 
