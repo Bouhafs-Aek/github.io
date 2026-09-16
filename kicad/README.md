@@ -46,12 +46,14 @@ kicad/
 │   ├── board-drawing.svg            dimensioned drawing, generated from the PCB
 │   ├── dn024-board-drawing.svg      the same, for the DN024 board
 │   ├── dn024-ti-form-drawing.svg    the same, for the DN024 reference form
+│   ├── dn024-sim-board-drawing.svg  the same, for the DN024 RFsim model
 │   ├── sim-board-drawing.svg        the same, for the simulation board
 │   └── antenna-integration-checklist.md   design review list for any project
 ├── sim/
 │   ├── antenna_swra117d.lib         lumped antenna model (ngspice subckt)
 │   ├── s11_antenna.cir              S11 / VSWR / Zin at the connector
 │   ├── board/swra117d_2g4_sim.*     RFsim project: Figure 3, ground on layer 2
+│   ├── board/dn024_monopole_sim.*   RFsim project: DN024, Z62 shorted, no pours
 │   └── openems/swra117d_openems.py  full-wave S11, impedance, directivity
 └── tools/                           generators, checkers, line + scaling calculators
 ```
@@ -1409,20 +1411,122 @@ form is easier to fixture and keeps the connector body out of the antenna's
 half-space. They share every dimension that sets the resonance, so the antenna
 is the same antenna either way.
 
-### Not done yet
+### Simulating it: `sim/board/dn024_monopole_sim.*`
 
-No simulation and no RFsim project for this antenna. Two reasons, and the
-second is the real one: 868 MHz needs a domain margin of λ/4 = **86 mm**
-against the 37.5 mm the 2.4 GHz board needs, so the domain volume is about
-12× larger and the run is correspondingly slower; and the pi network is a
-lumped part of the answer here, so a full-wave run of the copper alone does
-not give the S11 the note quotes — it gives the antenna's raw impedance, which
-is then matched. Say the word and it is the same machinery as the first board.
+Handing either fabrication board straight to a field solver produces a
+confident, detailed, entirely wrong S11. Two reasons, neither of them about
+the antenna, and both invisible in the PCB editor:
+
+**1. KiCad stores zones unfilled.** A `.kicad_pcb` written by a script has
+zone *outlines* and no `filled_polygon` at all until somebody presses **B**
+and saves. A solver reads the file. For a microstrip that costs you the
+reference; for a **monopole it is fatal**, because the plane is the other half
+of the antenna — there is nothing to resonate against, and what comes back is
+the feed line talking to itself.
+
+**2. A field solver meshes copper, and Z62 is a 3.9 pF capacitor.** On the
+fabrication board Z62 is an 0402 land: two pads with a **0.40 mm gap** between
+them. The solver sees the gap, not the part that will be soldered across it —
+a fraction of a picofarad where 3.9 pF belongs:
+
+| | at 868 MHz | at 2.44 GHz |
+|---|---|---|
+| 3.9 pF, the real part | −j47 Ω | −j17 Ω |
+| ~30 fF, a 0.40 mm gap | **−j6100 Ω** | **−j2200 Ω** |
+
+−j6100 Ω is an open circuit. The antenna is **not connected to the port**, and
+S11 sits at 0 dB across the sub-GHz band with the port looking into a stub.
+That is not a bad match, it is no circuit.
+
+So `tools/gen_dn024_sim_board.py` builds a third DN024 project that removes
+both, and nothing else:
+
+* **No zones at all.** The ground plane is *pads* — 43 × 63 mm solid on B.Cu,
+  and the same plane on F.Cu minus the opening around the feed. Pads are solid
+  copper in the file, so there is no fill step to forget and nothing that
+  looks like a plane but is not one.
+* **Z62 is a copper bridge.** One continuous `ANT_FEED` net from the port pad
+  to the antenna.
+* **No connector.** `P1` is a port land the width of the 50 Ω line, with the
+  B.Cu plane directly underneath as its reference — RFsim attaches ports to
+  pads and needs reference copper under the one it drives.
+* Geometry is otherwise `dn024_ti_form` verbatim, imported rather than copied.
+
+#### The point of shorting Z62 is that it gives you a number to check against
+
+This is not a workaround, it is the configuration TI measured. SWRA227E 4.3.1:
+
+> *"With no antenna match components (Z62: 0 ohm), at 868 MHz the match is poor
+> with SWR 2.9 and excellent at 2.44 GHz with SWR 1.2."*
+
+So a correct run of this board must land near:
+
+| | SWR | S11 |
+|---|---|---|
+| **868 MHz** | 2.9 | **−6.2 dB** |
+| **2440 MHz** | 1.2 | **−20.8 dB** |
+
+**Not** Figure 13's matched −10 dB bands. Those include the 3.9 pF, and no
+copper-only model can produce them — add the capacitor in a circuit simulator
+afterwards, on top of the Zin this run gives you. A full-wave result you
+cannot check against a measured number is not a result, and this is the only
+DN024 number in the note that a copper-only model is entitled to reproduce.
+
+The expectation is printed by the generator, written on the board's
+`User.Comments` layer, put in the schematic note, and asserted by the checker,
+so it is in front of you at the moment you read the plot.
+
+#### Running it
+
+```sh
+python3 tools/gen_dn024_sim_board.py
+python3 tools/check_dn024_sim.py
+```
+
+```
+ok   board: no copper pours, so there is no fill step to forget - the ground plane is pads, which are solid copper in the file
+ok   board: ground plane 43.0 x 63.0 mm as 1 B.Cu pad(s) (2709 mm2) and 3 F.Cu pad(s), the size SWRA227E Table 3 measured the match on
+ok   board: port pad 2.95 x 2.0 mm at (122.5, 113.0) with solid B.Cu directly under it - attach RFsim port 1 here, as MSL
+ok   board: one continuous ANT_FEED run of 11 tracks from the port pad to the antenna, with copper where the fabrication board puts Z62 - this is SWRA227E 4.3.1's 'Z62: 0 ohm' case
+ok   board: closest ground copper to a signal track 0.38 mm (Z61.2 vs a ANT_FEED track)
+ok   expect:    868 MHz  SWR 2.9  ->  S11 =  -6.2 dB  (SWRA227E 4.3.1, measured with Z62 = 0 ohm)
+ok   expect:   2440 MHz  SWR 1.2  ->  S11 = -20.8 dB  (SWRA227E 4.3.1, measured with Z62 = 0 ohm)
+ok   expect: NOT Figure 13's matched bands - those include the 3.9 pF, and no copper-only model can produce them
+
+0 problem(s)
+```
+
+The checker was mutation-tested against the obvious mutant — the fabrication
+board itself, which has both faults — and reports all four:
+
+```
+FAIL board: 2 copper pour(s) - this board must carry none. KiCad writes zones unfilled, a solver reads the file, and an unfilled pour is not a ground plane
+FAIL board: no solid B.Cu ground copper - a monopole radiates against its plane, and without one there is nothing to resonate
+FAIL board: expected exactly one P1 pad 1 to drive, found 0
+FAIL board: an RF_IN net exists, so the feed is still split by a series matching land. A solver meshes copper: that land is a 0.40 mm gap, not 3.9 pF, and the antenna is left unconnected
+```
+
+#### Sweep and domain
+
+Sub-GHz costs domain, and the rule is a quarter wavelength of free space at
+the **lowest frequency you sweep**, not at the band of interest:
+
+| sweep starts at | λ/4 margin the domain needs |
+|---|---|
+| 868 MHz | 86 mm |
+| 0.6 GHz | 125 mm |
+| 0.5 GHz | **150 mm** |
+
+Starting at 0.5 GHz costs about 1.7× the domain volume of starting at 0.6 GHz
+and tells you nothing — there is no band there. Start at 0.6 GHz.
+
+[`docs/dn024-sim-board-drawing.svg`](docs/dn024-sim-board-drawing.svg) is the
+drawing.
 
 ## Reusing this on someone else's board
 
 [`docs/antenna-integration-checklist.md`](docs/antenna-integration-checklist.md)
-is the checklist these projects produced: 77 items across antenna placement,
+is the checklist these projects produced: 81 items across antenna placement,
 feed, stitching, simulation setup, what to leave out of a model, bench
 measurement, and tuning —
 each one there because getting it wrong here cost a wrong answer. It is written to be applied to any printed

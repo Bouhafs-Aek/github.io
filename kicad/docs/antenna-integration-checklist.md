@@ -159,6 +159,30 @@ Every one of these has produced a confidently wrong answer in practice.
       shorted to ground by design. A circuit-level extractor sees only that
       short and reports VSWR → ∞.
 
+### Two faults that make a full-wave run meaningless, and look fine on screen
+
+- [ ] **Zones filled AND saved before the solver reads the file.** KiCad
+      stores zones as outlines with no fill until you press **B**; a script
+      written board has none at all. A solver reads the file, so an unfilled
+      pour is simply not there. For a microstrip that costs the reference;
+      for a **monopole or a dipole it is fatal** — the plane is half the
+      antenna. Better: in a simulation-only board, make the plane *pads*,
+      which are solid copper in the file and have no fill step to forget.
+- [ ] **Every series matching part accounted for.** A field solver meshes
+      copper. A series 0402 land is a **0.4 mm gap**, worth a fraction of a
+      pF, not the part you will fit: −j6000 Ω at 868 MHz where a 3.9 pF
+      wants −j47 Ω. That is an open circuit, and the antenna is not
+      connected to the port at all. Either short the land in the model, or
+      tell the solver the lumped value — never assume it read the schematic.
+- [ ] **A published number to check the run against, chosen before you run.**
+      Application notes usually measure the *unmatched* case as well as the
+      matched one; the unmatched one is what a copper-only model computes.
+      Match that first. A result you cannot compare to a measurement is not
+      a result.
+- [ ] **A signal net that is continuous from port to radiator**, verified by
+      walking the copper — not by looking at the ratsnest, which shows
+      intent rather than metal.
+
 ## 4a. Choosing the port model
 
 Every field solver offers two or three port models, and they differ in what

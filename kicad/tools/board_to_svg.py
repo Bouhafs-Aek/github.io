@@ -69,8 +69,17 @@ def render(pcb_path: pathlib.Path) -> str:
     ys = [p[1] for e in edges for p in e]
     x0, y0, x1, y1 = min(xs), min(ys), max(xs), max(ys)
 
-    plane = min(float(xy[2]) for z in find_all(pcb, "zone") if not find(z, "keepout")
-                for xy in find(find(z, "polygon"), "pts")[1:])
+    # The ground plane edge is normally the top of the pour.  The simulation
+    # boards carry no pour - their ground is pads, so that there is no fill
+    # step to forget - so fall back to the bottom of the antenna keep-out,
+    # which is the same line by construction.
+    def zone_ys(keepout: bool):
+        return [float(xy[2]) for z in find_all(pcb, "zone")
+                if bool(find(z, "keepout")) == keepout
+                for xy in find(find(z, "polygon"), "pts")[1:]]
+
+    pour_ys = zone_ys(False)
+    plane = min(pour_ys) if pour_ys else max(zone_ys(True), default=y1)
 
     body, pads_f, pads_b, vias = [], [], [], []
     for fp in find_all(pcb, "footprint"):

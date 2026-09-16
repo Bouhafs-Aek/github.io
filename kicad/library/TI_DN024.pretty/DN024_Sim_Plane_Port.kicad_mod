@@ -1,0 +1,53 @@
+(footprint "DN024_Sim_Plane_Port"
+	(version 20241229)
+	(generator "gen_dn024_sim_board.py")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(descr "Simulation only. Pad 1 is the RFsim port land, the width of the 50 ohm line. The pads numbered 2 are the DN024 ground plane - 43.0 x 63.0 mm solid on B.Cu, and the same plane on F.Cu minus the opening around the feed and the pi network. They are pads and not zones on purpose: KiCad stores zones unfilled, and a solver reads the file, so an unfilled pour is no ground plane at all. Do not put this on a board you intend to fabricate."
+	)
+	(tags "simulation port ground plane RFsim openEMS DN024")
+	(attr exclude_from_pos_files exclude_from_bom allow_missing_courtyard)
+	(property "Reference" "REF**"
+		(at 0 -2.4 0)
+		(layer "F.SilkS")
+		(uuid "d0ae825c-bd86-5bff-bc5e-31ad2a1dec88")
+		(effects (font (size 1 1) (thickness 0.15)))
+	)
+	(property "Value" "DN024_Sim_Plane_Port"
+		(at 0 2.4 0)
+		(layer "F.Fab")
+		(uuid "cb1ab5ff-c974-59f3-98e2-dd1115432573")
+		(effects (font (size 0.8 0.8) (thickness 0.12)))
+	)
+	(pad "1" smd rect
+		(at 0 0)
+		(size 2.95 2)
+		(layers "F.Cu" "F.Mask")
+		(uuid "dc6fef29-a48a-5b20-ab79-3155ce1df96a")
+	)
+	(pad "2" smd rect
+		(at 0 9.5)
+		(size 43 63)
+		(layers "B.Cu" "B.Mask")
+		(uuid "e467f5bc-a081-533d-ba45-069b09ce2de4")
+	)
+	(pad "2" smd rect
+		(at -13.625 9.5)
+		(size 15.75 63)
+		(layers "F.Cu" "F.Mask")
+		(uuid "37bcdf41-6ce5-562c-937c-4c7d72b29285")
+	)
+	(pad "2" smd rect
+		(at 13.625 9.5)
+		(size 15.75 63)
+		(layers "F.Cu" "F.Mask")
+		(uuid "e166897f-51ab-53fc-afa1-a8c31b3a6637")
+	)
+	(pad "2" smd rect
+		(at 0 22.87)
+		(size 11.5 36.26)
+		(layers "F.Cu" "F.Mask")
+		(uuid "63710687-7a72-50d1-a0fd-f0b654d5115e")
+	)
+	(embedded_fonts no)
+)
