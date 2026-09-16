@@ -6,7 +6,11 @@ that are specific to this one: the radiator is an exact copy of SWRA227E
 Table 1, the ground plane is the size the published match belongs to, and the
 pi network is wired and populated the way Table 3 says.
 
-    python3 kicad/tools/check_dn024.py
+    python3 kicad/tools/check_dn024.py [project.kicad_pcb]
+
+With no argument it checks both DN024 projects: the edge-launch one in dn024/
+and the reference-form one in dn024_ti_form/.  They share an antenna, a ground
+plane and a matching BOM, so they share a checker.
 """
 
 from __future__ import annotations
@@ -19,10 +23,10 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from sexpr import find, find_all, parse  # noqa: E402
 
 PRJ_DIR = pathlib.Path(__file__).resolve().parent.parent
-PROJECT = "dn024_monopole_868_2440"
-SCH = PRJ_DIR / "dn024" / f"{PROJECT}.kicad_sch"
-PCB = PRJ_DIR / "dn024" / f"{PROJECT}.kicad_pcb"
+PROJECTS = [PRJ_DIR / "dn024" / "dn024_monopole_868_2440.kicad_pcb",
+            PRJ_DIR / "dn024_ti_form" / "dn024_monopole_ti_form.kicad_pcb"]
 LIB = PRJ_DIR / "library" / "TI_DN024.kicad_sym"
+PCB = SCH = None                 # set per project by main()
 MIN_CLEARANCE = 0.15
 EPS = 1e-6
 
@@ -352,6 +356,23 @@ def check_board(pcb, pads, nets):
         if float(at[2]) - float(find(v, "size")[1]) / 2 < edge:
             fail(f"board: via at ({at[1]}, {at[2]}) is in the antenna keep-out")
 
+    # copper of one net must keep away from pads of another.  This is what
+    # caught a 50 ohm line trying to pass between ground posts 5.08 mm apart:
+    # it left 0.12 mm, and nothing was looking.
+    worst_pad = None
+    for a, b, w, net in segs:
+        for pad in pads:
+            if pad["net"] == net:
+                continue
+            if not set(pad["layers"]) & {"F.Cu", "*.Cu"}:
+                continue
+            gap = (point_to_segment(pad["centre"], a, b) - w / 2
+                   - max(pad["size"]) / 2)
+            worst_pad = gap if worst_pad is None else min(worst_pad, gap)
+            if gap < MIN_CLEARANCE:
+                fail(f"board: a {net} track is {gap:.3f} mm from pad "
+                     f"{pad['ref']}.{pad['number']} ({pad['net']})")
+
     worst = None
     for i, (a1, b1, w1, n1) in enumerate(segs):
         for a2, b2, w2, n2 in segs[i + 1:]:
@@ -364,7 +385,9 @@ def check_board(pcb, pads, nets):
     notes.append(f"board: {len(pads)} pads, {len(segs)} tracks, "
                  f"{len(find_all(pcb, 'via'))} vias, every track end lands, "
                  f"keep-out above y = {edge} clean" +
-                 (f", closest different-net tracks {worst:.2f} mm" if worst else ""))
+                 (f", closest different-net tracks {worst:.2f} mm" if worst else "") +
+                 (f", closest track to a foreign pad {worst_pad:.2f} mm"
+                  if worst_pad is not None else ""))
 
 
 def point_to_segment(p, a, b):
@@ -464,9 +487,13 @@ def check_zones_unfilled(pcb):
                      "press B in the PCB editor before DRC or any simulation")
 
 
-def main() -> int:
+def check_one(path: pathlib.Path) -> int:
+    global PCB, SCH, errors, notes
+    PCB, SCH = path, path.with_suffix(".kicad_sch")
+    errors, notes = [], []
+    print(f"--- {path.parent.name}/{path.name}")
     if not PCB.exists():
-        print(f"FAIL {PCB} does not exist - run tools/gen_dn024_project.py")
+        print("FAIL does not exist - run its generator\n")
         return 1
     pcb = parse(PCB.read_text())
     nets = {int(n[1]): str(n[2]) for n in find_all(pcb, "net")}
@@ -483,8 +510,15 @@ def main() -> int:
         print(f"ok   {note}")
     for err in errors:
         print(f"FAIL {err}")
-    print(f"\n{len(errors)} problem(s)")
-    return 1 if errors else 0
+    print(f"{len(errors)} problem(s)\n")
+    return len(errors)
+
+
+def main() -> int:
+    paths = [pathlib.Path(a) for a in sys.argv[1:]] or PROJECTS
+    bad = sum(check_one(p) for p in paths)
+    print(f"{bad} problem(s) across {len(paths)} project(s)")
+    return 1 if bad else 0
 
 
 if __name__ == "__main__":

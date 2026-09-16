@@ -68,6 +68,18 @@ same topology as a 2.4 GHz IFA:
 - [ ] **Launch referenced.** An end-launch connector is coplanar by
       construction — give it ground either side *and* ground beneath, with
       vias at the launch, not 3 mm away.
+- [ ] **The 50 Ω line actually fits the connector.** A through-hole SMA has
+      four ground posts on a 5.08 mm square; a 50 Ω line on 1.6 mm FR4 is
+      2.95 mm wide. Half the pitch, less half the line, less half a 1.9 mm
+      pad, leaves **0.115 mm** — a DRC violation, not a tight fit. Neck the
+      line down over 3–4 mm into the pin and treat that as the launch
+      transition [2.5 mm of taper into 1.5 mm of 1.0 mm line costs about
+      0.45 nH: j2.6 Ω at 868 MHz, j6.5 Ω at 2.44 GHz].
+- [ ] **Clearance checked track-to-pad, not just track-to-track.** The
+      violation above is invisible to a rule that only compares tracks.
+- [ ] **Connector land measured against the part you will buy.** A land
+      pattern read off an application note's figure carries about ±0.1 mm;
+      the pitch is usually a standard and therefore safe, the drills are not.
 - [ ] **Matching pads present even if unpopulated.** Three 0402 sites cost
       nothing on the BOM and turn a re-spin into a component swap.
 

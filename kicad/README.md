@@ -9,7 +9,9 @@ checker that fails the build if it stops being one:
   because the note publishes no matching values and AN058 asks for the pads.
 * **TI DN024 / SWRA227E**, a **868 + 2440 MHz meandering monopole** — copper
   on both layers and a pi matching network at the feed, because this note says
-  it needs one and gives the values.
+  it needs one and gives the values. It comes in **two launches**: an
+  edge-mount SMA in `dn024/`, and the note's own vertical through-hole jack
+  with the top ground cut away around the feed in `dn024_ti_form/`.
 
 Plus a third project for RFsim, the inverted-F drawn the way its Figure 3
 draws it — ground on layer 2 only, one via, no connector — and two simulation
@@ -26,7 +28,9 @@ kicad/
 ├── library/
 │   ├── SWRA117D_RF.kicad_sym        antenna, SMA, RF_PORT, GND, PWR_FLAG (+ C, L)
 │   ├── TI_DN024.kicad_sym           the second antenna's symbols
-│   ├── TI_DN024.pretty/             the DN024 monopole footprint
+│   ├── TI_DN024.pretty/
+│   │   ├── TI_DN024_Monopole_868_2440.kicad_mod  the radiator, from Table 1
+│   │   └── SMA_ThruHole_4Post.kicad_mod          P6, measured off Figure 2
 │   └── SWRA117D_RF.pretty/
 │       ├── Texas_SWRA117D_2.4GHz_Left.kicad_mod  antenna, as published
 │       ├── SWRA117D_2G4_Left_retuned.kicad_mod   antenna, scaled x1.155
@@ -35,10 +39,13 @@ kicad/
 │       ├── RF_Port_Land.kicad_mod                the same land, no connector
 │       └── Chip_0402_1005Metric_RF.kicad_mod     spare 0402 land
 ├── dn024/                           second antenna: TI DN024 monopole
-│   └── dn024_monopole_868_2440.*    868 + 2440 MHz, sch + pcb + pro
+│   └── dn024_monopole_868_2440.*    868 + 2440 MHz, edge-launch SMA
+├── dn024_ti_form/                   the same antenna in the note's own form
+│   └── dn024_monopole_ti_form.*     through-hole SMA inboard, ground opening
 ├── docs/
 │   ├── board-drawing.svg            dimensioned drawing, generated from the PCB
 │   ├── dn024-board-drawing.svg      the same, for the DN024 board
+│   ├── dn024-ti-form-drawing.svg    the same, for the DN024 reference form
 │   ├── sim-board-drawing.svg        the same, for the simulation board
 │   └── antenna-integration-checklist.md   design review list for any project
 ├── sim/
@@ -1245,6 +1252,124 @@ way, so the DN024 board reuses the SMA and 0402 lands from the first library.
 [`docs/dn024-board-drawing.svg`](docs/dn024-board-drawing.svg) is the drawing,
 from the same renderer as the other two.
 
+### The same antenna in the note's own form: `dn024_ti_form/`
+
+`dn024/` uses an edge-mount SMA on the board edge, because that is the launch
+the 2.45 GHz board in this repo already had and it keeps the two projects
+comparable. SWRA227E's own Figure 2 does something different, and
+`dn024_ti_form/dn024_monopole_ti_form.*` is that: **same antenna, same
+43 × 63 mm ground plane, same Table 3 BOM**, different launch.
+
+| | `dn024/` | `dn024_ti_form/` |
+|---|---|---|
+| connector | `SMA_EdgeMount_Generic`, edge mount | **`SMA_ThruHole_4Post`** — vertical jack, four ground posts on a 5.08 mm square |
+| where | on the board edge, below the plane | **22 mm inboard**, with board on all four sides, as Figure 2 places P6 |
+| top ground | solid, keep-away either side of the line | **cut away** in a tall chamfered opening around the feed and the network |
+| bottom ground | solid | solid — unchanged, and it is what the line is referenced to |
+| everything else | — | identical: radiator, plane, clearances, 2.95 mm feed, Z61/Z62/Z63 |
+
+#### The connector is measured, not specified
+
+SWRA227E names P6 and draws it, and gives no part number and no land pattern.
+`tools/gen_sma_through_hole.py` therefore reads the plated barrels out of
+Figure 2 at the figure's own scale — 7.86 px/mm, set by `X1` = 63 mm:
+
+| | measured | used | why |
+|---|---|---|---|
+| post pitch | 5.15 mm in x, 5.06 mm in y | **5.08 mm** | 0.200" is the standard SMA flange square, and the reading lands on it from both axes independently — this number is certain |
+| post drill | 1.21, 1.27, 1.21, 1.21 mm | **1.2 mm** | four readings of one feature, spread 0.06 mm |
+| signal pin | 1.08 mm, centred to within a pixel | **1.1 mm** | |
+
+That is about **±0.1 mm of reading error on a raster**, so the drills are a
+starting point: *check them against the connector you actually buy before
+ordering boards.* The generator's docstring says the same thing, so the
+caveat travels with the file rather than living only here.
+
+The bottom plane pulls back 0.5 mm around the signal pin. That clearance is
+also a starting value, not a computed one — a coaxial launch through a plane
+wants an anti-pad sized from the barrel diameter and the dielectric, which is
+a tuning exercise on a real board and not something the note gives.
+
+#### Why the top ground is cut away
+
+The opening is the one feature of Figure 2 that could not be dimensioned:
+it is a hatched raster fill with no dimension on it, read at about 11–12 mm
+wide with chamfered corners. So it is **not** copied by eye — it is sized from
+what it is for, and the figure only sets its shape:
+
+* no top ground beside the 50 Ω line, so the line is a plain microstrip
+  referenced to the bottom plane and its 2.95 mm width means 50 Ω;
+* no top ground beside the pi network, whose lands are wider than an 0402 for
+  the same reason;
+* 11.5 mm wide, which puts the pour further from the line than the keep-away
+  that keeps it 50 Ω, so the width is a consequence of the rule rather than of
+  the reading.
+
+It is an F.Cu-only keep-out named `PI_NETWORK_CLEARANCE`, chamfered 2.0 mm at
+the corners, reaching from the plane edge down past the connector.
+
+#### A 2.95 mm line does not fit between ground posts 5.08 mm apart
+
+This is the one thing the new form broke, and it is worth writing down because
+it is a trap on any through-hole SMA, not a quirk of this board.
+
+A 50 Ω microstrip on 1.6 mm FR4 is **2.95 mm** wide. The posts are 5.08 mm
+apart with 1.9 mm pads. Half the pitch, less half the line, less half a pad:
+
+```
+2.54 − 1.475 − 0.95 = 0.115 mm
+```
+
+— under the 0.15 mm rule, and the first draft of this board had exactly that. So
+the line **necks down for the last 4 mm**: 2.5 mm of taper in five steps from
+2.95 mm to 1.0 mm, then 1.5 mm of 1.0 mm line into the pin. That leaves
+1.09 mm to each post, and a launch transition is what a vertical connector
+wants anyway.
+
+The cost is small and computed rather than asserted — `line_impedance.py` puts
+1.0 mm at **84.5 Ω**, and against a 50 Ω line of the same 4.0 mm the whole
+transition adds **j2.6 Ω at 868 MHz and j6.5 Ω at 2.44 GHz**, about 0.45 nH
+either way. That is inside what Z61/Z62/Z63 exist to absorb.
+
+`check_dn024.py` gained a **track-to-pad clearance rule** for this, since
+nothing was looking: copper of one net against pads of another, not just track
+against track. It was verified by mutation — removing the neck makes it fail
+with the 0.115 mm above — and it now runs over both DN024 boards, which is why
+the checker output below has two blocks.
+
+#### Running it
+
+```sh
+python3 tools/gen_sma_through_hole.py     # the P6 land, from Figure 2
+python3 tools/gen_dn024_ti_project.py     # schematic + board + project
+python3 tools/check_dn024.py              # both DN024 projects
+```
+
+```
+--- dn024_ti_form/dn024_monopole_ti_form.kicad_pcb
+ok   library: TI_DN024 has 8 symbols and 2 footprints, all parsing cleanly
+ok   schematic: 5 embedded symbols match their libraries, 13 pins on wires, netlist matches the intended one
+ok   board: TI_DN024_Monopole_868_2440 matches all 7 dimensions of SWRA227E Table 1 within 11 um (exact copy), on B.Cu + F.Cu
+ok   board: ground plane 43.0 x 63.0 mm on F.Cu and B.Cu, the size SWRA227E Table 3 measured the match on
+ok   board: the radiator is on F.Cu and B.Cu, stitched by 53 vias no more than 2.80 mm apart (lambda/20 at 2.44 GHz is 2.90 mm), so the two layers are one conductor
+ok   board: 65 pads, 20 tracks, 158 vias, every track end lands, keep-out above y = 91.0 clean, closest different-net tracks 0.36 mm, closest track to a foreign pad 0.35 mm
+ok   pi network: Z62 series between RF_IN and ANT_FEED, Z61 shunt on the connector side, Z63 shunt on the antenna side; Z61 and Z63 laid out and unfitted, as Table 3 says
+ok   pi network: both shunt ground pads reach the bottom plane through a via of their own
+ok   board: 2 copper zone(s) carry no fill yet - press B in the PCB editor before DRC or any simulation
+
+0 problem(s) across 2 project(s)
+```
+
+[`docs/dn024-ti-form-drawing.svg`](docs/dn024-ti-form-drawing.svg) is the
+drawing.
+
+**Which one to build.** The through-hole form is the one to compare against
+the note's measurements, because it is the note's own layout and an inboard
+connector loads the ground plane the way the reference does. The edge-launch
+form is easier to fixture and keeps the connector body out of the antenna's
+half-space. They share every dimension that sets the resonance, so the antenna
+is the same antenna either way.
+
 ### Not done yet
 
 No simulation and no RFsim project for this antenna. Two reasons, and the
@@ -1258,7 +1383,7 @@ is then matched. Say the word and it is the same machinery as the first board.
 ## Reusing this on someone else's board
 
 [`docs/antenna-integration-checklist.md`](docs/antenna-integration-checklist.md)
-is the checklist these projects produced: 74 items across antenna placement,
+is the checklist these projects produced: 77 items across antenna placement,
 feed, stitching, simulation setup, what to leave out of a model, bench
 measurement, and tuning —
 each one there because getting it wrong here cost a wrong answer. It is written to be applied to any printed

@@ -95,10 +95,14 @@ def render(pcb_path: pathlib.Path) -> str:
             angle = (float(pad_at[3]) if len(pad_at) > 3 else 0.0)
             layers = [str(x) for x in find(pad, "layers")[1:]]
             cls = "bcu" if "B.Cu" in layers and "F.Cu" not in layers else "fcu pad"
-            rect = (f'<rect class="{cls}" x="{f(cx - w / 2)}" y="{f(cy - h / 2)}" '
-                    f'width="{f(w)}" height="{f(h)}" '
-                    f'transform="rotate({f(-angle)} {f(cx)} {f(cy)})"/>')
-            (pads_b if cls == "bcu" else pads_f).append(rect)
+            if str(pad[3]) in ("circle", "oval") and abs(w - h) < 1e-6:
+                shape = (f'<circle class="{cls}" cx="{f(cx)}" cy="{f(cy)}" '
+                         f'r="{f(w / 2)}"/>')
+            else:
+                shape = (f'<rect class="{cls}" x="{f(cx - w / 2)}" '
+                         f'y="{f(cy - h / 2)}" width="{f(w)}" height="{f(h)}" '
+                         f'transform="rotate({f(-angle)} {f(cx)} {f(cy)})"/>')
+            (pads_b if cls == "bcu" else pads_f).append(shape)
 
     for seg in find_all(pcb, "segment"):
         a = (float(find(seg, "start")[1]), float(find(seg, "start")[2]))
