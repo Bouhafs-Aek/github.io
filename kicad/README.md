@@ -58,6 +58,12 @@ kicad/
 └── tools/                           generators, checkers, line + scaling calculators
 ```
 
+**Also here: a football GNSS tracker** (`tracker/`). This is a complete
+wearable board, not an antenna test piece: NEO-M9N GNSS, ISM330DHCX IMU,
+nRF52840, microSD and Li-Po charging, with its own library
+(`library/EPTS_Tracker.*`), generator and checker. See
+[tracker/README.md](tracker/README.md).
+
 Open `swra117d_2g4_antenna.kicad_pro` in KiCad, then press **B** in the PCB
 editor to fill the ground zones (they are stored unfilled).
 

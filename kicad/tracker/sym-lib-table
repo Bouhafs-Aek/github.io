@@ -1,0 +1,4 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "EPTS_Tracker")(type "KiCad")(uri "${KIPRJMOD}/../library/EPTS_Tracker.kicad_sym")(options "")(descr "Football tracker parts, from the KiCad 9.0.9.1 libraries"))
+)
