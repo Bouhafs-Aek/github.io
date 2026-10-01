@@ -1,0 +1,8 @@
+# KiCad session / backup files
+*.kicad_prl
+*-backups/
+fp-info-cache
+
+# python bytecode
+__pycache__/
+*.pyc
