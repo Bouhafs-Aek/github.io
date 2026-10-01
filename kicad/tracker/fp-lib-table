@@ -1,0 +1,4 @@
+(fp_lib_table
+	(version 7)
+	(lib (name "EPTS_Tracker")(type "KiCad")(uri "${KIPRJMOD}/../library/EPTS_Tracker.pretty")(options "")(descr "Football tracker footprints, from the KiCad 9.0.9.1 libraries plus the GNSS patch"))
+)
