@@ -104,11 +104,19 @@ SD_AT = (BOARD_W - 8.125, 41.0, 90)      # card slot opens on the right edge
 USB_AT = (10.0, BOARD_H - 3.675, 0)      # receptacle face on the bottom edge
 BAT_AT = (5.1, 56.0, 270)                # JST-PH opening on the left edge
 
+# 0.15 mm, not 0.2: the ISM330DHCX's LGA-14 lands are 0.15 mm apart, and the
+# KiCad library footprint is ST's recommended land pattern.  0.15 mm is well
+# inside a 4-layer fab's 0.09-0.1 mm minimum.
+CLEARANCE = 0.15
+# The GCT USB4105 land pattern puts its outer GND pads 0.194 mm from the
+# locating holes; the rule follows the connector, as the fab allows.
+HOLE_CLEARANCE = 0.15
+
 NETCLASSES = {
     "GNSS_50R": dict(width=W_RF, clearance=GAP_RF, nets=["GNSS_ANT", "GNSS_RF"]),
-    "Power": dict(width=W_PWR, clearance=0.2,
+    "Power": dict(width=W_PWR, clearance=CLEARANCE,
                   nets=["GND", "VBUS", "VBAT", "VSYS", "+3V3"]),
-    "USB": dict(width=0.25, clearance=0.2, nets=["USB_DP", "USB_DN"]),
+    "USB": dict(width=0.25, clearance=CLEARANCE, nets=["USB_DP", "USB_DN"]),
 }
 
 
@@ -907,9 +915,11 @@ def build_project() -> dict:
     pro["meta"]["filename"] = f"{PROJECT}.kicad_pro"
     pro["sheets"] = [[gp.ROOT_UUID, "Root"]]
     rules = pro["board"]["design_settings"]["rules"]
-    rules["min_clearance"] = 0.15
+    rules["min_clearance"] = CLEARANCE
+    rules["min_hole_clearance"] = HOLE_CLEARANCE
     pro["board"]["design_settings"]["track_widths"] = [0.0, 0.2, W_RF, W_PWR]
     classes = [c for c in pro["net_settings"]["classes"] if c["name"] == "Default"]
+    classes[0]["clearance"] = CLEARANCE
     patterns = []
     for priority, (name, nc) in enumerate(NETCLASSES.items()):
         cls = dict(classes[0])

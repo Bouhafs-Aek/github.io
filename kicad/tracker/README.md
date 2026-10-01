@@ -182,6 +182,10 @@ install, and it checks:
   * SD pull-ups present
   * SWD on P0.18 / P1.00
 * **board**:
+  * a closed Edge.Cuts outline
+  * every pad-to-pad gap at or above its net classes' clearance, and every
+    pad at least `min_hole_clearance` from any hole. This is the pad-level
+    part of KiCad's DRC.
   * one RF width at 50 Ω on both outer layers
   * an unbroken copper path from the patch feed through Z2 to RF_IN
   * no GND via inside the feed gap
@@ -193,6 +197,24 @@ The checker was mutation-tested. Renaming one net label and widening one feed
 segment each make it fail with the right message, and the generated files
 pass. The checker caught one real bug during development: the pi network's
 route assumed the C_0402 pad offset (0.48 mm) for an R_0402 (0.51 mm).
+
+### Clearance rules, and why they are 0.15 mm
+
+The netclass clearance and `min_hole_clearance` are both 0.15 mm, not KiCad's
+0.2 mm default, because two library land patterns need it:
+
+* the ISM330DHCX's LGA-14 lands are 0.150–0.175 mm apart
+* the USB4105's outer GND pads are 0.194 mm from its locating holes
+
+Both are within a 4-layer fab's minimums (about 0.09–0.1 mm). The first KiCad
+DRC run on this design flagged exactly these pads, and the checker now
+reproduces them.
+
+**Open `epts_football_tracker.kicad_pcb`. Do not start a new board** with
+*Update PCB from Schematic*. A new board has no outline, every footprint
+piled in reference order, and the RF feed unrouted. Its DRC then reports
+`invalid_outline`, dozens of silkscreen overlaps and the feed as
+unconnected, none of which apply to the generated layout.
 
 ## Open items before ordering boards
 

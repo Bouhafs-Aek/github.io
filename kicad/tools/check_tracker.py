@@ -154,9 +154,16 @@ def board():
             size = find(pad, "size")
             net = find(pad, "net")
             layers = [str(v) for v in find(pad, "layers")[1:]]
+            drill = find(pad, "drill")
+            angle = fval(pat, 3) if len(pat) > 3 else 0.0
             pads.append(dict(num=str(pad[1]), kind=str(pad[2]),
                              pos=to_board(fval(pat, 1), fval(pat, 2)),
                              size=(fval(size, 1), fval(size, 2)),
+                             angle=angle, ref=ref,
+                             drill=fval(drill) if drill is not None and len(drill) > 1
+                             and str(drill[1]) != "oval" else (
+                                 min(fval(drill, 2), fval(drill, 3)) if drill is not None
+                                 and len(drill) > 3 else None),
                              net=str(net[2]) if net is not None else None,
                              layers=layers))
         crt = []
@@ -510,6 +517,68 @@ def main() -> None:
                     worst.append(f"{v['net']} via {v['pos']} on {r}.{p['num']}")
     check(not worst, f"{len(brd['vias'])} vias clear of other nets' pads"
           + (f": {worst[:5]}" if worst else ""))
+
+    print("Board: clearances (the DRC rules KiCad applies to pads)")
+    loops = collections.Counter()
+    for a, b in brd["edges"]:
+        loops[(round(a[0], 3), round(a[1], 3))] += 1
+        loops[(round(b[0], 3), round(b[1], 3))] += 1
+    check(bool(brd["edges"]) and all(v == 2 for v in loops.values()),
+          f"board outline: {len(brd['edges'])} Edge.Cuts segments forming a closed loop")
+    patterns = {pat["pattern"]: pat["netclass"] for pat in pro["net_settings"]["netclass_patterns"]}
+    clearance = {c["name"]: c["clearance"] for c in pro["net_settings"]["classes"]}
+    rules = pro["board"]["design_settings"]["rules"]
+
+    def need(net_a, net_b):
+        return max(clearance[patterns.get(net_a, "Default")],
+                   clearance[patterns.get(net_b, "Default")])
+
+    def pad_box(p):
+        w, h = p["size"]
+        if round(p["angle"]) % 180 == 90:
+            w, h = h, w
+        elif round(p["angle"]) % 90:
+            w = h = max(w, h)              # off-axis: the conservative square
+        x, y = p["pos"]
+        return (x - w / 2, y - h / 2, x + w / 2, y + h / 2)
+
+    def box_gap(a, b):
+        dx = max(a[0] - b[2], b[0] - a[2], 0.0)
+        dy = max(a[1] - b[3], b[1] - a[3], 0.0)
+        return math.hypot(dx, dy)
+
+    copper = [p for f in fps.values() for p in f["pads"] if p["kind"] != "np_thru_hole"]
+    for p in copper:
+        p["box"] = pad_box(p)
+    tight = []
+    for i, a in enumerate(copper):
+        for b in copper[i + 1:]:
+            if a["net"] is not None and a["net"] == b["net"]:
+                continue
+            if not set(a["layers"]) & set(b["layers"]) and "*.Cu" not in a["layers"] + b["layers"]:
+                continue
+            gap = box_gap(a["box"], b["box"])
+            req = need(a["net"], b["net"])
+            if gap < req - 1e-4:
+                tight.append(f"{a['ref']}.{a['num']}-{b['ref']}.{b['num']} "
+                             f"{gap:.3f} < {req}")
+    check(not tight, f"{len(copper)} copper pads: every pad-to-pad gap meets its "
+          "net classes' clearance" + (f": {tight[:6]}" if tight else ""))
+    holes = [p for f in fps.values() for p in f["pads"] if p["drill"]]
+    near_holes = []
+    for h in holes:
+        for p in copper:
+            if p is h or (p["ref"] == h["ref"] and p["num"] == h["num"] and h["num"]):
+                continue
+            x0, y0, x1, y1 = p["box"]
+            dx = max(x0 - h["pos"][0], h["pos"][0] - x1, 0.0)
+            dy = max(y0 - h["pos"][1], h["pos"][1] - y1, 0.0)
+            gap = math.hypot(dx, dy) - h["drill"] / 2
+            if gap < rules["min_hole_clearance"] - 1e-4:
+                near_holes.append(f"{p['ref']}.{p['num']} {gap:.3f} mm from a "
+                                  f"{h['ref']} hole")
+    check(not near_holes, f"{len(holes)} holes: copper at least "
+          f"{rules['min_hole_clearance']} mm away" + (f": {near_holes[:6]}" if near_holes else ""))
 
     print()
     if FAIL:
