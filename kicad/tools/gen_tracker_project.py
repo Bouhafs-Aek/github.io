@@ -43,7 +43,7 @@ import sys
 import uuid
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import gen_project as gp  # noqa: E402
+import pcb_helpers as gp  # noqa: E402
 from sexpr import Sym, dumps, find, find_all, num, parse  # noqa: E402
 
 gp.NAMESPACE = uuid.UUID("3f6b2d0e-9c41-5a7e-b2d8-6a1c4e9f0b37")
