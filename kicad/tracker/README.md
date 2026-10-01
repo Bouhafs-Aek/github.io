@@ -45,15 +45,25 @@ kicad/
 └── tools/
     ├── gen_tracker_library.py            fetches and flattens the library parts
     ├── gen_tracker_project.py            writes schematic, board and project
+    ├── tracker_router.py                 GND fan-out and power-net maze router
     └── check_tracker.py                  netlist, ERC, electrical and RF checks
 ```
 
-**State of the board: placed, not fully routed.** The parts the GNSS
-performance depends on are laid down and checked: the patch and its ground,
-the 50 Ω feed, the matching pads, the via fences and the BLE antenna keep-out.
-The remaining digital and power connections are ratsnest. Route them in KiCad,
-where the interactive router and DRC can see them, then press **B** to fill
-the four GND pours.
+**State of the board: placed, power and RF routed, signals left to route.**
+
+Already laid down and checked:
+
+* the GNSS patch and its ground, the 50 Ω feed, the matching pads, the via
+  fences and the BLE antenna keep-out
+* **a GND via beside every top-layer ground pad**, each joined to its pad by
+  a short track, so every ground pin reaches the In1/In2 planes directly
+* **all four power nets** (VBUS, VBAT, VSYS, +3V3), every pad, at 0.4 mm
+  where they fit and 0.2–0.25 mm into fine-pitch pads. The long trunks run
+  on B.Cu to leave the top for signals.
+
+What is left is 34 signal nets, about 45 connections: GNSS UART and PPS, the
+IMU and microSD SPI buses, USB D+/D-, SWD, button, LEDs and the battery
+divider. Route them in KiCad, then press **B** to fill the four GND pours.
 
 ## Block diagram
 
@@ -158,7 +168,7 @@ you need more.
 
 ```sh
 python3 kicad/tools/gen_tracker_library.py   # only to refresh the library (needs network)
-python3 kicad/tools/gen_tracker_project.py   # schematic, board, project
+python3 kicad/tools/gen_tracker_project.py   # schematic, board, project (~70 s, needs numpy)
 python3 kicad/tools/check_tracker.py         # must end with "all checks passed"
 ```
 
@@ -192,6 +202,11 @@ install, and it checks:
   * no courtyard overlaps
   * nothing near the patch, nothing in the BLE keep-out
   * every via clear of other nets' pads
+  * every track and via clear of other nets' copper, holes, the board edge
+    and the keep-outs, by exact segment and rectangle distances
+  * each power net joined into one piece by KiCad's own rule: a track end
+    or via joins only the copper it lies inside
+  * every top-layer GND pad has its own via
 
 The checker was mutation-tested. Renaming one net label and widening one feed
 segment each make it fail with the right message, and the generated files
@@ -218,7 +233,7 @@ unconnected, none of which apply to the generated layout.
 
 ## Open items before ordering boards
 
-1. **Route the ratsnest** in KiCad, fill zones, then run ERC and DRC.
+1. **Route the remaining signals** in KiCad, fill zones, then run ERC and DRC.
 2. **Patch feed offset**: set `PATCH_FEED_OFFSET` from the chosen part.
 3. **Battery polarity** at J2: match the cell's cable.
 4. **Enclosure and patch tuning**: a plastic case and the wearer's back detune

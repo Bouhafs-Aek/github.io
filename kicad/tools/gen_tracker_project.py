@@ -45,6 +45,7 @@ import uuid
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import pcb_helpers as gp  # noqa: E402
 from sexpr import Sym, dumps, find, find_all, num, parse  # noqa: E402
+import tracker_router as tr  # noqa: E402
 
 gp.NAMESPACE = uuid.UUID("3f6b2d0e-9c41-5a7e-b2d8-6a1c4e9f0b37")
 gp.ROOT_UUID = gp.U("sheet", "root")
@@ -770,10 +771,108 @@ def rf_route():
     gnd_vias += [(RF_VIA[0] - fence, RF_VIA[1]), (RF_VIA[0] - fence, Z3_AT[1]),
                  (RF_VIA[0] - fence, Z2_AT[1]), (RF_VIA[0] - fence, 35.0),
                  (18.5, rf_in[1] + fence), (18.5, rf_in[1] - fence)]
+    # RF_IN's neighbours, U1 pads 10 and 12, straight to those two vias:
+    # the ground either side of the RF pin is the module's return path
+    for number, side in (("10", 1), ("12", -1)):
+        gpad = xform(pad_local(neo["fp_node"], number), NEO_AT)
+        out.append(seg(gpad, (18.5, rf_in[1] + side * fence), W_PWR, "GND"))
     return out, gnd_vias, feed, rf_in
 
 
-def stitch_grid(placed, existing):
+POWER_NETS = ["VBUS", "VBAT", "VSYS", "+3V3"]
+
+
+def pad_geometry(placed):
+    """Every pad as (ref, number, net, box, layers, drill), board-relative."""
+    out = []
+    for p in PARTS:
+        at = placed[p["ref"]]
+        for c in p["fp_node"]:
+            if not (isinstance(c, list) and c[0] == "pad"):
+                continue
+            pat, size = find(c, "at"), find(c, "size")
+            centre = xform((float(pat[1]), float(pat[2])), at)
+            angle = (float(pat[3]) if len(pat) > 3 else 0.0) + at[2]
+            w, h = float(size[1]), float(size[2])
+            if round(angle) % 180 == 90:
+                w, h = h, w
+            box = (centre[0] - w / 2, centre[1] - h / 2, centre[0] + w / 2, centre[1] + h / 2)
+            layers = [str(v) for v in find(c, "layers")[1:]]
+            if any(l == "*.Cu" for l in layers):
+                layers = ["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"]
+            drill = find(c, "drill")
+            hole = None
+            if drill is not None and len(drill) > 1:
+                hole = (float(drill[2]) if str(drill[1]) == "oval" else float(drill[1])) / 2
+                if str(drill[1]) == "oval":
+                    hole = min(float(drill[2]), float(drill[3])) / 2
+            out.append(dict(ref=p["ref"], num=str(c[1]), net=p["all_nets"].get(str(c[1])),
+                            box=box, layers=layers, kind=str(c[2]), hole=hole,
+                            centre=centre))
+    return out
+
+
+def build_copper(placed, rf_tracks, rf_vias):
+    clearance = {n: nc["clearance"] for nc in NETCLASSES.values() for n in nc["nets"]}
+    copper = tr.Copper(BOARD_W, BOARD_H, clearance, CLEARANCE)
+    for pad in pad_geometry(placed):
+        if pad["kind"] != "np_thru_hole":
+            copper.pads.append((pad["box"], pad["layers"], pad["net"]))
+        if pad["hole"]:
+            copper.holes.append((pad["centre"], pad["hole"]))
+    copper.segs.extend(rf_tracks)
+    copper.vias.extend(rf_vias)
+    # footprint rule areas (BLE antenna, microSD, Tag-Connect)
+    for p in PARTS:
+        for z in find_all(p["fp_node"], "zone"):
+            ko = find(z, "keepout")
+            if ko is None:
+                continue
+            pts = [xform((float(a[1]), float(a[2])), placed[p["ref"]])
+                   for a in find(find(z, "polygon"), "pts")[1:]]
+            lay = find(z, "layers") or find(z, "layer")
+            layers = [str(v) for v in lay[1:]]
+            copper.keepouts.append((bbox(pts), layers,
+                                    str(find(ko, "tracks")[1]) == "not_allowed",
+                                    str(find(ko, "vias")[1]) == "not_allowed"))
+    both = ["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"]
+    copper.keepouts.append((BLE_BOX, both, True, True))
+    # the patch's footprint, and the pi network: nothing new goes there
+    copper.keepouts.append(((PATCH_C[0] - PATCH_HALF - 0.5, PATCH_C[1] - PATCH_HALF - 0.5,
+                             PATCH_C[0] + PATCH_HALF + 0.5, PATCH_C[1] + PATCH_HALF + 0.5),
+                            both, True, True))
+    copper.keepouts.append((RF_BOX, both, True, True))
+    return copper
+
+
+def route_board(placed, rf_tracks, rf_vias):
+    """GND fan-out, then the power nets.  Returns (tracks, vias, report)."""
+    copper = build_copper(placed, rf_tracks, rf_vias)
+    pads = pad_geometry(placed)
+    centre_of = {p["ref"]: placed[p["ref"]][:2] for p in PARTS}
+    gnd = [(p["ref"], p["box"], p["layers"]) for p in pads
+           if p["net"] == "GND" and p["kind"] == "smd"
+           and not inside_box(p["centre"], RF_BOX)]
+    tracks, vias = tr.fanout(copper, gnd, centre_of)
+    gnd_vias = [(v, "GND") for v in vias]
+    tracks = [t for t in tracks]
+    report = {"fanout_vias": len(vias), "failed": {}}
+    for net in POWER_NETS:
+        net_pads = [(f"{p['ref']}.{p['num']}", p["box"], p["layers"]) for p in pads
+                    if p["net"] == net]
+        t, v, failed = tr.route_net(copper, net, net_pads)
+        tracks += t
+        gnd_vias += [(x, net) for x in v]
+        if failed:
+            report["failed"][net] = failed
+    return tracks, gnd_vias, report, copper
+
+
+def inside_box(pt, box):
+    return box[0] <= pt[0] <= box[2] and box[1] <= pt[1] <= box[3]
+
+
+def stitch_grid(placed, existing, copper=None):
     """GND vias on a 3 mm grid wherever no part, RF line or keep-out is."""
     keep = []
     for p in PARTS:
@@ -794,8 +893,11 @@ def stitch_grid(placed, existing):
                                for k in keep[len(PARTS):])
                 ae1 = xform((0, 0), PATCH_C + (0,))
                 free = free and math.dist((x, y), (ae1[0], ae1[1] + 1.5)) > 2.5
-            if free and all(math.dist((x, y), e) > 1.2 for e in existing):
+            if free and all(math.dist((x, y), e) > 1.2 for e in existing) and (
+                    copper is None or copper.via_clear_ignoring_keepouts((x, y), "GND")):
                 out.append((x, y))
+                if copper is not None:
+                    copper.vias.append(((x, y), "GND"))
             x += 3.0
         y += 3.0
     return out
@@ -845,6 +947,18 @@ LAYERS = [(0, "F.Cu", "signal", None), (4, "In1.Cu", "signal", None),
           (35, "F.Fab", "user", None), (33, "B.Fab", "user", None)]
 
 
+ROUTE_REPORT: dict = {}
+
+
+def rf_seg_tuple(node):
+    """A segment node as (a, b, width, layer, net), board-relative."""
+    st, en = find(node, "start"), find(node, "end")
+    net = next(n for n, i in NETS.items() if i == int(find(node, "net")[1]))
+    return ((float(st[1]) - BOARD_X0, float(st[2]) - BOARD_Y0),
+            (float(en[1]) - BOARD_X0, float(en[2]) - BOARD_Y0),
+            float(find(node, "width")[1]), str(find(node, "layer")[1]), net)
+
+
 def build_board(placed) -> list:
     layer_nodes = [Sym("layers")]
     for number, name, ltype, alias in LAYERS:
@@ -882,9 +996,16 @@ def build_board(placed) -> list:
 
     tracks, fence, _, _ = rf_route()
     pcb.extend(tracks)
-    vias = fence + stitch_grid(placed, fence)
-    for pos in vias:
+    rf_tracks = [rf_seg_tuple(t) for t in tracks if t[0] == "segment"]
+    rf_vias = [(v, "GND") for v in fence] + [(RF_VIA, "GNSS_ANT")]
+    routed, routed_vias, report, copper = route_board(placed, rf_tracks, rf_vias)
+    for a, b, width, layer, net in routed:
+        pcb.append(seg(a, b, width, net, layer))
+    for pos, net in routed_vias:
+        pcb.append(via(pos, net))
+    for pos in fence + stitch_grid(placed, fence + [v for v, _ in routed_vias], copper):
         pcb.append(via(pos))
+    ROUTE_REPORT.update(report)
 
     inset = [(0.3, 0.3), (BOARD_W - 0.3, 0.3), (BOARD_W - 0.3, BOARD_H - 0.3),
              (0.3, BOARD_H - 0.3)]
@@ -953,6 +1074,9 @@ def main() -> None:
         'from the KiCad 9.0.9.1 libraries plus the GNSS patch"))\n)\n')
     for path in (sch_path, pcb_path, pro_path):
         print(f"wrote {path.relative_to(PRJ_DIR.parent)}")
+    print(f"GND fan-out vias: {ROUTE_REPORT.get('fanout_vias')}")
+    for net, pads in ROUTE_REPORT.get("failed", {}).items():
+        print(f"  could not route {net} to {', '.join(pads)} - route by hand")
 
 
 if __name__ == "__main__":

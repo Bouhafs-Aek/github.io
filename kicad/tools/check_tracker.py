@@ -193,8 +193,22 @@ def board():
         zones.append(dict(net=str(find(z, "net_name")[1]), layers=[str(v) for v in layers[1:]],
                           pts=pts, keepout=find(z, "keepout") is not None,
                           name=str(find(z, "name")[1]) if find(z, "name") else ""))
+    keepouts = []
+    for z in find_all(pcb, "zone") + [z for fp in find_all(pcb, "footprint")
+                                       for z in find_all(fp, "zone")]:
+        ko = find(z, "keepout")
+        if ko is None:
+            continue
+        layers = find(z, "layers") or find(z, "layer")
+        pts = [(fval(a, 1), fval(a, 2)) for a in find(find(z, "polygon"), "pts")[1:]]
+        keepouts.append(dict(box=(min(q[0] for q in pts), min(q[1] for q in pts),
+                                  max(q[0] for q in pts), max(q[1] for q in pts)),
+                             layers=[str(v) for v in layers[1:]],
+                             tracks=str(find(ko, "tracks")[1]) == "not_allowed",
+                             vias=str(find(ko, "vias")[1]) == "not_allowed"))
     stack = find(find(pcb, "setup"), "stackup")
-    return dict(fps=fps, segs=segs, vias=vias, edges=edges, zones=zones, stack=stack)
+    return dict(fps=fps, segs=segs, vias=vias, edges=edges, zones=zones, stack=stack,
+                keepouts=keepouts)
 
 
 def inside(pt, box, margin=0.0):
@@ -213,6 +227,25 @@ def point_seg_dist(p, a, b):
     t = 0.0 if dx == dy == 0 else max(0.0, min(1.0, ((p[0] - ax) * dx + (p[1] - ay) * dy)
                                                 / (dx * dx + dy * dy)))
     return math.dist(p, (ax + t * dx, ay + t * dy))
+
+
+def seg_seg_dist(a, b, c, d):
+    """Distance between segments a-b and c-d (0 if they cross)."""
+    def orient(p, q, r):
+        return (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+    o1, o2, o3, o4 = orient(a, b, c), orient(a, b, d), orient(c, d, a), orient(c, d, b)
+    if (o1 > 0) != (o2 > 0) and (o3 > 0) != (o4 > 0) and 0 not in (o1, o2, o3, o4):
+        return 0.0
+    return min(point_seg_dist(a, c, d), point_seg_dist(b, c, d),
+               point_seg_dist(c, a, b), point_seg_dist(d, a, b))
+
+
+def seg_rect_dist(a, b, box):
+    """Distance from segment a-b to an axis-aligned rectangle."""
+    if inside(a, box) or inside(b, box):
+        return 0.0
+    corners = [(box[0], box[1]), (box[2], box[1]), (box[2], box[3]), (box[0], box[3])]
+    return min(seg_seg_dist(a, b, corners[i], corners[(i + 1) % 4]) for i in range(4))
 
 
 def parse_value(text: str) -> float:
@@ -503,7 +536,7 @@ def main() -> None:
           "BLE antenna keep-out runs to the board edge on all four copper layers")
     intruders = [r for r, f in fps.items() if r != "U2"
                  for p in f["pads"] if inside(p["pos"], bbox)]
-    intruders += ["via"] * sum(inside(v["pos"], bbox, 0.4) for v in brd["vias"])
+    intruders += ["via"] * sum(inside(v["pos"], bbox, v["size"] / 2 - 1e-3) for v in brd["vias"])
     intruders += ["track"] * sum(inside(s["a"], bbox) or inside(s["b"], bbox) for s in brd["segs"])
     check(not intruders, "nothing in the BLE antenna keep-out" + (f": {intruders}" if intruders else ""))
     worst = []
@@ -512,8 +545,12 @@ def main() -> None:
             for p in f["pads"]:
                 if p["net"] == v["net"] and p["kind"] != "np_thru_hole":
                     continue
-                reach = max(p["size"]) / 2 + v["size"] / 2 + 0.15
-                if math.dist(v["pos"], p["pos"]) < reach:
+                w, h = p["size"]
+                if round(p["angle"]) % 180 == 90:
+                    w, h = h, w
+                dx = max(abs(v["pos"][0] - p["pos"][0]) - w / 2, 0.0)
+                dy = max(abs(v["pos"][1] - p["pos"][1]) - h / 2, 0.0)
+                if math.hypot(dx, dy) < v["size"] / 2 + 0.15 - 1e-3:
                     worst.append(f"{v['net']} via {v['pos']} on {r}.{p['num']}")
     check(not worst, f"{len(brd['vias'])} vias clear of other nets' pads"
           + (f": {worst[:5]}" if worst else ""))
@@ -579,6 +616,135 @@ def main() -> None:
                                   f"{h['ref']} hole")
     check(not near_holes, f"{len(holes)} holes: copper at least "
           f"{rules['min_hole_clearance']} mm away" + (f": {near_holes[:6]}" if near_holes else ""))
+
+    print("Board: tracks and vias (fan-out, power routing, RF)")
+    for p in copper:
+        p["cu"] = {"F.Cu", "In1.Cu", "In2.Cu", "B.Cu"} if any(
+            l == "*.Cu" for l in p["layers"]) else {l for l in p["layers"] if l.endswith(".Cu")}
+    via_r = {id(v): v["size"] / 2 for v in brd["vias"]}
+    edge_rule = rules["min_copper_edge_clearance"]
+    bad = []
+    segs = brd["segs"]
+    for k, sg in enumerate(segs):
+        a, b, half = sg["a"], sg["b"], sg["w"] / 2
+        lo = (min(a[0], b[0]) - 2, min(a[1], b[1]) - 2, max(a[0], b[0]) + 2, max(a[1], b[1]) + 2)
+        for pd in copper:
+            if pd["net"] == sg["net"] or sg["layer"] not in pd["cu"] or not overlap(pd["box"], lo):
+                continue
+            gap = seg_rect_dist(a, b, pd["box"]) - half
+            if gap < need(sg["net"], pd["net"]) - 1e-3:
+                bad.append(f"{sg['net']} track {gap:.3f} mm from {pd['ref']}.{pd['num']}")
+        for o in segs[k + 1:]:
+            if o["net"] == sg["net"] or o["layer"] != sg["layer"]:
+                continue
+            gap = seg_seg_dist(a, b, o["a"], o["b"]) - half - o["w"] / 2
+            if gap < need(sg["net"], o["net"]) - 1e-3:
+                bad.append(f"{sg['net']}/{o['net']} tracks {gap:.3f} mm apart near {a}")
+        for v in brd["vias"]:
+            if v["net"] == sg["net"]:
+                continue
+            gap = point_seg_dist(v["pos"], a, b) - half - via_r[id(v)]
+            if gap < need(sg["net"], v["net"]) - 1e-3:
+                bad.append(f"{sg['net']} track {gap:.3f} mm from a {v['net']} via at {v['pos']}")
+        for h in holes:
+            gap = point_seg_dist(h["pos"], a, b) - half - h["drill"] / 2
+            if gap < rules["min_hole_clearance"] - 1e-3 and not (
+                    h["net"] == sg["net"] and h["kind"] == "thru_hole"):
+                bad.append(f"{sg['net']} track {gap:.3f} mm from a {h['ref']} hole")
+        for e0, e1 in brd["edges"]:
+            gap = seg_seg_dist(a, b, e0, e1) - half
+            if gap < edge_rule - 1e-3:
+                bad.append(f"{sg['net']} track {gap:.3f} mm from the board edge")
+        for ko in brd["keepouts"]:
+            if ko["tracks"] and sg["layer"] in ko["layers"] and \
+                    seg_rect_dist(a, b, ko["box"]) < half - 1e-3:
+                bad.append(f"{sg['net']} track in a keep-out at {a}")
+    vias = brd["vias"]
+    for k, v in enumerate(vias):
+        r = via_r[id(v)]
+        for pd in copper:
+            if pd["net"] == v["net"] or not pd["cu"] & {"F.Cu", "B.Cu"}:
+                continue
+            gap = rect_gap = max(pd["box"][0] - v["pos"][0], v["pos"][0] - pd["box"][2], 0.0)
+            dy = max(pd["box"][1] - v["pos"][1], v["pos"][1] - pd["box"][3], 0.0)
+            gap = math.hypot(rect_gap, dy) - r
+            if gap < need(v["net"], pd["net"]) - 1e-3:
+                bad.append(f"{v['net']} via {gap:.3f} mm from {pd['ref']}.{pd['num']}")
+        for o in vias[k + 1:]:
+            gap = math.dist(v["pos"], o["pos"]) - r - via_r[id(o)]
+            req = 0.25 if o["net"] == v["net"] else need(v["net"], o["net"])
+            if gap < req - 1e-3:
+                bad.append(f"vias {gap:.3f} mm apart at {v['pos']}")
+        for h in holes:
+            gap = math.dist(v["pos"], h["pos"]) - r - h["drill"] / 2
+            if gap < rules["min_hole_clearance"] - 1e-3:
+                bad.append(f"{v['net']} via {gap:.3f} mm from a {h['ref']} hole")
+        x0, y0, x1, y1 = outline
+        if min(v["pos"][0] - x0, x1 - v["pos"][0], v["pos"][1] - y0, y1 - v["pos"][1]) - r \
+                < edge_rule - 1e-3:
+            bad.append(f"via at {v['pos']} too close to the board edge")
+        for ko in brd["keepouts"]:
+            if ko["vias"] and inside(v["pos"], ko["box"], r - 1e-3):
+                bad.append(f"{v['net']} via in a keep-out at {v['pos']}")
+    check(not bad, f"{len(segs)} tracks and {len(vias)} vias: clearances to every other "
+          "net's copper, holes, board edge and keep-outs" + (f": {bad[:6]}" if bad else ""))
+
+    # connectivity, by KiCad's rule: a track end (or a via) joins whatever
+    # copper it lies inside on its layer.  Crossing mid-track joins nothing.
+    def joined(net):
+        items = []
+        for pd in copper:
+            if pd["net"] == net:
+                items.append(("pad", pd))
+        for sg in segs:
+            if sg["net"] == net:
+                items.append(("seg", sg))
+        for v in vias:
+            if v["net"] == net:
+                items.append(("via", v))
+        parent = list(range(len(items)))
+
+        def root(i):
+            while parent[i] != i:
+                parent[i] = parent[parent[i]]
+                i = parent[i]
+            return i
+
+        def covers(item, pt, layer):
+            kind, o = item
+            if kind == "pad":
+                return layer in o["cu"] and inside(pt, o["box"], 1e-3)
+            if kind == "seg":
+                return o["layer"] == layer and point_seg_dist(pt, o["a"], o["b"]) <= o["w"] / 2 + 1e-3
+            return math.dist(pt, o["pos"]) <= via_r[id(o)] + 1e-3
+
+        anchors = []
+        for i, (kind, o) in enumerate(items):
+            if kind == "seg":
+                anchors += [(i, o["a"], o["layer"]), (i, o["b"], o["layer"])]
+            elif kind == "via":
+                anchors += [(i, o["pos"], "F.Cu"), (i, o["pos"], "B.Cu")]
+        for i, pt, layer in anchors:
+            for j, other in enumerate(items):
+                if j != i and covers(other, pt, layer):
+                    parent[root(i)] = root(j)
+        pads = [i for i, (k, _) in enumerate(items) if k == "pad"]
+        groups = {root(i) for i in pads}
+        return len(groups), len(pads), items, root
+
+    for net in ("VBUS", "VBAT", "VSYS", "+3V3"):
+        groups, npads, _, _ = joined(net)
+        check(groups == 1, f"{net}: all {npads} pads joined by copper" +
+              ("" if groups == 1 else f" - {groups} separate pieces"))
+    _, _, items, root = joined("GND")
+    via_roots = {root(i) for i, (k, _) in enumerate(items) if k == "via"}
+    rf = (min(s_["a"][0] for s_ in rf_segs) - 4, min(s_["a"][1] for s_ in rf_segs),
+          max(s_["a"][0] for s_ in rf_segs) + 4, max(s_["b"][1] for s_ in rf_segs) + 2)
+    stranded = [f"{o['ref']}.{o['num']}" for i, (k, o) in enumerate(items)
+                if k == "pad" and o["kind"] == "smd" and "F.Cu" in o["cu"]
+                and root(i) not in via_roots and not inside(o["pos"], rf)]
+    check(not stranded, "every top-layer GND pad has its own via to the inner planes"
+          + (f": not {stranded}" if stranded else ""))
 
     print()
     if FAIL:
