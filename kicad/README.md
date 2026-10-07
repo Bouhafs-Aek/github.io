@@ -1778,6 +1778,113 @@ and the two **measured** lengths are marked on the silkscreen as a trim scale
 next to the stub. `tools/gen_dn023_footprint.py --l6 11.0` builds any of them
 if you would rather etch it than cut it.
 
+## Fabrication: one panel, one order
+
+The three `*_common` boards were given one 55 × 90 mm outline on purpose, so
+they panelise. `kit/panel_common/` is the three of them butted in a row —
+**165 × 90 mm, two V-score lines** — which means one order, one stackup and
+one piece of laminate. For three boards whose entire purpose is being compared
+with each other, that removes the last variable between them.
+
+```
+A  dn023_common    868 / 915 MHz printed inverted-F
+B  dn024_common    868 + 2440 MHz meandering monopole
+C  an043_common    2.45 GHz meandered inverted-F
+```
+
+[`docs/kit/kit_panel_common.svg`](docs/kit/kit_panel_common.svg) is the panel.
+
+### A merge goes wrong quietly
+
+`gen_panel.py` is not a copy-and-paste. Four things have to be rewritten, and
+none of them is visible at a glance:
+
+* **References become `A…`, `B…`, `C…`** — three boards each carrying `J1`
+  make the pick-and-place file ambiguous, and nobody can tell which board a
+  part belongs to.
+* **Nets are renumbered and renamed per board.** Three `GND`s merged into one
+  net tells DRC that three separate boards are connected. The zone's
+  `net_name` is rewritten along with its number, because **KiCad believes the
+  name**, so renumbering one without the other reattaches a zone to another
+  board's net.
+* **Every uuid is re-keyed**, since three copies of one board otherwise carry
+  three copies of every identifier.
+* **The boards' own `Edge.Cuts` are dropped** and become V-score lines on
+  `User.Comments`. A fab reads `Edge.Cuts` as *route this* and would cut the
+  panel into three before shipping it.
+
+`check_panel.py` checks all of it against the source boards, and found two
+real faults the moment it was written:
+
+**`sexpr.find_all` searches direct children only.** Every uuid in a board is
+nested inside a footprint or a track, so asking for them at the top level
+returned an empty list — and an empty list has no duplicates. The check had
+been passing while testing nothing. Fixed by adding `find_deep()` to the
+parser, which two other files had each been working around with a private
+copy.
+
+**With that fixed it reported 28 duplicated uuids — and the fault was not in
+the panel.** `gen_project.board_footprint` deep-copies a library footprint
+including its uuids, so the three 0402 sites placed from one file carried
+three copies of each. **Every board in the repository had it.** Fixed at the
+source, and `check_kit.py` now has a uuid rule so it cannot come back.
+
+### The export refuses to hand a fab house an empty ground plane
+
+This is the same trap that made a full-wave run meaningless earlier in this
+project, except that this time you pay for it. **KiCad stores zones
+unfilled**, every board here is written by a script, and `kicad-cli pcb export
+gerbers` does not warn you — it hands you a board with no copper pour at all.
+
+So `make_fab.py` fills the zones with **KiCad's own filler** (`pcbnew`, the
+only thing entitled to do it — an approximation written here would be copper
+that disagrees with KiCad's DRC), then **refuses to export** if no
+`filled_polygon` appears afterwards, then refuses again if any exported file
+comes out empty. Without KiCad installed it says so and stops, rather than
+producing something plausible and wrong.
+
+```sh
+python3 tools/gen_panel.py
+python3 tools/check_panel.py
+python3 tools/gen_bom.py
+python3 tools/make_fab.py          # needs KiCad 9; CI does this for you
+```
+
+**Order as:** 2 layer, **1.6 mm FR4**, 1 oz copper, HASL or ENIG, **V-score on
+the two marked lines** (`User.Comments`). The 5 mm of bare laminate either side
+of each ground plane is checked against the scoring lines by `check_panel.py`.
+
+### The BOM is six parts
+
+Read out of the board files rather than the generator's tables, so it says
+what is actually on the board. Unfitted sites stay visible *as* unfitted —
+hiding them would hide the whole reason they are there.
+
+| qty | value | where | part |
+|---|---|---|---|
+| 3 | U.FL receptacle | `AJ1 BJ1 CJ1` | Hirose U.FL-R-SMT-1(10) |
+| 2 | 0 Ω link | `AZ2 CZ2` | any 0402 — no matching values are published for those two antennas |
+| 1 | 3.9 pF | `BZ2` | Murata GRM1555C1H3R9CZ01D — SWRA227E Table 3 |
+| 6 | not fitted | `AZ1 AZ3 …` | lands for compensating an enclosure later |
+
+Not on the board but needed to measure: **3 × U.FL-to-SMA bulkhead pigtail**
+(≤ 300 mm) and **3 × clamp ferrite** for them. The ferrite is not optional —
+see the launch section above.
+
+### CI builds the fabrication files
+
+[`.github/workflows/pcb.yml`](../.github/workflows/pcb.yml) regenerates every
+library, footprint, board and panel, then requires `git diff --exit-code`: **a
+generated file edited by hand fails the build.** Then it verifies the three
+antennas against their published tables, runs six checkers, runs both mutation
+suites, and checks that every drawing matches its board. A second job installs
+KiCad, rebuilds the panel, exports and uploads the gerbers, drill, position
+file and BOM as a build artifact.
+
+Only that second job needs KiCad. Everything else is pure Python with no
+dependencies, on purpose — so the checks run anywhere, including on a machine
+that has never had KiCad installed.
+
 ## Reusing this on someone else's board
 
 [`docs/antenna-integration-checklist.md`](docs/antenna-integration-checklist.md)

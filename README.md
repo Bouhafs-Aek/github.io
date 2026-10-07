@@ -38,6 +38,11 @@ sites. A checker asserts it, because a kit whose variables leak is not a kit.
 <img src="kicad/docs/kit/an043_common.svg" width="30%">
 </p>
 
+**Ready to order:** the three common-plane boards panelise into one
+165 × 90 mm, V-scored, 3-up panel — and
+[CI](.github/workflows/pcb.yml) builds the gerbers, drill, pick-and-place and
+BOM on every push, as a downloadable artifact. Six parts on the whole panel.
+
 ## What is actually in here
 
 | | |
@@ -47,7 +52,8 @@ sites. A checker asserts it, because a kit whose variables leak is not a kit.
 | `kicad/sim/board/` | two RFsim projects, built so a full-wave run can produce a meaningful answer |
 | `kicad/sim/openems/`, `kicad/sim/*.cir` | full-wave and lumped simulation flows that read their geometry out of the board file |
 | `kicad/library/` | symbols and footprints, every antenna generated from its published table |
-| `kicad/tools/` | 30 programs: generators, four checkers, three independent verifiers, two mutation suites |
+| `kicad/kit/panel_common/` | the three common-plane boards, 3-up and V-scored, with BOM and fabrication export |
+| `kicad/tools/` | 34 programs: generators, six checkers, three independent verifiers, two mutation suites, the panel and fabrication tooling |
 | `kicad/docs/antenna-integration-checklist.md` | 85 items, every one of them there because getting it wrong here cost a wrong answer |
 
 ## The rule the whole repository follows
