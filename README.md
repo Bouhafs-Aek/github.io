@@ -53,7 +53,7 @@ BOM on every push, as a downloadable artifact. Six parts on the whole panel.
 | `kicad/sim/openems/`, `kicad/sim/*.cir` | full-wave and lumped simulation flows that read their geometry out of the board file |
 | `kicad/library/` | symbols and footprints, every antenna generated from its published table |
 | `kicad/kit/panel_common/` | the three common-plane boards, 3-up and V-scored, with BOM and fabrication export |
-| `kicad/tools/` | 34 programs: generators, six checkers, three independent verifiers, two mutation suites, the panel and fabrication tooling |
+| `kicad/tools/` | 35 programs: generators, six checkers, three independent verifiers, two mutation suites, the panel and fabrication tooling |
 | `kicad/docs/antenna-integration-checklist.md` | 85 items, every one of them there because getting it wrong here cost a wrong answer |
 
 ## The rule the whole repository follows
