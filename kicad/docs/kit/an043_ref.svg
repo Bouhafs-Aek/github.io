@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="93 53 64 46.9" role="img" aria-label="Dimensioned layout of the 2.45 GHz antenna test board">
+<defs><pattern id="ko" width="1.9" height="1.9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="keepout-hatch" x1="0" y1="0" x2="0" y2="1.9"/></pattern></defs>
+<rect class="keepout" x="100" y="60" width="50" height="8.15" fill="url(#ko)"/>
+<rect class="board-edge" x="100" y="60" width="50" height="32.9"/>
+<rect class="bcu" x="127.9" y="84.675" width="3.5" height="12.95" transform="rotate(-90 129.65 91.15)"/>
+<rect class="keepout" x="126.175" y="68.15" width="6.95" height="24.75" fill="url(#ko)"/>
+<rect class="keepout" x="125.65" y="68.15" width="9.5" height="11.5" fill="url(#ko)"/>
+<polygon class="fcu" points="127.2,65.89 125.2,65.89 125.2,63.25 122.5,63.25 122.5,65.89 120.5,65.89 120.5,63.25 117.8,63.25 117.8,67.69 118.3,67.69 118.3,63.75 120,63.75 120,66.39 123,66.39 123,63.75 124.7,63.75 124.7,66.39 127.7,66.39 127.7,63.75 129.4,63.75 129.4,68.65 129.9,68.65 129.9,63.75 131.3,63.75 131.3,68.65 132.2,68.65 132.2,68.407 131.898,68.407 131.888,68.454 131.864,68.497 131.826,68.53 131.818,68.534 131.775,68.546 131.727,68.545 131.681,68.532 131.663,68.522 131.629,68.487 131.608,68.441 131.602,68.392 131.61,68.344 131.627,68.311 131.662,68.279 131.708,68.259 131.757,68.252 131.805,68.26 131.838,68.277 131.873,68.314 131.893,68.358 131.898,68.407 132.2,68.407 132.2,63.25 127.2,63.25 127.2,65.89"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M129.65,68.4 L129.65,71.15"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M129.65,71.15 L132.17,71.15"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M129.65,71.15 L129.65,74.17"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M129.65,75.13 L129.65,78.15"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M129.65,78.15 L132.17,78.15"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M129.65,78.15 L129.65,80.15"/>
+<path class="trace" stroke-width="0.835" stroke-linecap="round" fill="none" d="M129.65,80.15 L129.65,80.75"/>
+<path class="trace" stroke-width="1.305" stroke-linecap="round" fill="none" d="M129.65,80.75 L129.65,81.35"/>
+<path class="trace" stroke-width="1.775" stroke-linecap="round" fill="none" d="M129.65,81.35 L129.65,81.95"/>
+<path class="trace" stroke-width="2.245" stroke-linecap="round" fill="none" d="M129.65,81.95 L129.65,82.55"/>
+<path class="trace" stroke-width="2.715" stroke-linecap="round" fill="none" d="M129.65,82.55 L129.65,83.15"/>
+<path class="trace" stroke-width="2.95" stroke-linecap="round" fill="none" d="M129.65,83.15 L129.65,92.9"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M133.13,71.15 L134.05,71.15"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M133.13,78.15 L134.05,78.15"/>
+<rect class="fcu pad" x="127.9" y="89.675" width="3.5" height="2.95" transform="rotate(-90 129.65 91.15)"/>
+<rect class="fcu pad" x="122.925" y="89.65" width="3.5" height="3" transform="rotate(-90 124.675 91.15)"/>
+<rect class="fcu pad" x="132.875" y="89.65" width="3.5" height="3" transform="rotate(-90 134.625 91.15)"/>
+<rect class="fcu pad" x="131.89" y="77.84" width="0.56" height="0.62" transform="rotate(-0 132.17 78.15)"/>
+<rect class="fcu pad" x="132.85" y="77.84" width="0.56" height="0.62" transform="rotate(-0 133.13 78.15)"/>
+<rect class="fcu pad" x="129.37" y="74.82" width="0.56" height="0.62" transform="rotate(-90 129.65 75.13)"/>
+<rect class="fcu pad" x="129.37" y="73.86" width="0.56" height="0.62" transform="rotate(-90 129.65 74.17)"/>
+<rect class="fcu pad" x="131.89" y="70.84" width="0.56" height="0.62" transform="rotate(-0 132.17 71.15)"/>
+<rect class="fcu pad" x="132.85" y="70.84" width="0.56" height="0.62" transform="rotate(-0 133.13 71.15)"/>
+<rect class="fcu pad" x="131.3" y="68.15" width="0.9" height="0.5" transform="rotate(-0 131.75 68.4)"/>
+<rect class="fcu pad" x="129.4" y="68.15" width="0.5" height="0.5" transform="rotate(-0 129.65 68.4)"/>
+<circle class="via" cx="106" cy="68.95" r="0.3"/>
+<circle class="via" cx="106" cy="91.1" r="0.3"/>
+<circle class="via" cx="109" cy="68.95" r="0.3"/>
+<circle class="via" cx="109" cy="91.1" r="0.3"/>
+<circle class="via" cx="112" cy="68.95" r="0.3"/>
+<circle class="via" cx="112" cy="91.1" r="0.3"/>
+<circle class="via" cx="115" cy="68.95" r="0.3"/>
+<circle class="via" cx="115" cy="91.1" r="0.3"/>
+<circle class="via" cx="118" cy="68.95" r="0.3"/>
+<circle class="via" cx="118" cy="91.1" r="0.3"/>
+<circle class="via" cx="121" cy="68.95" r="0.3"/>
+<circle class="via" cx="121" cy="91.1" r="0.3"/>
+<circle class="via" cx="124" cy="68.95" r="0.3"/>
+<circle class="via" cx="124" cy="91.1" r="0.3"/>
+<circle class="via" cx="136" cy="68.95" r="0.3"/>
+<circle class="via" cx="136" cy="91.1" r="0.3"/>
+<circle class="via" cx="139" cy="68.95" r="0.3"/>
+<circle class="via" cx="139" cy="91.1" r="0.3"/>
+<circle class="via" cx="142" cy="68.95" r="0.3"/>
+<circle class="via" cx="142" cy="91.1" r="0.3"/>
+<circle class="via" cx="106" cy="72.95" r="0.3"/>
+<circle class="via" cx="110" cy="72.95" r="0.3"/>
+<circle class="via" cx="114" cy="72.95" r="0.3"/>
+<circle class="via" cx="118" cy="72.95" r="0.3"/>
+<circle class="via" cx="122" cy="72.95" r="0.3"/>
+<circle class="via" cx="138" cy="72.95" r="0.3"/>
+<circle class="via" cx="142" cy="72.95" r="0.3"/>
+<circle class="via" cx="106" cy="76.95" r="0.3"/>
+<circle class="via" cx="110" cy="76.95" r="0.3"/>
+<circle class="via" cx="114" cy="76.95" r="0.3"/>
+<circle class="via" cx="118" cy="76.95" r="0.3"/>
+<circle class="via" cx="122" cy="76.95" r="0.3"/>
+<circle class="via" cx="138" cy="76.95" r="0.3"/>
+<circle class="via" cx="142" cy="76.95" r="0.3"/>
+<circle class="via" cx="106" cy="80.95" r="0.3"/>
+<circle class="via" cx="110" cy="80.95" r="0.3"/>
+<circle class="via" cx="114" cy="80.95" r="0.3"/>
+<circle class="via" cx="118" cy="80.95" r="0.3"/>
+<circle class="via" cx="122" cy="80.95" r="0.3"/>
+<circle class="via" cx="134" cy="80.95" r="0.3"/>
+<circle class="via" cx="138" cy="80.95" r="0.3"/>
+<circle class="via" cx="142" cy="80.95" r="0.3"/>
+<circle class="via" cx="106" cy="84.95" r="0.3"/>
+<circle class="via" cx="110" cy="84.95" r="0.3"/>
+<circle class="via" cx="114" cy="84.95" r="0.3"/>
+<circle class="via" cx="118" cy="84.95" r="0.3"/>
+<circle class="via" cx="122" cy="84.95" r="0.3"/>
+<circle class="via" cx="134" cy="84.95" r="0.3"/>
+<circle class="via" cx="138" cy="84.95" r="0.3"/>
+<circle class="via" cx="142" cy="84.95" r="0.3"/>
+<circle class="via" cx="106" cy="88.95" r="0.3"/>
+<circle class="via" cx="110" cy="88.95" r="0.3"/>
+<circle class="via" cx="114" cy="88.95" r="0.3"/>
+<circle class="via" cx="118" cy="88.95" r="0.3"/>
+<circle class="via" cx="122" cy="88.95" r="0.3"/>
+<circle class="via" cx="134" cy="88.95" r="0.3"/>
+<circle class="via" cx="138" cy="88.95" r="0.3"/>
+<circle class="via" cx="142" cy="88.95" r="0.3"/>
+<circle class="via" cx="134.05" cy="78.15" r="0.3"/>
+<circle class="via" cx="134.05" cy="71.15" r="0.3"/>
+<path class="plane-edge" d="M97,68.15 L153,68.15"/>
+<text class="note" x="101" y="70.55">GND plane edge &#8212; no copper above, any layer</text>
+<path class="dim" d="M100,97.1 L150,97.1"/>
+<path class="dim" d="M100,96.5 L100,97.7"/>
+<path class="dim" d="M150,96.5 L150,97.7"/>
+<text class="dim-text" x="125" y="96.4" text-anchor="middle">50 mm</text>
+<path class="dim" d="M97,60 L97,92.9"/>
+<path class="dim" d="M96.4,60 L97.6,60"/>
+<path class="dim" d="M96.4,92.9 L97.6,92.9"/>
+<text class="dim-text" x="96.1" y="76.45" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 96.1 76.45)">32.9 mm</text>
+<path class="dim" d="M153,60 L153,68.15"/>
+<path class="dim" d="M152.4,60 L153.6,60"/>
+<path class="dim" d="M152.4,68.15 L153.6,68.15"/>
+<text class="dim-text" x="152.1" y="64.075" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 152.1 64.075)">8.15</text>
+</svg>

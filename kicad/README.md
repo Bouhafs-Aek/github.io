@@ -1,6 +1,11 @@
-# TI reference PCB antennas in KiCad — symbols, boards, checks and RF simulation
+# TI reference PCB antennas in KiCad — an evaluation kit, with checks and RF simulation
 
-Two TI reference antennas, each as a complete self-contained KiCad project,
+**[`kit/`](#the-evaluation-kit-three-antennas-two-ground-planes) is six boards:
+three TI reference antennas, each built twice — once on the ground plane its
+note publishes, once on a 45 × 60 mm plane shared by all three.** That is the
+deliverable. Everything below it is what the kit is made of.
+
+Three TI reference antennas, each as a complete self-contained KiCad project,
 each an exact copy of its application note's dimension table and each with a
 checker that fails the build if it stops being one:
 
@@ -13,7 +18,11 @@ checker that fails the build if it stops being one:
   edge-mount SMA in `dn024/`, and the note's own vertical through-hole jack
   with the top ground cut away around the feed in `dn024_ti_form/`.
 
-Plus a third project for RFsim, the inverted-F drawn the way its Figure 3
+* **TI DN023 / SWRA228C**, a **868 / 915 / 955 MHz printed inverted-F** —
+  one layer, no ground beneath it, approximately 50 Ω with nothing fitted, and
+  tuned by *trimming* `L6` rather than by matching.
+
+Plus two RFsim projects — the inverted-F drawn the way its Figure 3
 draws it — ground on layer 2 only, one via, no connector — and two simulation
 flows: a lumped **ngspice** return-loss testbench and a
 full-wave **openEMS** model that reads its geometry out of whichever board
@@ -28,6 +37,8 @@ kicad/
 ├── library/
 │   ├── SWRA117D_RF.kicad_sym        antenna, SMA, RF_PORT, GND, PWR_FLAG (+ C, L)
 │   ├── TI_DN024.kicad_sym           the second antenna's symbols
+│   ├── TI_DN023.kicad_sym           the third antenna's symbols
+│   └── TI_DN023.pretty/             TI_DN023_IFA_868.kicad_mod, from Table 1
 │   ├── TI_DN024.pretty/
 │   │   ├── TI_DN024_Monopole_868_2440.kicad_mod  the radiator, from Table 1
 │   │   └── SMA_ThruHole_4Post.kicad_mod          P6, measured off Figure 2
@@ -38,6 +49,10 @@ kicad/
 │       ├── Chip_0402_RF_WideLand.kicad_mod     0402 pitch, 50 Ω-wide pads
 │       ├── RF_Port_Land.kicad_mod                the same land, no connector
 │       └── Chip_0402_1005Metric_RF.kicad_mod     spare 0402 land
+├── kit/                             THE KIT: 6 boards, 3 antennas x 2 planes
+│   ├── an043_ref/  an043_common/    2.45 GHz meandered inverted-F
+│   ├── dn023_ref/  dn023_common/    868/915 MHz printed inverted-F
+│   └── dn024_ref/  dn024_common/    868 + 2440 MHz meandering monopole
 ├── dn024/                           second antenna: TI DN024 monopole
 │   └── dn024_monopole_868_2440.*    868 + 2440 MHz, edge-launch SMA
 ├── dn024_ti_form/                   the same antenna in the note's own form
@@ -1522,6 +1537,177 @@ and tells you nothing — there is no band there. Start at 0.6 GHz.
 
 [`docs/dn024-sim-board-drawing.svg`](docs/dn024-sim-board-drawing.svg) is the
 drawing.
+
+## The evaluation kit: three antennas, two ground planes
+
+`kit/` is six boards. Three antennas, each built twice.
+
+| | antenna | size | band | note |
+|---|---|---|---|---|
+| **AN043** | meandered inverted-F | 15 × 6 mm | 2.45 GHz | SWRA117D |
+| **DN023** | printed inverted-F | 43 × 20 mm | 868 / 915 / 955 MHz | SWRA228C |
+| **DN024** | meandering monopole | 38 × 25 mm | 868 + 2440 MHz | SWRA227E |
+
+These three because AN058 Tables 9 and 10 — TI's own catalogue of reference
+antennas — list a dozen, and these are the three whose application note is in
+hand. Every one of them is an exact copy of a published dimension table,
+checked by its own `verify_against_*` script. The rest of the catalogue needs
+the note: `ti.com` is not reachable from this container, so the kit grows by
+adding a PDF, not by drawing from memory.
+
+### Why each antenna is built twice
+
+**A PCB antenna is not a component.** The ground plane is part of the antenna,
+so which plane you put it on decides what you measure. One board per antenna
+cannot answer both of the questions you actually have, so each antenna gets
+two:
+
+| | plane | what it is for |
+|---|---|---|
+| `*_ref` | the plane the note publishes | reproduces the note's own numbers, so the measurement **validates the build** |
+| `*_common` | **45 × 60 mm, shared by all three** | the three boards become **comparable with each other** — which is the question a customer asks |
+
+The reference boards cannot be compared with each other, because they differ
+in the one thing that matters most. The common boards do not reproduce
+anybody's published numbers, and that is the point: on the common plane none
+of these is the antenna its note measured, and the difference between the two
+boards of a pair *is the ground plane sensitivity* — which is the single
+most useful number to hand a customer whose enclosure is not yet fixed.
+
+One honest exception, marked on the board and in the schematic note: **AN043
+publishes no ground plane size at all.** SWRA117D only says plane size affects
+performance. Its "reference" plane is this repo's own 40 × 23.75 mm, not TI's.
+
+### Six separate boards, not one board with six antennas
+
+Putting several antennas on one PCB would answer neither question: they would
+share a plane and couple to each other. TI's own CC-Antenna-DK is a set of
+separate boards for the same reason. The three common-plane boards share one
+55 × 90 mm outline, so they panelise into one fabrication order and drop into
+one fixture.
+
+Everything that is not the antenna or the plane is held constant on purpose —
+1.6 mm FR4, the same edge-mount SMA, the same 2.95 mm 50 Ω microstrip, the
+same three matching sites at the feed. `check_kit.py` asserts that, because a
+kit whose variables leak is not a kit:
+
+```
+ok   all 6 boards: one connector (SWRA117D_RF:SMA_EdgeMount_Generic), one stackup (1.69 mm), one 50 ohm width (2.95 mm) - only the antenna and the plane are variables
+ok   the 3 common-plane boards share one 55 x 90 mm outline and one 45 x 60 mm plane, so only the antenna differs
+```
+
+### The boards
+
+| board | outline | plane | antenna | drawing |
+|---|---|---|---|---|
+| `an043_ref` | 50 × 32.9 | 40 × 23.75 † | 14.4 × 5.4 | [svg](docs/kit/an043_ref.svg) |
+| `an043_common` | 55 × 90 | 45 × 60 | 14.4 × 5.4 | [svg](docs/kit/an043_common.svg) |
+| `dn023_ref` | 53 × 69 | 31 × 45 | 43 × 20 | [svg](docs/kit/dn023_ref.svg) |
+| `dn023_common` | 55 × 90 | 45 × 60 | 43 × 20 | [svg](docs/kit/dn023_common.svg) |
+| `dn024_ref` | 53 × 91 | 43 × 63 | 38 × 25 | [svg](docs/kit/dn024_ref.svg) |
+| `dn024_common` | 55 × 90 | 45 × 60 | 38 × 25 | [svg](docs/kit/dn024_common.svg) |
+
+† this repo's choice; SWRA117D publishes none.
+
+Matching, per antenna, with nothing invented:
+
+| | Z1 | Z2 | Z3 | why |
+|---|---|---|---|---|
+| AN043 | NF | **0 Ω link** | NF | the note publishes no values; AN058 asks for the pads |
+| DN023 | NF | **0 Ω link** | NF | *"approximately matched to 50 ohm, no external matching components are needed… has included the option for one series and two shunt components"* |
+| DN024 | NF | **3.9 pF** | NF | SWRA227E Table 3, dual band — the only one of the three with published values |
+
+### Almost nothing on these boards is written down twice
+
+The outline, the plane, where the antenna sits, where the connector goes and
+where the schematic symbol is placed are all **derived** at generation time
+from the footprints and symbols themselves. That is what keeps six boards
+consistent — and it is also why they need checking, because a derivation that
+is wrong is wrong six times.
+
+The three antennas put their footprint origin in three different places, and
+nothing in the generator may assume which:
+
+| | origin relative to the plane edge | why |
+|---|---|---|
+| AN043 | **0.25 mm below** | the feed pad straddles the edge and the W1 strap's via lands in the plane behind it |
+| DN023 | **on it** | SWRA228C measures `L1` = 20.0 mm *to* the plane edge, and the shorting leg merges into the plane there |
+| DN024 | **1.0 mm above** | Table 1's `L5` is clear board between antenna and plane |
+
+Writing the checker found three real faults, all of which look fine on screen:
+
+* **DN023's shorting leg was shorted to nothing.** It is an SMD pad sitting
+  exactly *on* the plane edge — and both pours stop at that line, so there was
+  no copper for it to reach. It now runs 1.5 mm into the plane and vias down
+  to B.Cu. An inverted-F with an open short is not a badly matched antenna, it
+  is a different antenna.
+* **The wide 0402 land was being turned the wrong way.** `Chip_0402_RF_WideLand`
+  is drawn for a part lying *along* the line, and a series part stands *across*
+  it, so at 90° its wide pads pointed the wrong way and sat 1.1 mm inside the
+  neighbouring track. The kit uses the ordinary 0402 behind the taper, which is
+  what the DN024 board already did.
+* **The checker's own pad model was wrong.** Treating a pad as a circle of its
+  longest half-dimension reads a track passing the short way as driving
+  straight through it. Replaced with the exact rectangle distance — which is
+  how the first fault above got found in the first place.
+
+### Running it
+
+```sh
+python3 tools/gen_dn023_symbols.py      # library/TI_DN023.kicad_sym
+python3 tools/gen_dn023_footprint.py    # the third antenna, from Table 1
+python3 tools/verify_against_swra228c.py
+python3 tools/gen_kit.py                # all six boards
+python3 tools/check_kit.py
+python3 tools/mutate_kit.py             # does the checker actually bite?
+```
+
+```
+0 problem(s) across 6 board(s)
+8/8 mutations caught
+```
+
+The mutations are the mistakes that are easy to make here and invisible in the
+editor: the antenna off centre, the board too narrow for the 5 mm either side
+SWRA228C asks for, the shorting leg not reaching the plane, Z2 wired as a shunt
+instead of in series, one common board quietly given a different plane, AE1
+placed so its feed pin misses the bus, the antenna pushed down over the plane
+edge, and a ground pour going missing from the bottom layer.
+
+### What to measure, and in what order
+
+1. **Each `*_ref` board against its note.** DN024: SWR 1.2 at 868 and 1.6 at
+   2.44 GHz (SWRA227E 4.3). DN023: reflection better than −25 dB once `L6` is
+   trimmed. If a reference board does not reproduce its note, the build is
+   wrong and nothing downstream means anything.
+2. **Then the three `*_common` boards against each other.** Same plane, same
+   launch, same stackup — so the difference is the antenna, and the comparison
+   is honest.
+3. **Then each pair against itself.** `ref` versus `common` for one antenna is
+   that antenna's ground-plane sensitivity, measured rather than asserted.
+
+### DN023's L6 is a trim, and the note gives it three values
+
+SWRA228C tunes this antenna by cutting copper off, not by matching — and it
+dimensions the cut three different ways:
+
+| | `L6` | where |
+|---|---|---|
+| as drawn | **17.0 mm** | Table 1 |
+| 868 MHz | 9 mm | section 3.1 text |
+| 868 MHz | **11 mm** | Figure 12 caption, the measured plot |
+| 915 MHz | 1 mm | section 3.1 text |
+| 915 MHz | **3 mm** | Figure 13 caption, the measured plot |
+
+The revision history says *"SWRA228C — Updated values in Table 1"*, so Table 1
+moved at least once. The two captions sit exactly 2 mm — one `W2` — above the
+text, which reads like two datums rather than one of them being wrong.
+
+Nothing here picks between them. The board is built at Table 1's 17.0 mm,
+which is the longest and therefore the only one you can still cut back from,
+and the two **measured** lengths are marked on the silkscreen as a trim scale
+next to the stub. `tools/gen_dn023_footprint.py --l6 11.0` builds any of them
+if you would rather etch it than cut it.
 
 ## Reusing this on someone else's board
 
