@@ -1,0 +1,4 @@
+reference,qty,value,footprint,fitted,manufacturer_part,note
+J1,1,U.FL receptacle,U_FL_Hirose_U_FL_R_SMT_1_Vertical,yes,Hirose U.FL-R-SMT-1(10),"mates with a U.FL to SMA pigtail, not supplied on the board"
+Z2,1,0R,Chip_0402_1005Metric_RF,yes,any 0402 0 ohm link,no matching values are published for this antenna; the link makes the site a through
+Z1 Z3,2,DNP,Chip_0402_1005Metric_RF,no,,"land laid out, nothing fitted - for compensating an enclosure later (AN058, and SWRA228C section 3)"

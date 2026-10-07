@@ -1,0 +1,5 @@
+reference,qty,value,footprint,fitted,manufacturer_part,note
+AJ1 BJ1 CJ1,3,U.FL receptacle,U_FL_Hirose_U_FL_R_SMT_1_Vertical,yes,Hirose U.FL-R-SMT-1(10),"mates with a U.FL to SMA pigtail, not supplied on the board"
+AZ2 CZ2,2,0R,Chip_0402_1005Metric_RF,yes,any 0402 0 ohm link,no matching values are published for this antenna; the link makes the site a through
+BZ2,1,3.9pF,Chip_0402_1005Metric_RF,yes,Murata GRM1555C1H3R9CZ01D,"SWRA227E Table 3, dual band; C0G 0402"
+AZ1 AZ3 BZ1 BZ3 CZ1 CZ3,6,DNP,Chip_0402_1005Metric_RF,no,,"land laid out, nothing fitted - for compensating an enclosure later (AN058, and SWRA228C section 3)"

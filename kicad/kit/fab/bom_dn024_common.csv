@@ -1,0 +1,4 @@
+reference,qty,value,footprint,fitted,manufacturer_part,note
+J1,1,U.FL receptacle,U_FL_Hirose_U_FL_R_SMT_1_Vertical,yes,Hirose U.FL-R-SMT-1(10),"mates with a U.FL to SMA pigtail, not supplied on the board"
+Z2,1,3.9pF,Chip_0402_1005Metric_RF,yes,Murata GRM1555C1H3R9CZ01D,"SWRA227E Table 3, dual band; C0G 0402"
+Z1 Z3,2,DNP,Chip_0402_1005Metric_RF,no,,"land laid out, nothing fitted - for compensating an enclosure later (AN058, and SWRA228C section 3)"

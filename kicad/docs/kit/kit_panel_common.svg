@@ -1,0 +1,642 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="43 43 179 104" role="img" aria-label="Dimensioned layout of the 2.45 GHz antenna test board">
+<defs><pattern id="ko" width="1.9" height="1.9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="keepout-hatch" x1="0" y1="0" x2="0" y2="1.9"/></pattern></defs>
+<rect class="keepout" x="50" y="50" width="165" height="29" fill="url(#ko)"/>
+<rect class="board-edge" x="50" y="50" width="165" height="90"/>
+<rect class="keepout" x="59.525" y="79" width="6.95" height="50.95" fill="url(#ko)"/>
+<rect class="keepout" x="59" y="79" width="9.5" height="11.5" fill="url(#ko)"/>
+<rect class="keepout" x="129.025" y="79" width="6.95" height="50.95" fill="url(#ko)"/>
+<rect class="keepout" x="128.5" y="79" width="9.5" height="11.5" fill="url(#ko)"/>
+<rect class="keepout" x="188.675" y="79" width="6.95" height="50.95" fill="url(#ko)"/>
+<rect class="keepout" x="188.15" y="79" width="9.5" height="11.5" fill="url(#ko)"/>
+<polygon class="fcu" points="57,79 57,60 68,60 68,71 74,71 74,60 78,60 78,71 84,71 84,60 88,60 88,71 94,71 94,60 98,60 98,76 99,76 99,59 93,59 93,70 89,70 89,59 83,59 83,70 79,70 79,59 73,59 73,70 69,70 69,59 56,59 56,79"/>
+<polygon class="fcu" points="64,79 64,59 62,59 62,79"/>
+<polygon class="fcu" points="133.5,78 133.5,71 151.5,71 151.5,64 115.5,64 115.5,61 151.5,61 151.5,54 113.5,54 113.5,56 149.5,56 149.5,59 113.5,59 113.5,66 149.5,66 149.5,69 131.5,69 131.5,78"/>
+<polygon class="fcu" points="189.7,76.74 187.7,76.74 187.7,74.1 185,74.1 185,76.74 183,76.74 183,74.1 180.3,74.1 180.3,78.54 180.8,78.54 180.8,74.6 182.5,74.6 182.5,77.24 185.5,77.24 185.5,74.6 187.2,74.6 187.2,77.24 190.2,77.24 190.2,74.6 191.9,74.6 191.9,79.5 192.4,79.5 192.4,74.6 193.8,74.6 193.8,79.5 194.7,79.5 194.7,79.257 194.398,79.257 194.388,79.304 194.364,79.347 194.326,79.38 194.318,79.384 194.275,79.396 194.227,79.395 194.181,79.382 194.163,79.372 194.129,79.337 194.108,79.291 194.102,79.242 194.11,79.194 194.127,79.161 194.162,79.129 194.208,79.109 194.257,79.102 194.305,79.11 194.338,79.127 194.373,79.164 194.393,79.208 194.398,79.257 194.7,79.257 194.7,74.1 189.7,74.1 189.7,76.74"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M63,79 L63,82"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M63,82 L65.52,82"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M63,82 L63,85.02"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M63,85.98 L63,89"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M63,89 L65.52,89"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M63,89 L63,91"/>
+<path class="trace" stroke-width="0.835" stroke-linecap="round" fill="none" d="M63,91 L63,91.6"/>
+<path class="trace" stroke-width="1.305" stroke-linecap="round" fill="none" d="M63,91.6 L63,92.2"/>
+<path class="trace" stroke-width="1.775" stroke-linecap="round" fill="none" d="M63,92.2 L63,92.8"/>
+<path class="trace" stroke-width="2.245" stroke-linecap="round" fill="none" d="M63,92.8 L63,93.4"/>
+<path class="trace" stroke-width="2.715" stroke-linecap="round" fill="none" d="M63,93.4 L63,94"/>
+<path class="trace" stroke-width="2.95" stroke-linecap="round" fill="none" d="M63,94 L63,129.95"/>
+<path class="trace" stroke-width="2.755" stroke-linecap="round" fill="none" d="M63,129.95 L63,130.45"/>
+<path class="trace" stroke-width="2.365" stroke-linecap="round" fill="none" d="M63,130.45 L63,130.95"/>
+<path class="trace" stroke-width="1.975" stroke-linecap="round" fill="none" d="M63,130.95 L63,131.45"/>
+<path class="trace" stroke-width="1.585" stroke-linecap="round" fill="none" d="M63,131.45 L63,131.95"/>
+<path class="trace" stroke-width="1.195" stroke-linecap="round" fill="none" d="M63,131.95 L63,132.45"/>
+<path class="trace" stroke-width="1" stroke-linecap="round" fill="none" d="M63,132.45 L63,133.95"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M66.48,82 L67.4,82"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M66.48,89 L67.4,89"/>
+<path class="trace" stroke-width="1" stroke-linecap="round" fill="none" d="M56.5,78.5 L56.5,80.5"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M132.5,78 L132.5,82"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M132.5,82 L135.02,82"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M132.5,82 L132.5,85.02"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M132.5,85.98 L132.5,89"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M132.5,89 L135.02,89"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M132.5,89 L132.5,91"/>
+<path class="trace" stroke-width="0.835" stroke-linecap="round" fill="none" d="M132.5,91 L132.5,91.6"/>
+<path class="trace" stroke-width="1.305" stroke-linecap="round" fill="none" d="M132.5,91.6 L132.5,92.2"/>
+<path class="trace" stroke-width="1.775" stroke-linecap="round" fill="none" d="M132.5,92.2 L132.5,92.8"/>
+<path class="trace" stroke-width="2.245" stroke-linecap="round" fill="none" d="M132.5,92.8 L132.5,93.4"/>
+<path class="trace" stroke-width="2.715" stroke-linecap="round" fill="none" d="M132.5,93.4 L132.5,94"/>
+<path class="trace" stroke-width="2.95" stroke-linecap="round" fill="none" d="M132.5,94 L132.5,129.95"/>
+<path class="trace" stroke-width="2.755" stroke-linecap="round" fill="none" d="M132.5,129.95 L132.5,130.45"/>
+<path class="trace" stroke-width="2.365" stroke-linecap="round" fill="none" d="M132.5,130.45 L132.5,130.95"/>
+<path class="trace" stroke-width="1.975" stroke-linecap="round" fill="none" d="M132.5,130.95 L132.5,131.45"/>
+<path class="trace" stroke-width="1.585" stroke-linecap="round" fill="none" d="M132.5,131.45 L132.5,131.95"/>
+<path class="trace" stroke-width="1.195" stroke-linecap="round" fill="none" d="M132.5,131.95 L132.5,132.45"/>
+<path class="trace" stroke-width="1" stroke-linecap="round" fill="none" d="M132.5,132.45 L132.5,133.95"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M135.98,82 L136.9,82"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M135.98,89 L136.9,89"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M192.15,79.25 L192.15,82"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M192.15,82 L194.67,82"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M192.15,82 L192.15,85.02"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M192.15,85.98 L192.15,89"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M192.15,89 L194.67,89"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M192.15,89 L192.15,91"/>
+<path class="trace" stroke-width="0.835" stroke-linecap="round" fill="none" d="M192.15,91 L192.15,91.6"/>
+<path class="trace" stroke-width="1.305" stroke-linecap="round" fill="none" d="M192.15,91.6 L192.15,92.2"/>
+<path class="trace" stroke-width="1.775" stroke-linecap="round" fill="none" d="M192.15,92.2 L192.15,92.8"/>
+<path class="trace" stroke-width="2.245" stroke-linecap="round" fill="none" d="M192.15,92.8 L192.15,93.4"/>
+<path class="trace" stroke-width="2.715" stroke-linecap="round" fill="none" d="M192.15,93.4 L192.15,94"/>
+<path class="trace" stroke-width="2.95" stroke-linecap="round" fill="none" d="M192.15,94 L192.15,129.95"/>
+<path class="trace" stroke-width="2.755" stroke-linecap="round" fill="none" d="M192.15,129.95 L192.15,130.45"/>
+<path class="trace" stroke-width="2.365" stroke-linecap="round" fill="none" d="M192.15,130.45 L192.15,130.95"/>
+<path class="trace" stroke-width="1.975" stroke-linecap="round" fill="none" d="M192.15,130.95 L192.15,131.45"/>
+<path class="trace" stroke-width="1.585" stroke-linecap="round" fill="none" d="M192.15,131.45 L192.15,131.95"/>
+<path class="trace" stroke-width="1.195" stroke-linecap="round" fill="none" d="M192.15,131.95 L192.15,132.45"/>
+<path class="trace" stroke-width="1" stroke-linecap="round" fill="none" d="M192.15,132.45 L192.15,133.95"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M195.63,82 L196.55,82"/>
+<path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M195.63,89 L196.55,89"/>
+<rect class="fcu pad" x="62.475" y="133.45" width="1.05" height="1" transform="rotate(-270 63 133.95)"/>
+<rect class="fcu pad" x="60.425" y="134.95" width="2.2" height="1.05" transform="rotate(-270 61.525 135.475)"/>
+<rect class="fcu pad" x="63.375" y="134.95" width="2.2" height="1.05" transform="rotate(-270 64.475 135.475)"/>
+<rect class="fcu pad" x="65.24" y="88.69" width="0.56" height="0.62" transform="rotate(-0 65.52 89)"/>
+<rect class="fcu pad" x="66.2" y="88.69" width="0.56" height="0.62" transform="rotate(-0 66.48 89)"/>
+<rect class="fcu pad" x="62.72" y="85.67" width="0.56" height="0.62" transform="rotate(-90 63 85.98)"/>
+<rect class="fcu pad" x="62.72" y="84.71" width="0.56" height="0.62" transform="rotate(-90 63 85.02)"/>
+<rect class="fcu pad" x="65.24" y="81.69" width="0.56" height="0.62" transform="rotate(-0 65.52 82)"/>
+<rect class="fcu pad" x="66.2" y="81.69" width="0.56" height="0.62" transform="rotate(-0 66.48 82)"/>
+<rect class="fcu pad" x="62" y="78" width="2" height="1" transform="rotate(-0 63 78.5)"/>
+<rect class="fcu pad" x="56" y="78" width="1" height="1" transform="rotate(-0 56.5 78.5)"/>
+<rect class="fcu pad" x="131.975" y="133.45" width="1.05" height="1" transform="rotate(-270 132.5 133.95)"/>
+<rect class="fcu pad" x="129.925" y="134.95" width="2.2" height="1.05" transform="rotate(-270 131.025 135.475)"/>
+<rect class="fcu pad" x="132.875" y="134.95" width="2.2" height="1.05" transform="rotate(-270 133.975 135.475)"/>
+<rect class="fcu pad" x="134.74" y="88.69" width="0.56" height="0.62" transform="rotate(-0 135.02 89)"/>
+<rect class="fcu pad" x="135.7" y="88.69" width="0.56" height="0.62" transform="rotate(-0 135.98 89)"/>
+<rect class="fcu pad" x="132.22" y="85.67" width="0.56" height="0.62" transform="rotate(-90 132.5 85.98)"/>
+<rect class="fcu pad" x="132.22" y="84.71" width="0.56" height="0.62" transform="rotate(-90 132.5 85.02)"/>
+<rect class="fcu pad" x="134.74" y="81.69" width="0.56" height="0.62" transform="rotate(-0 135.02 82)"/>
+<rect class="fcu pad" x="135.7" y="81.69" width="0.56" height="0.62" transform="rotate(-0 135.98 82)"/>
+<rect class="fcu pad" x="131.5" y="77" width="2" height="2" transform="rotate(-0 132.5 78)"/>
+<circle class="fcu pad" cx="132.5" cy="75.2" r="0.3"/>
+<circle class="fcu pad" cx="132.5" cy="72.4" r="0.3"/>
+<circle class="fcu pad" cx="132.9" cy="70" r="0.3"/>
+<circle class="fcu pad" cx="135.7" cy="70" r="0.3"/>
+<circle class="fcu pad" cx="138.5" cy="70" r="0.3"/>
+<circle class="fcu pad" cx="141.3" cy="70" r="0.3"/>
+<circle class="fcu pad" cx="144.1" cy="70" r="0.3"/>
+<circle class="fcu pad" cx="146.9" cy="70" r="0.3"/>
+<circle class="fcu pad" cx="149.7" cy="70" r="0.3"/>
+<circle class="fcu pad" cx="150.5" cy="68" r="0.3"/>
+<circle class="fcu pad" cx="150.5" cy="65.2" r="0.3"/>
+<circle class="fcu pad" cx="147.9" cy="65" r="0.3"/>
+<circle class="fcu pad" cx="145.1" cy="65" r="0.3"/>
+<circle class="fcu pad" cx="142.3" cy="65" r="0.3"/>
+<circle class="fcu pad" cx="139.5" cy="65" r="0.3"/>
+<circle class="fcu pad" cx="136.7" cy="65" r="0.3"/>
+<circle class="fcu pad" cx="133.9" cy="65" r="0.3"/>
+<circle class="fcu pad" cx="131.1" cy="65" r="0.3"/>
+<circle class="fcu pad" cx="128.3" cy="65" r="0.3"/>
+<circle class="fcu pad" cx="125.5" cy="65" r="0.3"/>
+<circle class="fcu pad" cx="122.7" cy="65" r="0.3"/>
+<circle class="fcu pad" cx="119.9" cy="65" r="0.3"/>
+<circle class="fcu pad" cx="117.1" cy="65" r="0.3"/>
+<circle class="fcu pad" cx="114.5" cy="64.8" r="0.3"/>
+<circle class="fcu pad" cx="114.5" cy="62" r="0.3"/>
+<circle class="fcu pad" cx="115.3" cy="60" r="0.3"/>
+<circle class="fcu pad" cx="118.1" cy="60" r="0.3"/>
+<circle class="fcu pad" cx="120.9" cy="60" r="0.3"/>
+<circle class="fcu pad" cx="123.7" cy="60" r="0.3"/>
+<circle class="fcu pad" cx="126.5" cy="60" r="0.3"/>
+<circle class="fcu pad" cx="129.3" cy="60" r="0.3"/>
+<circle class="fcu pad" cx="132.1" cy="60" r="0.3"/>
+<circle class="fcu pad" cx="134.9" cy="60" r="0.3"/>
+<circle class="fcu pad" cx="137.7" cy="60" r="0.3"/>
+<circle class="fcu pad" cx="140.5" cy="60" r="0.3"/>
+<circle class="fcu pad" cx="143.3" cy="60" r="0.3"/>
+<circle class="fcu pad" cx="146.1" cy="60" r="0.3"/>
+<circle class="fcu pad" cx="148.9" cy="60" r="0.3"/>
+<circle class="fcu pad" cx="150.5" cy="58.8" r="0.3"/>
+<circle class="fcu pad" cx="150.5" cy="56" r="0.3"/>
+<circle class="fcu pad" cx="148.7" cy="55" r="0.3"/>
+<circle class="fcu pad" cx="145.9" cy="55" r="0.3"/>
+<circle class="fcu pad" cx="143.1" cy="55" r="0.3"/>
+<circle class="fcu pad" cx="140.3" cy="55" r="0.3"/>
+<circle class="fcu pad" cx="137.5" cy="55" r="0.3"/>
+<circle class="fcu pad" cx="134.7" cy="55" r="0.3"/>
+<circle class="fcu pad" cx="131.9" cy="55" r="0.3"/>
+<circle class="fcu pad" cx="129.1" cy="55" r="0.3"/>
+<circle class="fcu pad" cx="126.3" cy="55" r="0.3"/>
+<circle class="fcu pad" cx="123.5" cy="55" r="0.3"/>
+<circle class="fcu pad" cx="120.7" cy="55" r="0.3"/>
+<circle class="fcu pad" cx="117.9" cy="55" r="0.3"/>
+<circle class="fcu pad" cx="115.1" cy="55" r="0.3"/>
+<rect class="fcu pad" x="191.625" y="133.45" width="1.05" height="1" transform="rotate(-270 192.15 133.95)"/>
+<rect class="fcu pad" x="189.575" y="134.95" width="2.2" height="1.05" transform="rotate(-270 190.675 135.475)"/>
+<rect class="fcu pad" x="192.525" y="134.95" width="2.2" height="1.05" transform="rotate(-270 193.625 135.475)"/>
+<rect class="fcu pad" x="194.39" y="88.69" width="0.56" height="0.62" transform="rotate(-0 194.67 89)"/>
+<rect class="fcu pad" x="195.35" y="88.69" width="0.56" height="0.62" transform="rotate(-0 195.63 89)"/>
+<rect class="fcu pad" x="191.87" y="85.67" width="0.56" height="0.62" transform="rotate(-90 192.15 85.98)"/>
+<rect class="fcu pad" x="191.87" y="84.71" width="0.56" height="0.62" transform="rotate(-90 192.15 85.02)"/>
+<rect class="fcu pad" x="194.39" y="81.69" width="0.56" height="0.62" transform="rotate(-0 194.67 82)"/>
+<rect class="fcu pad" x="195.35" y="81.69" width="0.56" height="0.62" transform="rotate(-0 195.63 82)"/>
+<rect class="fcu pad" x="193.8" y="79" width="0.9" height="0.5" transform="rotate(-0 194.25 79.25)"/>
+<rect class="fcu pad" x="191.9" y="79" width="0.5" height="0.5" transform="rotate(-0 192.15 79.25)"/>
+<circle class="via" cx="56" cy="79.8" r="0.3"/>
+<circle class="via" cx="56" cy="138.2" r="0.3"/>
+<circle class="via" cx="59" cy="79.8" r="0.3"/>
+<circle class="via" cx="59" cy="138.2" r="0.3"/>
+<circle class="via" cx="68" cy="138.2" r="0.3"/>
+<circle class="via" cx="71" cy="79.8" r="0.3"/>
+<circle class="via" cx="71" cy="138.2" r="0.3"/>
+<circle class="via" cx="74" cy="79.8" r="0.3"/>
+<circle class="via" cx="74" cy="138.2" r="0.3"/>
+<circle class="via" cx="77" cy="79.8" r="0.3"/>
+<circle class="via" cx="77" cy="138.2" r="0.3"/>
+<circle class="via" cx="80" cy="79.8" r="0.3"/>
+<circle class="via" cx="80" cy="138.2" r="0.3"/>
+<circle class="via" cx="83" cy="79.8" r="0.3"/>
+<circle class="via" cx="83" cy="138.2" r="0.3"/>
+<circle class="via" cx="86" cy="79.8" r="0.3"/>
+<circle class="via" cx="86" cy="138.2" r="0.3"/>
+<circle class="via" cx="89" cy="79.8" r="0.3"/>
+<circle class="via" cx="89" cy="138.2" r="0.3"/>
+<circle class="via" cx="92" cy="79.8" r="0.3"/>
+<circle class="via" cx="92" cy="138.2" r="0.3"/>
+<circle class="via" cx="95" cy="79.8" r="0.3"/>
+<circle class="via" cx="95" cy="138.2" r="0.3"/>
+<circle class="via" cx="98" cy="79.8" r="0.3"/>
+<circle class="via" cx="98" cy="138.2" r="0.3"/>
+<circle class="via" cx="56" cy="83.8" r="0.3"/>
+<circle class="via" cx="72" cy="83.8" r="0.3"/>
+<circle class="via" cx="76" cy="83.8" r="0.3"/>
+<circle class="via" cx="80" cy="83.8" r="0.3"/>
+<circle class="via" cx="84" cy="83.8" r="0.3"/>
+<circle class="via" cx="88" cy="83.8" r="0.3"/>
+<circle class="via" cx="92" cy="83.8" r="0.3"/>
+<circle class="via" cx="96" cy="83.8" r="0.3"/>
+<circle class="via" cx="56" cy="87.8" r="0.3"/>
+<circle class="via" cx="72" cy="87.8" r="0.3"/>
+<circle class="via" cx="76" cy="87.8" r="0.3"/>
+<circle class="via" cx="80" cy="87.8" r="0.3"/>
+<circle class="via" cx="84" cy="87.8" r="0.3"/>
+<circle class="via" cx="88" cy="87.8" r="0.3"/>
+<circle class="via" cx="92" cy="87.8" r="0.3"/>
+<circle class="via" cx="96" cy="87.8" r="0.3"/>
+<circle class="via" cx="56" cy="91.8" r="0.3"/>
+<circle class="via" cx="68" cy="91.8" r="0.3"/>
+<circle class="via" cx="72" cy="91.8" r="0.3"/>
+<circle class="via" cx="76" cy="91.8" r="0.3"/>
+<circle class="via" cx="80" cy="91.8" r="0.3"/>
+<circle class="via" cx="84" cy="91.8" r="0.3"/>
+<circle class="via" cx="88" cy="91.8" r="0.3"/>
+<circle class="via" cx="92" cy="91.8" r="0.3"/>
+<circle class="via" cx="96" cy="91.8" r="0.3"/>
+<circle class="via" cx="56" cy="95.8" r="0.3"/>
+<circle class="via" cx="68" cy="95.8" r="0.3"/>
+<circle class="via" cx="72" cy="95.8" r="0.3"/>
+<circle class="via" cx="76" cy="95.8" r="0.3"/>
+<circle class="via" cx="80" cy="95.8" r="0.3"/>
+<circle class="via" cx="84" cy="95.8" r="0.3"/>
+<circle class="via" cx="88" cy="95.8" r="0.3"/>
+<circle class="via" cx="92" cy="95.8" r="0.3"/>
+<circle class="via" cx="96" cy="95.8" r="0.3"/>
+<circle class="via" cx="56" cy="99.8" r="0.3"/>
+<circle class="via" cx="68" cy="99.8" r="0.3"/>
+<circle class="via" cx="72" cy="99.8" r="0.3"/>
+<circle class="via" cx="76" cy="99.8" r="0.3"/>
+<circle class="via" cx="80" cy="99.8" r="0.3"/>
+<circle class="via" cx="84" cy="99.8" r="0.3"/>
+<circle class="via" cx="88" cy="99.8" r="0.3"/>
+<circle class="via" cx="92" cy="99.8" r="0.3"/>
+<circle class="via" cx="96" cy="99.8" r="0.3"/>
+<circle class="via" cx="56" cy="103.8" r="0.3"/>
+<circle class="via" cx="68" cy="103.8" r="0.3"/>
+<circle class="via" cx="72" cy="103.8" r="0.3"/>
+<circle class="via" cx="76" cy="103.8" r="0.3"/>
+<circle class="via" cx="80" cy="103.8" r="0.3"/>
+<circle class="via" cx="84" cy="103.8" r="0.3"/>
+<circle class="via" cx="88" cy="103.8" r="0.3"/>
+<circle class="via" cx="92" cy="103.8" r="0.3"/>
+<circle class="via" cx="96" cy="103.8" r="0.3"/>
+<circle class="via" cx="56" cy="107.8" r="0.3"/>
+<circle class="via" cx="68" cy="107.8" r="0.3"/>
+<circle class="via" cx="72" cy="107.8" r="0.3"/>
+<circle class="via" cx="76" cy="107.8" r="0.3"/>
+<circle class="via" cx="80" cy="107.8" r="0.3"/>
+<circle class="via" cx="84" cy="107.8" r="0.3"/>
+<circle class="via" cx="88" cy="107.8" r="0.3"/>
+<circle class="via" cx="92" cy="107.8" r="0.3"/>
+<circle class="via" cx="96" cy="107.8" r="0.3"/>
+<circle class="via" cx="56" cy="111.8" r="0.3"/>
+<circle class="via" cx="68" cy="111.8" r="0.3"/>
+<circle class="via" cx="72" cy="111.8" r="0.3"/>
+<circle class="via" cx="76" cy="111.8" r="0.3"/>
+<circle class="via" cx="80" cy="111.8" r="0.3"/>
+<circle class="via" cx="84" cy="111.8" r="0.3"/>
+<circle class="via" cx="88" cy="111.8" r="0.3"/>
+<circle class="via" cx="92" cy="111.8" r="0.3"/>
+<circle class="via" cx="96" cy="111.8" r="0.3"/>
+<circle class="via" cx="56" cy="115.8" r="0.3"/>
+<circle class="via" cx="68" cy="115.8" r="0.3"/>
+<circle class="via" cx="72" cy="115.8" r="0.3"/>
+<circle class="via" cx="76" cy="115.8" r="0.3"/>
+<circle class="via" cx="80" cy="115.8" r="0.3"/>
+<circle class="via" cx="84" cy="115.8" r="0.3"/>
+<circle class="via" cx="88" cy="115.8" r="0.3"/>
+<circle class="via" cx="92" cy="115.8" r="0.3"/>
+<circle class="via" cx="96" cy="115.8" r="0.3"/>
+<circle class="via" cx="56" cy="119.8" r="0.3"/>
+<circle class="via" cx="68" cy="119.8" r="0.3"/>
+<circle class="via" cx="72" cy="119.8" r="0.3"/>
+<circle class="via" cx="76" cy="119.8" r="0.3"/>
+<circle class="via" cx="80" cy="119.8" r="0.3"/>
+<circle class="via" cx="84" cy="119.8" r="0.3"/>
+<circle class="via" cx="88" cy="119.8" r="0.3"/>
+<circle class="via" cx="92" cy="119.8" r="0.3"/>
+<circle class="via" cx="96" cy="119.8" r="0.3"/>
+<circle class="via" cx="56" cy="123.8" r="0.3"/>
+<circle class="via" cx="68" cy="123.8" r="0.3"/>
+<circle class="via" cx="72" cy="123.8" r="0.3"/>
+<circle class="via" cx="76" cy="123.8" r="0.3"/>
+<circle class="via" cx="80" cy="123.8" r="0.3"/>
+<circle class="via" cx="84" cy="123.8" r="0.3"/>
+<circle class="via" cx="88" cy="123.8" r="0.3"/>
+<circle class="via" cx="92" cy="123.8" r="0.3"/>
+<circle class="via" cx="96" cy="123.8" r="0.3"/>
+<circle class="via" cx="56" cy="127.8" r="0.3"/>
+<circle class="via" cx="68" cy="127.8" r="0.3"/>
+<circle class="via" cx="72" cy="127.8" r="0.3"/>
+<circle class="via" cx="76" cy="127.8" r="0.3"/>
+<circle class="via" cx="80" cy="127.8" r="0.3"/>
+<circle class="via" cx="84" cy="127.8" r="0.3"/>
+<circle class="via" cx="88" cy="127.8" r="0.3"/>
+<circle class="via" cx="92" cy="127.8" r="0.3"/>
+<circle class="via" cx="96" cy="127.8" r="0.3"/>
+<circle class="via" cx="56" cy="131.8" r="0.3"/>
+<circle class="via" cx="68" cy="131.8" r="0.3"/>
+<circle class="via" cx="72" cy="131.8" r="0.3"/>
+<circle class="via" cx="76" cy="131.8" r="0.3"/>
+<circle class="via" cx="80" cy="131.8" r="0.3"/>
+<circle class="via" cx="84" cy="131.8" r="0.3"/>
+<circle class="via" cx="88" cy="131.8" r="0.3"/>
+<circle class="via" cx="92" cy="131.8" r="0.3"/>
+<circle class="via" cx="96" cy="131.8" r="0.3"/>
+<circle class="via" cx="56" cy="135.8" r="0.3"/>
+<circle class="via" cx="68" cy="135.8" r="0.3"/>
+<circle class="via" cx="72" cy="135.8" r="0.3"/>
+<circle class="via" cx="76" cy="135.8" r="0.3"/>
+<circle class="via" cx="80" cy="135.8" r="0.3"/>
+<circle class="via" cx="84" cy="135.8" r="0.3"/>
+<circle class="via" cx="88" cy="135.8" r="0.3"/>
+<circle class="via" cx="92" cy="135.8" r="0.3"/>
+<circle class="via" cx="96" cy="135.8" r="0.3"/>
+<circle class="via" cx="67.4" cy="89" r="0.3"/>
+<circle class="via" cx="67.4" cy="82" r="0.3"/>
+<circle class="via" cx="56.5" cy="80.5" r="0.3"/>
+<circle class="via" cx="60.8" cy="133.525" r="0.3"/>
+<circle class="via" cx="65.2" cy="133.525" r="0.3"/>
+<circle class="via" cx="60.8" cy="136.475" r="0.3"/>
+<circle class="via" cx="65.2" cy="136.475" r="0.3"/>
+<circle class="via" cx="111" cy="79.8" r="0.3"/>
+<circle class="via" cx="111" cy="138.2" r="0.3"/>
+<circle class="via" cx="114" cy="79.8" r="0.3"/>
+<circle class="via" cx="114" cy="138.2" r="0.3"/>
+<circle class="via" cx="117" cy="79.8" r="0.3"/>
+<circle class="via" cx="117" cy="138.2" r="0.3"/>
+<circle class="via" cx="120" cy="79.8" r="0.3"/>
+<circle class="via" cx="120" cy="138.2" r="0.3"/>
+<circle class="via" cx="123" cy="79.8" r="0.3"/>
+<circle class="via" cx="123" cy="138.2" r="0.3"/>
+<circle class="via" cx="126" cy="79.8" r="0.3"/>
+<circle class="via" cx="126" cy="138.2" r="0.3"/>
+<circle class="via" cx="138" cy="138.2" r="0.3"/>
+<circle class="via" cx="141" cy="79.8" r="0.3"/>
+<circle class="via" cx="141" cy="138.2" r="0.3"/>
+<circle class="via" cx="144" cy="79.8" r="0.3"/>
+<circle class="via" cx="144" cy="138.2" r="0.3"/>
+<circle class="via" cx="147" cy="79.8" r="0.3"/>
+<circle class="via" cx="147" cy="138.2" r="0.3"/>
+<circle class="via" cx="150" cy="79.8" r="0.3"/>
+<circle class="via" cx="150" cy="138.2" r="0.3"/>
+<circle class="via" cx="153" cy="79.8" r="0.3"/>
+<circle class="via" cx="153" cy="138.2" r="0.3"/>
+<circle class="via" cx="111" cy="83.8" r="0.3"/>
+<circle class="via" cx="115" cy="83.8" r="0.3"/>
+<circle class="via" cx="119" cy="83.8" r="0.3"/>
+<circle class="via" cx="123" cy="83.8" r="0.3"/>
+<circle class="via" cx="127" cy="83.8" r="0.3"/>
+<circle class="via" cx="139" cy="83.8" r="0.3"/>
+<circle class="via" cx="143" cy="83.8" r="0.3"/>
+<circle class="via" cx="147" cy="83.8" r="0.3"/>
+<circle class="via" cx="151" cy="83.8" r="0.3"/>
+<circle class="via" cx="111" cy="87.8" r="0.3"/>
+<circle class="via" cx="115" cy="87.8" r="0.3"/>
+<circle class="via" cx="119" cy="87.8" r="0.3"/>
+<circle class="via" cx="123" cy="87.8" r="0.3"/>
+<circle class="via" cx="127" cy="87.8" r="0.3"/>
+<circle class="via" cx="139" cy="87.8" r="0.3"/>
+<circle class="via" cx="143" cy="87.8" r="0.3"/>
+<circle class="via" cx="147" cy="87.8" r="0.3"/>
+<circle class="via" cx="151" cy="87.8" r="0.3"/>
+<circle class="via" cx="111" cy="91.8" r="0.3"/>
+<circle class="via" cx="115" cy="91.8" r="0.3"/>
+<circle class="via" cx="119" cy="91.8" r="0.3"/>
+<circle class="via" cx="123" cy="91.8" r="0.3"/>
+<circle class="via" cx="127" cy="91.8" r="0.3"/>
+<circle class="via" cx="139" cy="91.8" r="0.3"/>
+<circle class="via" cx="143" cy="91.8" r="0.3"/>
+<circle class="via" cx="147" cy="91.8" r="0.3"/>
+<circle class="via" cx="151" cy="91.8" r="0.3"/>
+<circle class="via" cx="111" cy="95.8" r="0.3"/>
+<circle class="via" cx="115" cy="95.8" r="0.3"/>
+<circle class="via" cx="119" cy="95.8" r="0.3"/>
+<circle class="via" cx="123" cy="95.8" r="0.3"/>
+<circle class="via" cx="127" cy="95.8" r="0.3"/>
+<circle class="via" cx="139" cy="95.8" r="0.3"/>
+<circle class="via" cx="143" cy="95.8" r="0.3"/>
+<circle class="via" cx="147" cy="95.8" r="0.3"/>
+<circle class="via" cx="151" cy="95.8" r="0.3"/>
+<circle class="via" cx="111" cy="99.8" r="0.3"/>
+<circle class="via" cx="115" cy="99.8" r="0.3"/>
+<circle class="via" cx="119" cy="99.8" r="0.3"/>
+<circle class="via" cx="123" cy="99.8" r="0.3"/>
+<circle class="via" cx="127" cy="99.8" r="0.3"/>
+<circle class="via" cx="139" cy="99.8" r="0.3"/>
+<circle class="via" cx="143" cy="99.8" r="0.3"/>
+<circle class="via" cx="147" cy="99.8" r="0.3"/>
+<circle class="via" cx="151" cy="99.8" r="0.3"/>
+<circle class="via" cx="111" cy="103.8" r="0.3"/>
+<circle class="via" cx="115" cy="103.8" r="0.3"/>
+<circle class="via" cx="119" cy="103.8" r="0.3"/>
+<circle class="via" cx="123" cy="103.8" r="0.3"/>
+<circle class="via" cx="127" cy="103.8" r="0.3"/>
+<circle class="via" cx="139" cy="103.8" r="0.3"/>
+<circle class="via" cx="143" cy="103.8" r="0.3"/>
+<circle class="via" cx="147" cy="103.8" r="0.3"/>
+<circle class="via" cx="151" cy="103.8" r="0.3"/>
+<circle class="via" cx="111" cy="107.8" r="0.3"/>
+<circle class="via" cx="115" cy="107.8" r="0.3"/>
+<circle class="via" cx="119" cy="107.8" r="0.3"/>
+<circle class="via" cx="123" cy="107.8" r="0.3"/>
+<circle class="via" cx="127" cy="107.8" r="0.3"/>
+<circle class="via" cx="139" cy="107.8" r="0.3"/>
+<circle class="via" cx="143" cy="107.8" r="0.3"/>
+<circle class="via" cx="147" cy="107.8" r="0.3"/>
+<circle class="via" cx="151" cy="107.8" r="0.3"/>
+<circle class="via" cx="111" cy="111.8" r="0.3"/>
+<circle class="via" cx="115" cy="111.8" r="0.3"/>
+<circle class="via" cx="119" cy="111.8" r="0.3"/>
+<circle class="via" cx="123" cy="111.8" r="0.3"/>
+<circle class="via" cx="127" cy="111.8" r="0.3"/>
+<circle class="via" cx="139" cy="111.8" r="0.3"/>
+<circle class="via" cx="143" cy="111.8" r="0.3"/>
+<circle class="via" cx="147" cy="111.8" r="0.3"/>
+<circle class="via" cx="151" cy="111.8" r="0.3"/>
+<circle class="via" cx="111" cy="115.8" r="0.3"/>
+<circle class="via" cx="115" cy="115.8" r="0.3"/>
+<circle class="via" cx="119" cy="115.8" r="0.3"/>
+<circle class="via" cx="123" cy="115.8" r="0.3"/>
+<circle class="via" cx="127" cy="115.8" r="0.3"/>
+<circle class="via" cx="139" cy="115.8" r="0.3"/>
+<circle class="via" cx="143" cy="115.8" r="0.3"/>
+<circle class="via" cx="147" cy="115.8" r="0.3"/>
+<circle class="via" cx="151" cy="115.8" r="0.3"/>
+<circle class="via" cx="111" cy="119.8" r="0.3"/>
+<circle class="via" cx="115" cy="119.8" r="0.3"/>
+<circle class="via" cx="119" cy="119.8" r="0.3"/>
+<circle class="via" cx="123" cy="119.8" r="0.3"/>
+<circle class="via" cx="127" cy="119.8" r="0.3"/>
+<circle class="via" cx="139" cy="119.8" r="0.3"/>
+<circle class="via" cx="143" cy="119.8" r="0.3"/>
+<circle class="via" cx="147" cy="119.8" r="0.3"/>
+<circle class="via" cx="151" cy="119.8" r="0.3"/>
+<circle class="via" cx="111" cy="123.8" r="0.3"/>
+<circle class="via" cx="115" cy="123.8" r="0.3"/>
+<circle class="via" cx="119" cy="123.8" r="0.3"/>
+<circle class="via" cx="123" cy="123.8" r="0.3"/>
+<circle class="via" cx="127" cy="123.8" r="0.3"/>
+<circle class="via" cx="139" cy="123.8" r="0.3"/>
+<circle class="via" cx="143" cy="123.8" r="0.3"/>
+<circle class="via" cx="147" cy="123.8" r="0.3"/>
+<circle class="via" cx="151" cy="123.8" r="0.3"/>
+<circle class="via" cx="111" cy="127.8" r="0.3"/>
+<circle class="via" cx="115" cy="127.8" r="0.3"/>
+<circle class="via" cx="119" cy="127.8" r="0.3"/>
+<circle class="via" cx="123" cy="127.8" r="0.3"/>
+<circle class="via" cx="127" cy="127.8" r="0.3"/>
+<circle class="via" cx="139" cy="127.8" r="0.3"/>
+<circle class="via" cx="143" cy="127.8" r="0.3"/>
+<circle class="via" cx="147" cy="127.8" r="0.3"/>
+<circle class="via" cx="151" cy="127.8" r="0.3"/>
+<circle class="via" cx="111" cy="131.8" r="0.3"/>
+<circle class="via" cx="115" cy="131.8" r="0.3"/>
+<circle class="via" cx="119" cy="131.8" r="0.3"/>
+<circle class="via" cx="123" cy="131.8" r="0.3"/>
+<circle class="via" cx="127" cy="131.8" r="0.3"/>
+<circle class="via" cx="139" cy="131.8" r="0.3"/>
+<circle class="via" cx="143" cy="131.8" r="0.3"/>
+<circle class="via" cx="147" cy="131.8" r="0.3"/>
+<circle class="via" cx="151" cy="131.8" r="0.3"/>
+<circle class="via" cx="111" cy="135.8" r="0.3"/>
+<circle class="via" cx="115" cy="135.8" r="0.3"/>
+<circle class="via" cx="119" cy="135.8" r="0.3"/>
+<circle class="via" cx="123" cy="135.8" r="0.3"/>
+<circle class="via" cx="127" cy="135.8" r="0.3"/>
+<circle class="via" cx="139" cy="135.8" r="0.3"/>
+<circle class="via" cx="143" cy="135.8" r="0.3"/>
+<circle class="via" cx="147" cy="135.8" r="0.3"/>
+<circle class="via" cx="151" cy="135.8" r="0.3"/>
+<circle class="via" cx="136.9" cy="89" r="0.3"/>
+<circle class="via" cx="136.9" cy="82" r="0.3"/>
+<circle class="via" cx="130.3" cy="133.525" r="0.3"/>
+<circle class="via" cx="134.7" cy="133.525" r="0.3"/>
+<circle class="via" cx="130.3" cy="136.475" r="0.3"/>
+<circle class="via" cx="134.7" cy="136.475" r="0.3"/>
+<circle class="via" cx="166" cy="79.8" r="0.3"/>
+<circle class="via" cx="166" cy="138.2" r="0.3"/>
+<circle class="via" cx="169" cy="79.8" r="0.3"/>
+<circle class="via" cx="169" cy="138.2" r="0.3"/>
+<circle class="via" cx="172" cy="79.8" r="0.3"/>
+<circle class="via" cx="172" cy="138.2" r="0.3"/>
+<circle class="via" cx="175" cy="79.8" r="0.3"/>
+<circle class="via" cx="175" cy="138.2" r="0.3"/>
+<circle class="via" cx="178" cy="79.8" r="0.3"/>
+<circle class="via" cx="178" cy="138.2" r="0.3"/>
+<circle class="via" cx="181" cy="79.8" r="0.3"/>
+<circle class="via" cx="181" cy="138.2" r="0.3"/>
+<circle class="via" cx="184" cy="79.8" r="0.3"/>
+<circle class="via" cx="184" cy="138.2" r="0.3"/>
+<circle class="via" cx="187" cy="79.8" r="0.3"/>
+<circle class="via" cx="187" cy="138.2" r="0.3"/>
+<circle class="via" cx="199" cy="79.8" r="0.3"/>
+<circle class="via" cx="199" cy="138.2" r="0.3"/>
+<circle class="via" cx="202" cy="79.8" r="0.3"/>
+<circle class="via" cx="202" cy="138.2" r="0.3"/>
+<circle class="via" cx="205" cy="79.8" r="0.3"/>
+<circle class="via" cx="205" cy="138.2" r="0.3"/>
+<circle class="via" cx="208" cy="79.8" r="0.3"/>
+<circle class="via" cx="208" cy="138.2" r="0.3"/>
+<circle class="via" cx="166" cy="83.8" r="0.3"/>
+<circle class="via" cx="170" cy="83.8" r="0.3"/>
+<circle class="via" cx="174" cy="83.8" r="0.3"/>
+<circle class="via" cx="178" cy="83.8" r="0.3"/>
+<circle class="via" cx="182" cy="83.8" r="0.3"/>
+<circle class="via" cx="186" cy="83.8" r="0.3"/>
+<circle class="via" cx="198" cy="83.8" r="0.3"/>
+<circle class="via" cx="202" cy="83.8" r="0.3"/>
+<circle class="via" cx="206" cy="83.8" r="0.3"/>
+<circle class="via" cx="166" cy="87.8" r="0.3"/>
+<circle class="via" cx="170" cy="87.8" r="0.3"/>
+<circle class="via" cx="174" cy="87.8" r="0.3"/>
+<circle class="via" cx="178" cy="87.8" r="0.3"/>
+<circle class="via" cx="182" cy="87.8" r="0.3"/>
+<circle class="via" cx="186" cy="87.8" r="0.3"/>
+<circle class="via" cx="198" cy="87.8" r="0.3"/>
+<circle class="via" cx="202" cy="87.8" r="0.3"/>
+<circle class="via" cx="206" cy="87.8" r="0.3"/>
+<circle class="via" cx="166" cy="91.8" r="0.3"/>
+<circle class="via" cx="170" cy="91.8" r="0.3"/>
+<circle class="via" cx="174" cy="91.8" r="0.3"/>
+<circle class="via" cx="178" cy="91.8" r="0.3"/>
+<circle class="via" cx="182" cy="91.8" r="0.3"/>
+<circle class="via" cx="186" cy="91.8" r="0.3"/>
+<circle class="via" cx="198" cy="91.8" r="0.3"/>
+<circle class="via" cx="202" cy="91.8" r="0.3"/>
+<circle class="via" cx="206" cy="91.8" r="0.3"/>
+<circle class="via" cx="166" cy="95.8" r="0.3"/>
+<circle class="via" cx="170" cy="95.8" r="0.3"/>
+<circle class="via" cx="174" cy="95.8" r="0.3"/>
+<circle class="via" cx="178" cy="95.8" r="0.3"/>
+<circle class="via" cx="182" cy="95.8" r="0.3"/>
+<circle class="via" cx="186" cy="95.8" r="0.3"/>
+<circle class="via" cx="198" cy="95.8" r="0.3"/>
+<circle class="via" cx="202" cy="95.8" r="0.3"/>
+<circle class="via" cx="206" cy="95.8" r="0.3"/>
+<circle class="via" cx="166" cy="99.8" r="0.3"/>
+<circle class="via" cx="170" cy="99.8" r="0.3"/>
+<circle class="via" cx="174" cy="99.8" r="0.3"/>
+<circle class="via" cx="178" cy="99.8" r="0.3"/>
+<circle class="via" cx="182" cy="99.8" r="0.3"/>
+<circle class="via" cx="186" cy="99.8" r="0.3"/>
+<circle class="via" cx="198" cy="99.8" r="0.3"/>
+<circle class="via" cx="202" cy="99.8" r="0.3"/>
+<circle class="via" cx="206" cy="99.8" r="0.3"/>
+<circle class="via" cx="166" cy="103.8" r="0.3"/>
+<circle class="via" cx="170" cy="103.8" r="0.3"/>
+<circle class="via" cx="174" cy="103.8" r="0.3"/>
+<circle class="via" cx="178" cy="103.8" r="0.3"/>
+<circle class="via" cx="182" cy="103.8" r="0.3"/>
+<circle class="via" cx="186" cy="103.8" r="0.3"/>
+<circle class="via" cx="198" cy="103.8" r="0.3"/>
+<circle class="via" cx="202" cy="103.8" r="0.3"/>
+<circle class="via" cx="206" cy="103.8" r="0.3"/>
+<circle class="via" cx="166" cy="107.8" r="0.3"/>
+<circle class="via" cx="170" cy="107.8" r="0.3"/>
+<circle class="via" cx="174" cy="107.8" r="0.3"/>
+<circle class="via" cx="178" cy="107.8" r="0.3"/>
+<circle class="via" cx="182" cy="107.8" r="0.3"/>
+<circle class="via" cx="186" cy="107.8" r="0.3"/>
+<circle class="via" cx="198" cy="107.8" r="0.3"/>
+<circle class="via" cx="202" cy="107.8" r="0.3"/>
+<circle class="via" cx="206" cy="107.8" r="0.3"/>
+<circle class="via" cx="166" cy="111.8" r="0.3"/>
+<circle class="via" cx="170" cy="111.8" r="0.3"/>
+<circle class="via" cx="174" cy="111.8" r="0.3"/>
+<circle class="via" cx="178" cy="111.8" r="0.3"/>
+<circle class="via" cx="182" cy="111.8" r="0.3"/>
+<circle class="via" cx="186" cy="111.8" r="0.3"/>
+<circle class="via" cx="198" cy="111.8" r="0.3"/>
+<circle class="via" cx="202" cy="111.8" r="0.3"/>
+<circle class="via" cx="206" cy="111.8" r="0.3"/>
+<circle class="via" cx="166" cy="115.8" r="0.3"/>
+<circle class="via" cx="170" cy="115.8" r="0.3"/>
+<circle class="via" cx="174" cy="115.8" r="0.3"/>
+<circle class="via" cx="178" cy="115.8" r="0.3"/>
+<circle class="via" cx="182" cy="115.8" r="0.3"/>
+<circle class="via" cx="186" cy="115.8" r="0.3"/>
+<circle class="via" cx="198" cy="115.8" r="0.3"/>
+<circle class="via" cx="202" cy="115.8" r="0.3"/>
+<circle class="via" cx="206" cy="115.8" r="0.3"/>
+<circle class="via" cx="166" cy="119.8" r="0.3"/>
+<circle class="via" cx="170" cy="119.8" r="0.3"/>
+<circle class="via" cx="174" cy="119.8" r="0.3"/>
+<circle class="via" cx="178" cy="119.8" r="0.3"/>
+<circle class="via" cx="182" cy="119.8" r="0.3"/>
+<circle class="via" cx="186" cy="119.8" r="0.3"/>
+<circle class="via" cx="198" cy="119.8" r="0.3"/>
+<circle class="via" cx="202" cy="119.8" r="0.3"/>
+<circle class="via" cx="206" cy="119.8" r="0.3"/>
+<circle class="via" cx="166" cy="123.8" r="0.3"/>
+<circle class="via" cx="170" cy="123.8" r="0.3"/>
+<circle class="via" cx="174" cy="123.8" r="0.3"/>
+<circle class="via" cx="178" cy="123.8" r="0.3"/>
+<circle class="via" cx="182" cy="123.8" r="0.3"/>
+<circle class="via" cx="186" cy="123.8" r="0.3"/>
+<circle class="via" cx="198" cy="123.8" r="0.3"/>
+<circle class="via" cx="202" cy="123.8" r="0.3"/>
+<circle class="via" cx="206" cy="123.8" r="0.3"/>
+<circle class="via" cx="166" cy="127.8" r="0.3"/>
+<circle class="via" cx="170" cy="127.8" r="0.3"/>
+<circle class="via" cx="174" cy="127.8" r="0.3"/>
+<circle class="via" cx="178" cy="127.8" r="0.3"/>
+<circle class="via" cx="182" cy="127.8" r="0.3"/>
+<circle class="via" cx="186" cy="127.8" r="0.3"/>
+<circle class="via" cx="198" cy="127.8" r="0.3"/>
+<circle class="via" cx="202" cy="127.8" r="0.3"/>
+<circle class="via" cx="206" cy="127.8" r="0.3"/>
+<circle class="via" cx="166" cy="131.8" r="0.3"/>
+<circle class="via" cx="170" cy="131.8" r="0.3"/>
+<circle class="via" cx="174" cy="131.8" r="0.3"/>
+<circle class="via" cx="178" cy="131.8" r="0.3"/>
+<circle class="via" cx="182" cy="131.8" r="0.3"/>
+<circle class="via" cx="186" cy="131.8" r="0.3"/>
+<circle class="via" cx="198" cy="131.8" r="0.3"/>
+<circle class="via" cx="202" cy="131.8" r="0.3"/>
+<circle class="via" cx="206" cy="131.8" r="0.3"/>
+<circle class="via" cx="166" cy="135.8" r="0.3"/>
+<circle class="via" cx="170" cy="135.8" r="0.3"/>
+<circle class="via" cx="174" cy="135.8" r="0.3"/>
+<circle class="via" cx="178" cy="135.8" r="0.3"/>
+<circle class="via" cx="182" cy="135.8" r="0.3"/>
+<circle class="via" cx="186" cy="135.8" r="0.3"/>
+<circle class="via" cx="198" cy="135.8" r="0.3"/>
+<circle class="via" cx="202" cy="135.8" r="0.3"/>
+<circle class="via" cx="206" cy="135.8" r="0.3"/>
+<circle class="via" cx="196.55" cy="89" r="0.3"/>
+<circle class="via" cx="196.55" cy="82" r="0.3"/>
+<circle class="via" cx="189.95" cy="133.525" r="0.3"/>
+<circle class="via" cx="194.35" cy="133.525" r="0.3"/>
+<circle class="via" cx="189.95" cy="136.475" r="0.3"/>
+<circle class="via" cx="194.35" cy="136.475" r="0.3"/>
+<path class="plane-edge" d="M47,79 L218,79"/>
+<text class="note" x="51" y="81.4">GND plane edge &#8212; no copper above, any layer</text>
+<path class="dim" d="M50,144.2 L215,144.2"/>
+<path class="dim" d="M50,143.6 L50,144.8"/>
+<path class="dim" d="M215,143.6 L215,144.8"/>
+<text class="dim-text" x="132.5" y="143.5" text-anchor="middle">165 mm</text>
+<path class="dim" d="M47,50 L47,140"/>
+<path class="dim" d="M46.4,50 L47.6,50"/>
+<path class="dim" d="M46.4,140 L47.6,140"/>
+<text class="dim-text" x="46.1" y="95" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 46.1 95)">90 mm</text>
+<path class="dim" d="M218,50 L218,79"/>
+<path class="dim" d="M217.4,50 L218.6,50"/>
+<path class="dim" d="M217.4,79 L218.6,79"/>
+<text class="dim-text" x="217.1" y="64.5" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 217.1 64.5)">29</text>
+</svg>

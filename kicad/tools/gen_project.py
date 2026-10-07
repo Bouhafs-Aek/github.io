@@ -397,6 +397,15 @@ def rotate_at(node, rot):
         at.append(num(angle))
 
 
+def rekey_uuids(node, ref: str) -> None:
+    for child in node:
+        if isinstance(child, list) and child:
+            if child[0] == "uuid":
+                child[1] = U("fpobj", f"{ref}:{child[1]}")
+            else:
+                rekey_uuids(child, ref)
+
+
 def board_footprint(part) -> list:
     # "Name" resolves in this project's default footprint library; "NICK:Name"
     # names another one, which the second antenna's project needs
@@ -413,6 +422,10 @@ def board_footprint(part) -> list:
         if head in ("version", "generator", "generator_version", "layer", "embedded_fonts"):
             continue
         child = copy.deepcopy(child)
+        # A library footprint carries its own uuids, and three 0402s placed
+        # from one file would otherwise carry three copies of each.  Re-key
+        # them from the reference so every object on the board is distinct.
+        rekey_uuids(child, part["ref"])
         if head == "property":
             if child[1] == "Reference":
                 child[2] = part["ref"]

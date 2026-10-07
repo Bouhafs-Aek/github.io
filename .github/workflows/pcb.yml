@@ -1,0 +1,117 @@
+name: PCB
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    name: Generate and check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Everything here is pure Python with no dependencies on purpose, so
+      # this job is fast and runs anywhere. Only the fabrication export needs
+      # KiCad installed.
+      - name: Regenerate every library, footprint, board and panel
+        working-directory: kicad
+        run: |
+          set -eux
+          python3 tools/gen_rf_lands.py --width 2.95
+          python3 tools/gen_sma_footprint.py --width 2.95 --gap 2.0 --style sma
+          python3 tools/gen_sma_footprint.py --width 2.95 --gap 2.0 --style port
+          python3 tools/gen_sma_through_hole.py
+          python3 tools/gen_ufl_footprint.py
+          python3 tools/gen_dn023_symbols.py
+          python3 tools/gen_dn023_footprint.py
+          python3 tools/gen_dn024_symbols.py
+          python3 tools/gen_dn024_footprint.py
+          python3 tools/gen_project.py
+          python3 tools/gen_sim_board.py
+          python3 tools/gen_dn024_project.py
+          python3 tools/gen_dn024_ti_project.py
+          python3 tools/gen_dn024_sim_board.py
+          python3 tools/gen_kit.py
+          python3 tools/gen_panel.py
+          python3 tools/gen_bom.py
+
+      # If a generated file in the repository differs from what its generator
+      # produces, one of the two was edited by hand and they have drifted.
+      - name: The committed files must match their generators
+        run: |
+          git diff --stat
+          git diff --exit-code
+
+      - name: Verify each antenna against its published dimension table
+        working-directory: kicad
+        run: |
+          set -eux
+          python3 tools/verify_against_swra117d.py
+          python3 tools/verify_against_swra227e.py
+          python3 tools/verify_against_swra228c.py
+
+      - name: Check every project
+        working-directory: kicad
+        run: |
+          set -eux
+          python3 tools/check_project.py
+          python3 tools/check_sim_board.py
+          python3 tools/check_dn024.py
+          python3 tools/check_dn024_sim.py
+          python3 tools/check_kit.py
+          python3 tools/check_panel.py
+
+      # A checker that has never failed is a checker nobody has tested.
+      - name: The checkers must catch the faults they are for
+        working-directory: kicad
+        run: |
+          set -eux
+          python3 tools/mutate_sim_board.py
+          python3 tools/mutate_kit.py
+
+      - name: Every drawing matches the board it was rendered from
+        working-directory: kicad
+        run: python3 tools/gen_drawings.py --check
+
+  fabrication:
+    name: Fabrication files
+    runs-on: ubuntu-latest
+    needs: checks
+    steps:
+      - uses: actions/checkout@v4
+
+      # The system python is the one that can import pcbnew, so this job does
+      # not use setup-python.
+      - name: Install KiCad 9
+        run: |
+          set -eux
+          sudo add-apt-repository --yes ppa:kicad/kicad-9.0-releases
+          sudo apt-get update -qq
+          sudo apt-get install --yes --no-install-recommends kicad
+          kicad-cli version
+          python3 -c "import pcbnew; print('pcbnew', pcbnew.GetBuildVersion())"
+
+      - name: Rebuild the panel
+        working-directory: kicad
+        run: python3 tools/gen_panel.py
+
+      # Fills the zones with KiCad's own filler first, and refuses to export
+      # if the fill did not take: gerbers from an unfilled board have no
+      # copper pour, and nothing warns you.
+      - name: Gerbers, drill and pick-and-place
+        working-directory: kicad
+        run: python3 tools/make_fab.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kit-panel-fabrication
+          path: |
+            kicad/kit/fab/**/*.zip
+            kicad/kit/fab/**/*-pos.csv
+            kicad/kit/fab/*.csv
+          if-no-files-found: error

@@ -144,4 +144,23 @@ def find(node, key: str):
 
 
 def find_all(node, key: str):
+    """Direct children with this tag. ONE LEVEL - see find_deep."""
     return [c for c in node if isinstance(c, list) and c and c[0] == key]
+
+
+def find_deep(node, key: str):
+    """Every node with this tag at any depth, not just direct children.
+
+    ``find_all`` looks one level down, which is right for pads in a footprint
+    and wrong for anything that nests - uuids, or a KiCad symbol's pins, which
+    live inside a child symbol.  Asking find_all for those returns an empty
+    list, and an empty list passes every check you write about it.
+    """
+    out = []
+    for child in node:
+        if isinstance(child, list) and child:
+            if child[0] == key:
+                out.append(child)
+            else:
+                out += find_deep(child, key)
+    return out

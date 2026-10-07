@@ -15,6 +15,7 @@ generator, so the checks fail if a derivation drifts.
 
 from __future__ import annotations
 
+import collections
 import math
 import pathlib
 import sys
@@ -22,7 +23,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import gen_kit as kit  # noqa: E402
 from check_dn024 import DSU, on_segment, point_to_segment, q, rotate, seg_distance  # noqa: E402
-from sexpr import find, find_all, parse  # noqa: E402
+from sexpr import find, find_all, find_deep, parse  # noqa: E402
 
 PRJ_DIR = pathlib.Path(__file__).resolve().parent.parent
 MIN_CLEARANCE = 0.15
@@ -446,6 +447,22 @@ def check_schematic(s):
        f"{len(placed)} pins on wires, netlist matches the intended one")
 
 
+def check_uuids(s, d):
+    """Two objects sharing one identifier is a bug KiCad will load anyway.
+
+    A library footprint carries its own uuids and the three 0402 sites are
+    placed from one file, so this fired the moment it was written: every
+    board had nine identifiers used three times over.
+    """
+    uids = [str(u[1]) for u in find_deep(d["pcb"], "uuid")]
+    dupes = [u for u, c in collections.Counter(uids).items() if c > 1]
+    if dupes:
+        fail(f"{s['key']}: {len(dupes)} uuid(s) used more than once - two "
+             "objects on the board share an identifier")
+    else:
+        ok(f"{s['key']}: {len(uids)} uuids, all distinct")
+
+
 def check_kit_invariants(specs, data):
     """What makes six boards a kit rather than six boards."""
     commons = [s for s in specs if s["plane_key"] == "common"]
@@ -489,6 +506,7 @@ def main() -> int:
         check_matching(s, d)
         check_short(s, d)
         check_schematic(s)
+        check_uuids(s, d)
     check_kit_invariants(specs, data)
     for n in notes:
         print(f"ok   {n}")

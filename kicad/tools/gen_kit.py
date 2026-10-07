@@ -43,7 +43,7 @@ import uuid
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import gen_project as gp  # noqa: E402
-from sexpr import Sym, dumps, find, find_all, num, parse  # noqa: E402
+from sexpr import Sym, dumps, find, find_all, find_deep, num, parse  # noqa: E402
 
 PRJ_DIR = gp.PRJ_DIR
 OUT_DIR = PRJ_DIR / "kit"
@@ -150,22 +150,6 @@ def footprint_box(qualified: str) -> dict:
                 w=max(xs) - min(xs), h=max(ys) - min(ys))
 
 
-def deep(node, tag):
-    """Every node with this tag, including ones nested inside a match.
-
-    ``sexpr.find_all`` stops at a match, which is right for pads but wrong
-    for symbols: a KiCad symbol's pins live inside a child *symbol* node, so
-    a non-recursing search finds the parent and never the pins.
-    """
-    out = []
-    for child in node:
-        if isinstance(child, list) and child:
-            if str(child[0]) == tag:
-                out.append(child)
-            out += deep(child, tag)
-    return out
-
-
 def symbol_pins(nick: str, name: str) -> dict:
     """Pin connection points of a library symbol, in symbol coordinates.
 
@@ -174,11 +158,11 @@ def symbol_pins(nick: str, name: str) -> dict:
     one this repo has already had once.
     """
     lib = parse((LIB_DIR / f"{nick}.kicad_sym").read_text())
-    for sym in deep(lib, "symbol"):
+    for sym in find_deep(lib, "symbol"):
         if not isinstance(sym[1], str) or not str(sym[1]).startswith(name):
             continue
         pins = {}
-        for pin in deep(sym, "pin"):
+        for pin in find_deep(sym, "pin"):
             at = find(pin, "at")
             pins[str(find(pin, "number")[1])] = (float(at[1]), float(at[2]))
         if pins:
