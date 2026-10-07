@@ -46,6 +46,7 @@ kicad/
 │       ├── Texas_SWRA117D_2.4GHz_Left.kicad_mod  antenna, as published
 │       ├── SWRA117D_2G4_Left_retuned.kicad_mod   antenna, scaled x1.155
 │       ├── SMA_EdgeMount_Generic.kicad_mod       50 Ω connector land
+│       ├── U_FL_Hirose_U_FL_R_SMT_1_Vertical.kicad_mod  the kit's launch
 │       ├── Chip_0402_RF_WideLand.kicad_mod     0402 pitch, 50 Ω-wide pads
 │       ├── RF_Port_Land.kicad_mod                the same land, no connector
 │       └── Chip_0402_1005Metric_RF.kicad_mod     spare 0402 land
@@ -1587,25 +1588,82 @@ separate boards for the same reason. The three common-plane boards share one
 one fixture.
 
 Everything that is not the antenna or the plane is held constant on purpose —
-1.6 mm FR4, the same edge-mount SMA, the same 2.95 mm 50 Ω microstrip, the
+1.6 mm FR4, the same U.FL launch, the same 2.95 mm 50 Ω microstrip, the
 same three matching sites at the feed. `check_kit.py` asserts that, because a
 kit whose variables leak is not a kit:
 
 ```
-ok   all 6 boards: one connector (SWRA117D_RF:SMA_EdgeMount_Generic), one stackup (1.69 mm), one 50 ohm width (2.95 mm) - only the antenna and the plane are variables
+ok   all 6 boards: one connector (SWRA117D_RF:U_FL_Hirose_U_FL_R_SMT_1_Vertical), one stackup (1.69 mm), one 50 ohm width (2.95 mm) - only the antenna and the plane are variables
 ok   the 3 common-plane boards share one 55 x 90 mm outline and one 45 x 60 mm plane, so only the antenna differs
 ```
 
+### The launch is a U.FL and a pigtail, not an SMA on the board edge
+
+**The cable is the measurement problem, not the connector.** On a 45 × 60 mm
+plane at 868 MHz — λ = 345 mm — the plane and whatever cable leaves it are one
+conductor as far as common-mode current is concerned. The braid becomes part
+of the antenna, and that shows up as an S11 null that *moves when you move the
+cable*. Move the cable, sweep twice: if the null walks, you are measuring the
+cable.
+
+Nothing about the connector fixes that. What a U.FL does is let you fix it:
+
+* the bulkhead SMA stays on the **jig**, so the connector body and its ground
+  tabs are no longer copper sitting in the near field of a plane that is half
+  the antenna;
+* the pigtail is somewhere to put a **ferrite or a sleeve balun**, which is the
+  only real cure;
+* and it is what an actual IoT product carries, so the board under test is
+  closer to the thing being designed.
+
+The land pattern is Hirose's own, for the **U.FL-R-SMT-1(10)** — signal pad
+1.05 × 1.00 mm, two ground pads 2.20 × 1.05 mm — taken from KiCad's
+`Connector_Coaxial` library, which cites [Hirose's page for the
+part](https://www.hirose.com/product/en/products/U.FL/U.FL-R-SMT-1%2810%29/).
+It is regenerated from those dimensions rather than the file being copied, so
+the provenance sits next to the geometry.
+
+**A 1.05 mm pad will not take a 2.95 mm line** — the same trap the through-hole
+SMA sprang with its ground posts. The line tapers 2.95 → 1.0 mm over 2.5 mm and
+runs 1.5 mm into the pad. And the taper lands somewhere better than it did
+there: the pour keep-away stops *above* the connector so the pour can close
+around J1's ground pads, which turns the neck into a grounded coplanar line
+rather than a microstrip —
+
+| 1.0 mm neck | Z₀ |
+|---|---|
+| as microstrip, pour kept back | 84.5 Ω |
+| **as CPWG, pour 0.2 mm away** | **53.9 Ω** |
+
+— so the neck is near 50 Ω by construction instead of being a lump to absorb.
+That is what a U.FL launch is supposed to look like.
+
+Three rules exist for the launch alone, because **the general rules do not
+cover it**: a track and the pad it runs to are the same net, so the clearance
+check skips the pair, and a 2.95 mm line driven straight onto a 1.05 mm pad
+reads as clean. `check_kit.py` additionally requires that the launch *lands on
+the signal pad* (not on the footprint origin, which is 1.05 mm past it — a
+mistake this generator made and the checker caught), that it is no wider than
+the pad, that both ground pads sit on the pour rather than inside the keep-away
+corridor, and that each has a stitching via within 3 mm.
+
+One consequence worth naming: **AN043's reference plane grew from 23.75 mm to
+28.0 mm.** The kit's standard feed — network, taper, a real run of 50 Ω line,
+launch — needs 27.05 mm, and `gen_kit.py` refuses to build a board with less
+rather than quietly shortening the line. SWRA117D publishes no plane size at
+all, so that number was always this repo's to choose; it may as well be one the
+standard feed fits in. Every other plane is the note's and is untouched.
+
 ### The boards
 
-| board | outline | plane | antenna | drawing |
-|---|---|---|---|---|
-| `an043_ref` | 50 × 32.9 | 40 × 23.75 † | 14.4 × 5.4 | [svg](docs/kit/an043_ref.svg) |
-| `an043_common` | 55 × 90 | 45 × 60 | 14.4 × 5.4 | [svg](docs/kit/an043_common.svg) |
-| `dn023_ref` | 53 × 69 | 31 × 45 | 43 × 20 | [svg](docs/kit/dn023_ref.svg) |
-| `dn023_common` | 55 × 90 | 45 × 60 | 43 × 20 | [svg](docs/kit/dn023_common.svg) |
-| `dn024_ref` | 53 × 91 | 43 × 63 | 38 × 25 | [svg](docs/kit/dn024_ref.svg) |
-| `dn024_common` | 55 × 90 | 45 × 60 | 38 × 25 | [svg](docs/kit/dn024_common.svg) |
+| board | outline | plane | antenna | 50 Ω run | drawing |
+|---|---|---|---|---|---|
+| `an043_ref` | 50 × 37.1 | 40 × 28 † | 14.4 × 5.4 | 3.95 mm | [svg](docs/kit/an043_ref.svg) |
+| `an043_common` | 55 × 90 | 45 × 60 | 14.4 × 5.4 | 35.95 mm | [svg](docs/kit/an043_common.svg) |
+| `dn023_ref` | 53 × 69 | 31 × 45 | 43 × 20 | 20.95 mm | [svg](docs/kit/dn023_ref.svg) |
+| `dn023_common` | 55 × 90 | 45 × 60 | 43 × 20 | 35.95 mm | [svg](docs/kit/dn023_common.svg) |
+| `dn024_ref` | 53 × 91 | 43 × 63 | 38 × 25 | 38.95 mm | [svg](docs/kit/dn024_ref.svg) |
+| `dn024_common` | 55 × 90 | 45 × 60 | 38 × 25 | 35.95 mm | [svg](docs/kit/dn024_common.svg) |
 
 † this repo's choice; SWRA117D publishes none.
 
@@ -1657,6 +1715,7 @@ Writing the checker found three real faults, all of which look fine on screen:
 python3 tools/gen_dn023_symbols.py      # library/TI_DN023.kicad_sym
 python3 tools/gen_dn023_footprint.py    # the third antenna, from Table 1
 python3 tools/verify_against_swra228c.py
+python3 tools/gen_ufl_footprint.py      # the U.FL land, from Hirose's pattern
 python3 tools/gen_kit.py                # all six boards
 python3 tools/check_kit.py
 python3 tools/mutate_kit.py             # does the checker actually bite?
@@ -1664,7 +1723,7 @@ python3 tools/mutate_kit.py             # does the checker actually bite?
 
 ```
 0 problem(s) across 6 board(s)
-8/8 mutations caught
+11/11 mutations caught
 ```
 
 The mutations are the mistakes that are easy to make here and invisible in the
@@ -1672,10 +1731,20 @@ editor: the antenna off centre, the board too narrow for the 5 mm either side
 SWRA228C asks for, the shorting leg not reaching the plane, Z2 wired as a shunt
 instead of in series, one common board quietly given a different plane, AE1
 placed so its feed pin misses the bus, the antenna pushed down over the plane
-edge, and a ground pour going missing from the bottom layer.
+edge, a ground pour going missing from the bottom layer, the 50 Ω line butting
+straight onto the U.FL's 1.05 mm pad, the launch stopping at the connector's
+origin instead of its signal pad, and the pour keep-away running past the U.FL
+so its ground pads are stranded.
+
+Two of those are caught by a rule written for them and one — the launch
+stopping short — by the general "every track end lands on something", which is
+worth saying rather than claiming three new rules were each proved.
 
 ### What to measure, and in what order
 
+0. **Choke the cable first, then prove it.** Ferrite on the pigtail, sweep,
+   move the cable, sweep again. If the null moves, the number is the cable's,
+   not the antenna's — and every comparison below is then meaningless.
 1. **Each `*_ref` board against its note.** DN024: SWR 1.2 at 868 and 1.6 at
    2.44 GHz (SWRA227E 4.3). DN023: reflection better than −25 dB once `L6` is
    trimmed. If a reference board does not reproduce its note, the build is
@@ -1712,7 +1781,7 @@ if you would rather etch it than cut it.
 ## Reusing this on someone else's board
 
 [`docs/antenna-integration-checklist.md`](docs/antenna-integration-checklist.md)
-is the checklist these projects produced: 81 items across antenna placement,
+is the checklist these projects produced: 85 items across antenna placement,
 feed, stitching, simulation setup, what to leave out of a model, bench
 measurement, and tuning —
 each one there because getting it wrong here cost a wrong answer. It is written to be applied to any printed

@@ -2,8 +2,7 @@
 <defs><pattern id="ko" width="1.9" height="1.9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="keepout-hatch" x1="0" y1="0" x2="0" y2="1.9"/></pattern></defs>
 <rect class="keepout" x="100" y="60" width="55" height="29" fill="url(#ko)"/>
 <rect class="board-edge" x="100" y="60" width="55" height="90"/>
-<rect class="bcu" x="125.75" y="141.775" width="3.5" height="12.95" transform="rotate(-90 127.5 148.25)"/>
-<rect class="keepout" x="124.025" y="89" width="6.95" height="61" fill="url(#ko)"/>
+<rect class="keepout" x="124.025" y="89" width="6.95" height="50.95" fill="url(#ko)"/>
 <rect class="keepout" x="123.5" y="89" width="9.5" height="11.5" fill="url(#ko)"/>
 <polygon class="fcu" points="128.5,88 128.5,81 146.5,81 146.5,74 110.5,74 110.5,71 146.5,71 146.5,64 108.5,64 108.5,66 144.5,66 144.5,69 108.5,69 108.5,76 144.5,76 144.5,79 126.5,79 126.5,88"/>
 <path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M127.5,88 L127.5,92"/>
@@ -17,12 +16,18 @@
 <path class="trace" stroke-width="1.775" stroke-linecap="round" fill="none" d="M127.5,102.2 L127.5,102.8"/>
 <path class="trace" stroke-width="2.245" stroke-linecap="round" fill="none" d="M127.5,102.8 L127.5,103.4"/>
 <path class="trace" stroke-width="2.715" stroke-linecap="round" fill="none" d="M127.5,103.4 L127.5,104"/>
-<path class="trace" stroke-width="2.95" stroke-linecap="round" fill="none" d="M127.5,104 L127.5,150"/>
+<path class="trace" stroke-width="2.95" stroke-linecap="round" fill="none" d="M127.5,104 L127.5,139.95"/>
+<path class="trace" stroke-width="2.755" stroke-linecap="round" fill="none" d="M127.5,139.95 L127.5,140.45"/>
+<path class="trace" stroke-width="2.365" stroke-linecap="round" fill="none" d="M127.5,140.45 L127.5,140.95"/>
+<path class="trace" stroke-width="1.975" stroke-linecap="round" fill="none" d="M127.5,140.95 L127.5,141.45"/>
+<path class="trace" stroke-width="1.585" stroke-linecap="round" fill="none" d="M127.5,141.45 L127.5,141.95"/>
+<path class="trace" stroke-width="1.195" stroke-linecap="round" fill="none" d="M127.5,141.95 L127.5,142.45"/>
+<path class="trace" stroke-width="1" stroke-linecap="round" fill="none" d="M127.5,142.45 L127.5,143.95"/>
 <path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M130.98,92 L131.9,92"/>
 <path class="trace" stroke-width="0.6" stroke-linecap="round" fill="none" d="M130.98,99 L131.9,99"/>
-<rect class="fcu pad" x="125.75" y="146.775" width="3.5" height="2.95" transform="rotate(-90 127.5 148.25)"/>
-<rect class="fcu pad" x="120.775" y="146.75" width="3.5" height="3" transform="rotate(-90 122.525 148.25)"/>
-<rect class="fcu pad" x="130.725" y="146.75" width="3.5" height="3" transform="rotate(-90 132.475 148.25)"/>
+<rect class="fcu pad" x="126.975" y="143.45" width="1.05" height="1" transform="rotate(-270 127.5 143.95)"/>
+<rect class="fcu pad" x="124.925" y="144.95" width="2.2" height="1.05" transform="rotate(-270 126.025 145.475)"/>
+<rect class="fcu pad" x="127.875" y="144.95" width="2.2" height="1.05" transform="rotate(-270 128.975 145.475)"/>
 <rect class="fcu pad" x="129.74" y="98.69" width="0.56" height="0.62" transform="rotate(-0 130.02 99)"/>
 <rect class="fcu pad" x="130.7" y="98.69" width="0.56" height="0.62" transform="rotate(-0 130.98 99)"/>
 <rect class="fcu pad" x="127.22" y="95.67" width="0.56" height="0.62" transform="rotate(-90 127.5 95.98)"/>
@@ -234,6 +239,10 @@
 <circle class="via" cx="146" cy="145.8" r="0.3"/>
 <circle class="via" cx="131.9" cy="99" r="0.3"/>
 <circle class="via" cx="131.9" cy="92" r="0.3"/>
+<circle class="via" cx="125.3" cy="143.525" r="0.3"/>
+<circle class="via" cx="129.7" cy="143.525" r="0.3"/>
+<circle class="via" cx="125.3" cy="146.475" r="0.3"/>
+<circle class="via" cx="129.7" cy="146.475" r="0.3"/>
 <path class="plane-edge" d="M97,89 L158,89"/>
 <text class="note" x="101" y="91.4">GND plane edge &#8212; no copper above, any layer</text>
 <path class="dim" d="M100,154.2 L155,154.2"/>

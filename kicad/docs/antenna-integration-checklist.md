@@ -77,6 +77,23 @@ same topology as a 2.4 GHz IFA:
       0.45 nH: j2.6 Ω at 868 MHz, j6.5 Ω at 2.44 GHz].
 - [ ] **Clearance checked track-to-pad, not just track-to-track.** The
       violation above is invisible to a rule that only compares tracks.
+- [ ] **The feed cable is choked, and you have proved it.** On a small ground
+      plane the cable braid is part of the antenna: at 868 MHz a 60 mm plane
+      and the coax leaving it are one conductor for common-mode current.
+      Ferrite or a sleeve balun on the pigtail, then sweep, move the cable,
+      sweep again. **If the null moves, you are measuring the cable** and
+      every comparison you make afterwards is noise.
+- [ ] **The connector body is out of the near field where it can be.** A
+      U.FL and a pigtail put the bulkhead SMA on the jig instead of leaving
+      the connector shell and its ground tabs as copper beside a plane that
+      is half the antenna.
+- [ ] **The launch tapers into the connector pad.** A U.FL signal pad is
+      1.05 mm and a 50 Ω line on 1.6 mm FR4 is 2.95 mm — it cannot butt on.
+      Let the pour close around the neck and it becomes a grounded coplanar
+      line [1.0 mm with a 0.2 mm gap is 53.9 Ω, against 84.5 Ω as a bare
+      microstrip], which is what you want at a launch.
+- [ ] **The launch lands on the pad, not on the footprint origin.** They are
+      not the same point, and the difference is invisible on screen.
 - [ ] **Connector land measured against the part you will buy.** A land
       pattern read off an application note's figure carries about ±0.1 mm;
       the pitch is usually a standard and therefore safe, the drills are not.

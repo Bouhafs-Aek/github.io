@@ -405,16 +405,16 @@
 		(dnp no)
 		(uuid "c62e65d7-5c95-5dc9-add4-8659427b1a6e")
 		(property "Reference" "J1" (at 63.5 81.28 0) (effects (font (size 1.27 1.27)) (justify left)))
-		(property "Value" "SMA edge launch"
+		(property "Value" "U.FL receptacle"
 			(at 63.5 83.82 0)
 			(effects (font (size 1.27 1.27)) (justify left))
 		)
-		(property "Footprint" "SWRA117D_RF:SMA_EdgeMount_Generic"
+		(property "Footprint" "SWRA117D_RF:U_FL_Hirose_U_FL_R_SMT_1_Vertical"
 			(at 63.5 88.9 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Datasheet" "~" (at 63.5 88.9 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Description" "Coaxial connector, 50 ohm test port. The same part on all six boards, so the launch is not a variable"
+		(property "Description" "Hirose U.FL-R-SMT-1(10), fed by a pigtail to a bulkhead SMA on the jig. The same part on all six boards, so the launch is not a variable. Put a ferrite or a sleeve balun on the pigtail: on a plane this size the cable braid is part of the antenna until you choke it"
 			(at 63.5 88.9 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)

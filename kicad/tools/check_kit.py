@@ -233,6 +233,69 @@ def check_board(s, d):
            f"foreign pad {worst_p:.2f} mm")
 
 
+def inside(poly, pt) -> bool:
+    x, y = pt
+    hit = False
+    for (x1, y1), (x2, y2) in zip(poly, poly[1:] + poly[:1]):
+        if (y1 > y) != (y2 > y) and x < x1 + (y - y1) / (y2 - y1) * (x2 - x1):
+            hit = not hit
+    return hit
+
+
+def check_launch(s, d):
+    """The U.FL launch: lands on the pad, necks to fit it, grounded locally.
+
+    None of this is covered by the general rules.  A track and the pad it
+    runs to are the same net, so the clearance check skips the pair - which
+    means a 2.95 mm line driven straight onto a 1.05 mm pad reads as clean.
+    """
+    key = s["key"]
+    sig = [p for p in d["pads"] if p["ref"] == "J1" and p["num"] == "1"]
+    gnds = [p for p in d["pads"] if p["ref"] == "J1" and p["num"] == "2"]
+    if len(sig) != 1 or len(gnds) != 2:
+        fail(f"{key}: J1 should have one signal pad and two ground pads, "
+             f"found {len(sig)} and {len(gnds)}")
+        return
+    sig = sig[0]
+
+    arriving = [t for t in d["segs"] if t[3] == "RF_IN"
+                and any(abs(pt[0] - sig["centre"][0]) <= sig["w"] / 2 + 1e-6
+                        and abs(pt[1] - sig["centre"][1]) <= sig["h"] / 2 + 1e-6
+                        for pt in (t[0], t[1]))]
+    if not arriving:
+        fail(f"{key}: no RF_IN track ends inside J1's signal pad - the launch "
+             "runs past it, probably to the footprint origin")
+        return
+    widest = max(t[2] for t in arriving)
+    across = min(sig["w"], sig["h"])
+    if widest > across + 1e-6:
+        fail(f"{key}: the launch reaches J1 pad 1 at {widest:.2f} mm wide on a "
+             f"pad only {across:.2f} mm across - it has to taper, not butt on")
+
+    keepaway = next((z for z in d["zones"]
+                     if z["name"] == "RF_POUR_KEEPAWAY"), None)
+    if keepaway is None:
+        fail(f"{key}: no RF_POUR_KEEPAWAY around the feed")
+    else:
+        stranded = [g for g in gnds if inside(keepaway["pts"], g["centre"])]
+        if stranded:
+            fail(f"{key}: {len(stranded)} of J1's ground pads sit inside the "
+                 "pour keep-away, so the pour never reaches them")
+    near = [g for g in gnds
+            if any(math.dist(g["centre"], (vx, vy)) < 3.0
+                   for vx, vy, _ in d["vias"])]
+    if len(near) != 2:
+        fail(f"{key}: only {len(near)} of J1's 2 ground pads have a stitching "
+             "via within 3 mm - the return current turns round at the launch")
+    if s["run_50"] < kit.MIN_RUN_50 - 1e-9:
+        fail(f"{key}: only {s['run_50']:.2f} mm of 50 ohm line between the "
+             f"network and the launch")
+    else:
+        ok(f"{key}: launch tapers {kit.W50} -> {widest:g} mm into J1's "
+           f"{across:g} mm signal pad, both ground pads on the pour and "
+           f"via'd, {s['run_50']:.2f} mm of 50 ohm line behind it")
+
+
 def check_matching(s, d):
     key = s["key"]
     by = {}
@@ -422,6 +485,7 @@ def main() -> int:
         d = board_data(path)
         data[s["key"]] = d
         check_board(s, d)
+        check_launch(s, d)
         check_matching(s, d)
         check_short(s, d)
         check_schematic(s)

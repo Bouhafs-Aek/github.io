@@ -47,6 +47,12 @@ MUTATIONS = [
     ("AE1 is placed so its feed pin misses the bus", None, "pin_off"),
     ("the antenna is pushed down over the plane edge", None, "over_plane"),
     ("a ground pour goes missing from the bottom layer", None, "one_layer"),
+    ("the 50 ohm line butts straight onto the U.FL's 1.05 mm pad",
+     None, "no_neck"),
+    ("the launch stops at the connector origin instead of its signal pad",
+     None, "miss_pad"),
+    ("the pour keep-away runs past the U.FL, stranding its ground pads",
+     None, "strand_gnd"),
 ]
 
 
@@ -118,6 +124,43 @@ def apply(name):
         kit.gp.gnd_zone = lambda layer, pts: (orig(layer, pts) if layer == "F.Cu"
                                               else orig("F.Cu", pts))
         return lambda: setattr(kit.gp, "gnd_zone", orig)
+    if name == "no_neck":
+        # 1.5 mm, not the full 2.95: wide enough to be wrong for a 1.05 mm
+        # pad, narrow enough to still clear J1's ground pads, so the width
+        # rule has to catch it on its own rather than the clearance rule
+        # catching it by accident.
+        orig = kit.LAUNCH_NECK, kit.LAUNCH_TAPER
+        kit.LAUNCH_NECK, kit.LAUNCH_TAPER = 1.5, 0.5
+
+        def undo():
+            kit.LAUNCH_NECK, kit.LAUNCH_TAPER = orig
+        return undo
+    if name == "miss_pad":
+        orig = kit.spec
+
+        def spec(a, k):
+            s = orig(a, k)
+            s["conn_feed_y"] = s["conn_y"]          # the origin, not the pad
+            return s
+        kit.spec = spec
+        return lambda: setattr(kit, "spec", orig)
+    if name == "strand_gnd":
+        # Run the keep-away corridor past the connector instead of stopping
+        # above it.  Mutating the connector's position instead would be
+        # refused by the generator before the checker ever saw the board.
+        orig = kit.build_board
+
+        def build_board(spec):
+            pcb = orig(spec)
+            for node in pcb:
+                if (node[0] == "zone" and kit.find(node, "name") is not None
+                        and str(kit.find(node, "name")[1]) == "RF_POUR_KEEPAWAY"):
+                    pts = kit.find(kit.find(node, "polygon"), "pts")
+                    for xy in pts[1:]:
+                        xy[2] = kit.num(float(xy[2]) + 8.0)
+            return pcb
+        kit.build_board = build_board
+        return lambda: setattr(kit, "build_board", orig)
     raise SystemExit(f"no mutation called {name}")
 
 

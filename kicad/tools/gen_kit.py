@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import pathlib
 import sys
 import uuid
@@ -62,6 +63,19 @@ Z3_UP, Z2_UP, Z1_UP = 3.0, 6.5, 10.0     # network sites, above the plane edge
 FENCE_PITCH, GRID_PITCH = 3.0, 4.0
 VIA_SIZE, VIA_DRILL = 0.6, 0.3
 
+# The kit launches through a U.FL and a pigtail, not an SMA on the board edge:
+# the bulkhead SMA stays on the jig instead of sitting as copper in the near
+# field of a plane that is half the antenna, and the pigtail is where the
+# common-mode choke goes.  See gen_ufl_footprint.py.
+CONN_FP = "SWRA117D_RF:U_FL_Hirose_U_FL_R_SMT_1_Vertical"
+CONN_UP = 4.0            # connector centre, above the bottom of the plane
+CONN_PAD_W = 1.05        # the U.FL signal pad, across the line
+LAUNCH_NECK = 1.0        # a 2.95 mm line cannot butt onto a 1.05 mm pad
+LAUNCH_TAPER, LAUNCH_STEPS, LAUNCH_RUN = 2.5, 5, 1.5
+CONN_ROT = 270           # signal pad toward the antenna, ground pads flanking
+MIN_RUN_50 = 3.0         # the shortest run of real 50 ohm line worth having
+TAPER_LEN, TAPER_STEPS = 3.0, 5
+
 COMMON_PLANE = (45.0, 60.0)
 COMMON_BOARD = (55.0, 90.0)
 
@@ -71,7 +85,12 @@ ANTENNAS = [
          pins={"1": "ANT_FEED", "2": "GND"}, bands="2450 MHz",
          origin_above_plane=-0.25,  # SWRA117D: the feed pad straddles the plane edge and the
          #                      W1 strap's via lands in the plane behind it
-         ref_plane=(40.0, 23.75), ref_published=False,
+         # 28.0 mm, not the 23.75 of the standalone board: the kit's feed
+         # - network, taper, a real run of 50 ohm, launch - needs 27.05 mm
+         # and spec() refuses anything shorter.  SWRA117D publishes no plane
+         # at all, so this number was always this repo's to choose, and it
+         # may as well be one the standard feed fits in.
+         ref_plane=(40.0, 28.0), ref_published=False,
          bom=[("Z1", "DNP"), ("Z2", "0R"), ("Z3", "DNP")],
          why=("SWRA117D publishes no matching values and no ground plane "
               "size. The plane here is this repo's own 40 x 23.75 mm, not "
@@ -167,6 +186,13 @@ def symbol_pins(nick: str, name: str) -> dict:
     raise SystemExit(f"{nick}:{name} has no pins")
 
 
+def rot_xy(pt, deg):
+    """A footprint-local offset in board coordinates, for a placed rotation."""
+    r = math.radians(-deg)
+    return (pt[0] * math.cos(r) - pt[1] * math.sin(r),
+            pt[0] * math.sin(r) + pt[1] * math.cos(r))
+
+
 def footprint_pads(qualified: str) -> dict:
     nick, _, name = qualified.rpartition(":")
     fp = parse((LIB_DIR / f"{nick}.pretty" / f"{name}.kicad_mod").read_text())
@@ -212,10 +238,24 @@ def spec(antenna: dict, plane_key: str) -> dict:
     pin2 = None
     if "2" in pins:
         pin2 = (ae1_sch[0] + pins["2"][0], ae1_sch[1] - pins["2"][1])
+    conn_y = plane_y1 - CONN_UP
+    # The launch ends on the U.FL's SIGNAL PAD, not on its origin: the pad is
+    # offset from the origin, and a track run to the origin sails straight
+    # past the pad and in under the connector body.
+    conn_pad = footprint_pads(CONN_FP)["1"][0]
+    conn_feed_y = conn_y + rot_xy((conn_pad["x"], conn_pad["y"]), CONN_ROT)[1]
+    run_50 = (conn_feed_y - (LAUNCH_TAPER + LAUNCH_RUN)) - (
+        plane_y0 + Z1_UP + 2.0 + TAPER_LEN)
+    if run_50 < MIN_RUN_50 - 1e-9:
+        raise SystemExit(
+            f"{antenna['key']}/{plane_key}: a {plane_h:g} mm plane leaves only "
+            f"{run_50:.2f} mm of 50 ohm line between the network and the "
+            f"launch; {MIN_RUN_50:g} mm is the least worth calling a line")
     key = f"{antenna['key']}_{plane_key}"
     return dict(
         antenna=antenna, plane_key=plane_key, key=key, box=box,
         ae1_sch=ae1_sch, pin2=pin2, pads=footprint_pads(antenna["fp"]),
+        conn_y=conn_y, conn_feed_y=conn_feed_y, run_50=run_50,
         project=f"kit_{key}",
         board=(x0, y0, x1, y1), board_w=board_w, board_h=board_h,
         plane=(x0 + (board_w - plane_w) / 2, plane_y0,
@@ -254,12 +294,15 @@ def parts(s: dict) -> list:
 
     bom = dict(a["bom"])
     out = [
-        dict(ref="J1", lib=f"{nick}:Conn_Coaxial_SMA", value="SMA edge launch",
-             fp="SWRA117D_RF:SMA_EdgeMount_Generic", sch=(63.5, 88.9, 0),
-             pcb=(fx, s["board"][3], 90), nets={"1": "RF_IN", "2": "GND"},
+        dict(ref="J1", lib=f"{nick}:Conn_Coaxial_SMA", value="U.FL receptacle",
+             fp=CONN_FP, sch=(63.5, 88.9, 0),
+             pcb=(fx, s["conn_y"], CONN_ROT), nets={"1": "RF_IN", "2": "GND"},
              ref_at=(63.5, 81.28), val_at=(63.5, 83.82),
-             desc="Coaxial connector, 50 ohm test port. The same part on all "
-                  "six boards, so the launch is not a variable"),
+             desc="Hirose U.FL-R-SMT-1(10), fed by a pigtail to a bulkhead "
+                  "SMA on the jig. The same part on all six boards, so the "
+                  "launch is not a variable. Put a ferrite or a sleeve balun "
+                  "on the pigtail: on a plane this size the cable braid is "
+                  "part of the antenna until you choke it"),
         chip("Z1", bom["Z1"], (78.74, 92.71), z1, {"1": "RF_IN", "2": "GND"}, 0,
              "Matching site, shunt on the connector side. " + a["why"]),
         chip("Z2", bom["Z2"], (95.25, 88.9), z2,
@@ -286,7 +329,7 @@ def feed_tracks(s: dict) -> list:
     z1, z2, z3 = s["z1"], s["z2"], s["z3"]
     ant_y = s["origin"][1]
     taper_top = z1[1] + 2.0
-    taper_len, steps = 3.0, 5
+    taper_len, steps = TAPER_LEN, TAPER_STEPS
     tracks = [
         ((fx, ant_y), (fx, z3[1]), W_PI, "ANT_FEED"),
         ((fx, z3[1]), (z3[0] - PAD_DX, z3[1]), W_PI, "ANT_FEED"),
@@ -300,8 +343,20 @@ def feed_tracks(s: dict) -> list:
         y1 = taper_top + (i + 1) * taper_len / steps
         width = W_PI + (W50 - W_PI) * (i + 0.5) / steps
         tracks.append(((fx, y0), (fx, y1), round(width, 3), "RF_IN"))
-    tracks.append(((fx, taper_top + taper_len), (fx, s["board"][3]),
+    # the 50 ohm run, then the launch: the U.FL signal pad is 1.05 mm across
+    # and this line is 2.95 mm, so it tapers into the pad rather than butting
+    # onto it - the same transition a through-hole SMA's ground posts force.
+    neck_start = s["conn_feed_y"] - LAUNCH_RUN
+    launch_start = neck_start - LAUNCH_TAPER
+    tracks.append(((fx, taper_top + taper_len), (fx, launch_start),
                    W50, "RF_IN"))
+    for i in range(LAUNCH_STEPS):
+        y0 = launch_start + i * LAUNCH_TAPER / LAUNCH_STEPS
+        y1 = launch_start + (i + 1) * LAUNCH_TAPER / LAUNCH_STEPS
+        width = W50 + (LAUNCH_NECK - W50) * (i + 0.5) / LAUNCH_STEPS
+        tracks.append(((fx, y0), (fx, y1), round(width, 3), "RF_IN"))
+    tracks.append(((fx, neck_start), (fx, s["conn_feed_y"]),
+                   LAUNCH_NECK, "RF_IN"))
     for at in (z3, z1):
         tracks.append(((at[0] + PAD_DX, at[1]), (at[0] + 1.4, at[1]),
                        W_PI, "GND"))
@@ -332,6 +387,8 @@ def stitching(s: dict) -> list:
         for at in (s["z1"], s["z2"], s["z3"]):
             if abs(x - at[0]) < 2.6 and abs(y - at[1]) < 2.6:
                 return False
+        if abs(x - fx) < 3.6 and abs(y - s["conn_y"]) < 3.6:
+            return False                      # the connector's own courtyard
         return True
 
     x = px0 + 1.0
@@ -355,6 +412,12 @@ def stitching(s: dict) -> list:
         if pad["kind"] == "smd":
             out.append((round(s["origin"][0] + pad["x"], 3),
                         round(s["plane_edge"] + 1.5, 3)))
+    # Ground at the launch, beside the U.FL's own ground pads rather than
+    # three millimetres away: the return current turns round here.
+    for dy in (-1.475, 1.475):
+        for dx in (-2.2, 2.2):
+            out.append((round(s["feed_x"] + dx, 3),
+                        round(s["conn_y"] + dy, 3)))
     return out
 
 
@@ -436,11 +499,15 @@ def build_board(s: dict) -> list:
     pcb.append(gp.keepout_zone("ANTENNA_KEEPOUT",
                                [(x0 - 0.5, y0 - 0.5), (x1 + 0.5, y0 - 0.5),
                                 (x1 + 0.5, py0), (x0 - 0.5, py0)]))
+    # The keep-away stops short of the connector: its ground pads have to sit
+    # ON the pour, and a corridor that ran past them would leave them
+    # grounded by nothing but the launch vias.
     half = W50 / 2 + POUR_GAP
+    keepaway_end = s["conn_feed_y"] - LAUNCH_TAPER - LAUNCH_RUN
     pcb.append(gp.keepout_zone(
         "RF_POUR_KEEPAWAY",
         [(s["feed_x"] - half, py0), (s["feed_x"] + half, py0),
-         (s["feed_x"] + half, y1 + 0.5), (s["feed_x"] - half, y1 + 0.5)],
+         (s["feed_x"] + half, keepaway_end), (s["feed_x"] - half, keepaway_end)],
         layers=("F.Cu",), tracks="allowed", vias="allowed"))
     pcb.append(gp.keepout_zone(
         "PI_NETWORK_CLEARANCE",
@@ -518,7 +585,8 @@ def write(s: dict) -> None:
     print(f"{s['key']:14} board {s['board_w']:5.1f} x {s['board_h']:5.1f} mm   "
           f"plane {s['plane_w']:4.1f} x {s['plane_h']:4.1f}   "
           f"antenna {s['box']['w']:5.2f} x {s['box']['h']:5.2f}   "
-          f"feed {s['feed_x'] - s['board'][0]:5.2f} mm from the left edge")
+          f"feed {s['feed_x'] - s['board'][0]:5.2f} mm from the left   "
+          f"50R run {s['run_50']:5.2f} mm")
 
 
 def all_specs() -> list:

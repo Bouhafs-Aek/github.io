@@ -5,7 +5,7 @@
 	(uuid "f5dbf9a5-18ef-5055-adee-098268de6a72")
 	(paper "A4")
 	(title_block
-		(title "TI AN043 / SWRA117D on a 40 x 23.75 mm reference plane")
+		(title "TI AN043 / SWRA117D on a 40 x 28 mm reference plane")
 		(date "2026-09-12")
 		(rev "A")
 		(comment 1 "Pi network laid out, fitted as a 0 ohm link: no matching values are published for this antenna"
@@ -362,7 +362,7 @@
 		(effects (font (size 1.27 1.27)) (justify left bottom))
 		(uuid "c6e022c1-a4f3-503c-8785-559c7f0b1623")
 	)
-	(text "Antenna evaluation kit, board an043_ref.\n\nAntenna: AN043 / SWRA117D, 2450 MHz, an exact copy of the note's\nown dimension table, checked by its verify_against_* script.\n\nGround plane: 40 x 23.75 mm, this repo's own choice - the note publishes no plane size.\n\nMatching: Z1=DNP  Z2=0R  Z3=DNP\nSWRA117D publishes no matching values and no ground plane size. The plane here is this repo's own 40 x 23.75 mm, not TI's - the note only says plane size affects performance.\n\n2.95 mm wide 50 ohm microstrip on 1.6 mm FR4 (er 4.5),\nthe same on all six boards so the launch is not a variable.\n\nBefore simulating or running DRC: fill the zones (B in the PCB\neditor). KiCad stores them unfilled and a plane is half the antenna."
+	(text "Antenna evaluation kit, board an043_ref.\n\nAntenna: AN043 / SWRA117D, 2450 MHz, an exact copy of the note's\nown dimension table, checked by its verify_against_* script.\n\nGround plane: 40 x 28 mm, this repo's own choice - the note publishes no plane size.\n\nMatching: Z1=DNP  Z2=0R  Z3=DNP\nSWRA117D publishes no matching values and no ground plane size. The plane here is this repo's own 40 x 23.75 mm, not TI's - the note only says plane size affects performance.\n\n2.95 mm wide 50 ohm microstrip on 1.6 mm FR4 (er 4.5),\nthe same on all six boards so the launch is not a variable.\n\nBefore simulating or running DRC: fill the zones (B in the PCB\neditor). KiCad stores them unfilled and a plane is half the antenna."
 		(exclude_from_sim no)
 		(at 76.2 112 0)
 		(effects (font (size 1.27 1.27)) (justify left top))
@@ -378,16 +378,16 @@
 		(dnp no)
 		(uuid "a60ce442-ad2d-5355-9a7f-6853ee238fd7")
 		(property "Reference" "J1" (at 63.5 81.28 0) (effects (font (size 1.27 1.27)) (justify left)))
-		(property "Value" "SMA edge launch"
+		(property "Value" "U.FL receptacle"
 			(at 63.5 83.82 0)
 			(effects (font (size 1.27 1.27)) (justify left))
 		)
-		(property "Footprint" "SWRA117D_RF:SMA_EdgeMount_Generic"
+		(property "Footprint" "SWRA117D_RF:U_FL_Hirose_U_FL_R_SMT_1_Vertical"
 			(at 63.5 88.9 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Datasheet" "~" (at 63.5 88.9 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Description" "Coaxial connector, 50 ohm test port. The same part on all six boards, so the launch is not a variable"
+		(property "Description" "Hirose U.FL-R-SMT-1(10), fed by a pigtail to a bulkhead SMA on the jig. The same part on all six boards, so the launch is not a variable. Put a ferrite or a sleeve balun on the pigtail: on a plane this size the cable braid is part of the antenna until you choke it"
 			(at 63.5 88.9 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
